@@ -1,0 +1,46 @@
+{
+  "expo": {
+    "name": "TallerOS",
+    "slug": "talleros",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#16191d"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.talleros.app"
+    },
+    "android": {
+      "package": "com.talleros.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#F5B700"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/efeefa2e-b6e4-497f-8c30-f96402e911c3",
+      "fallbackToCacheTimeout": 0,
+      "checkAutomatically": "ON_LOAD"
+    },
+    "extra": {
+      "apiUrl": "https://PON-AQUI-TU-URL-DE-RENDER.onrender.com",
+      "eas": {
+        "projectId": "efeefa2e-b6e4-497f-8c30-f96402e911c3"
+      }
+    },
+    "icon": "./assets/icon.png",
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
