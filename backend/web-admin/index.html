@@ -354,7 +354,7 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover{background:var(--surface-2)}
 
   <div class="web-wrap"><div class="web">
     <div class="wside">
-      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v41</span></div>
+      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v44</span></div>
       <div class="wlbl op-item">Operación</div>
       <a class="on op-item" data-w="dash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
       <a class="op-item" data-w="recep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-6 0v4"/><rect x="2" y="9" width="20" height="11" rx="2"/></svg>Recepción digital</a>
@@ -657,7 +657,7 @@ function renderDlist(){
   box.innerHTML=rec.damages.map(d=>`<div class="di"><span class="num sev-${d.sev}">${d.n}</span><div><b>${d.tipo.join(', ')}</b> · ${sn[d.sev]}</div><button class="x" onclick="delRecDmg(${d.n})">×</button></div>`).join('');
 }
 function delRecDmg(n){rec.damages=rec.damages.filter(d=>d.n!==n);const m=markers3D.find(x=>x.n===n);if(m){rGroup.remove(m.sphere);rGroup.remove(m.sprite);markers3D=markers3D.filter(x=>x.n!==n);}renderDlist();}
-function setupSig(id){const cv=document.getElementById(id);if(!cv)return;const dpr=window.devicePixelRatio||1;const r=cv.getBoundingClientRect();cv.width=r.width*dpr;cv.height=r.height*dpr;const ctx=cv.getContext('2d');ctx.scale(dpr,dpr);ctx.lineWidth=2;ctx.lineCap='round';ctx.strokeStyle='#16191d';cv._inked=false;let drawing=false;function pos(e){const b=cv.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return{x:t.clientX-b.left,y:t.clientY-b.top};}function start(e){drawing=true;cv._inked=true;const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);e.preventDefault();}function move(e){if(!drawing)return;const p=pos(e);ctx.lineTo(p.x,p.y);ctx.stroke();e.preventDefault();}function end(){drawing=false;}cv.addEventListener('mousedown',start);cv.addEventListener('mousemove',move);window.addEventListener('mouseup',end);cv.addEventListener('touchstart',start,{passive:false});cv.addEventListener('touchmove',move,{passive:false});cv.addEventListener('touchend',end);}
+function setupSig(id){const cv=document.getElementById(id);if(!cv)return;cv.style.touchAction='none';const dpr=window.devicePixelRatio||1;const r=cv.getBoundingClientRect();cv.width=r.width*dpr;cv.height=r.height*dpr;const ctx=cv.getContext('2d');ctx.scale(dpr,dpr);ctx.lineWidth=2;ctx.lineCap='round';ctx.strokeStyle='#16191d';cv._inked=false;let drawing=false;function pos(e){const b=cv.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return{x:t.clientX-b.left,y:t.clientY-b.top};}function start(e){drawing=true;cv._inked=true;const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);e.preventDefault();}function move(e){if(!drawing)return;const p=pos(e);ctx.lineTo(p.x,p.y);ctx.stroke();e.preventDefault();}function end(){if(drawing){drawing=false;try{cv._data=cv.toDataURL('image/png');}catch(e){}}}cv.addEventListener('mousedown',start);cv.addEventListener('mousemove',move);window.addEventListener('mouseup',end);cv.addEventListener('touchstart',start,{passive:false});cv.addEventListener('touchmove',move,{passive:false});cv.addEventListener('touchend',end);}
 function clearSig(id){const cv=document.getElementById(id);if(!cv)return;cv.getContext('2d').clearRect(0,0,cv.width,cv.height);cv._inked=false;}
 function confirmRecep(){
   const v=veh(rec.vehId);v.motivo=rec.trabajo;v.ingreso=new Date().toISOString().slice(0,10);
@@ -981,7 +981,7 @@ const WCARVB={sup:'0 0 872 335',front:'0 0 466 293',post:'0 0 483 341',izq:'0 0 
 let wrec={view:'sup',types:['Rayón'],sev:'leve',seq:0,client:'',vehId:null,mech:null,tipoVeh:'Automóvil',color:'',motivo:RMOTIVOS[0],trabajo:TIPOS[0],prioridad:'Media',combustible:2,km:'',accesorios:['Llave principal'],documentos:['Tarjeta de propiedad','SOAT'],obs:'',dmg:{sup:[],front:[],post:[],izq:[],der:[]}};
 
 function renderWebRecep(){
-  const _c=store.clients.find(c=>c.activo!==false)||store.clients[0];wrec.client=_c?_c.n:'';const cvs=store.vehicles.filter(v=>v.owner===wrec.client&&v.activo!==false);wrec.vehId=cvs[0]?cvs[0].id:null;
+  const _c=store.clients.find(c=>c.activo!==false)||store.clients[0];wrec.client=_c?_c.n:'';const cvs=store.vehicles.filter(v=>v.owner===wrec.client&&v.activo!==false);wrec.vehId=cvs[0]?cvs[0].id:null;wCargarVehDatos();
   document.getElementById('w-recep').innerHTML=`<div class="recep-grid">
     <div>
       <div class="wviews" id="wViews">${[['sup','Superior'],['front','Frontal'],['izq','Lat. Izq.'],['der','Lat. Der.'],['post','Posterior']].map(([k,l],i)=>`<button class="${i===0?'on':''}" onclick="wView('${k}',this)">${l}</button>`).join('')}</div>
@@ -1012,7 +1012,8 @@ function renderWebRecep(){
 function wPrio(b,p){document.querySelectorAll('#wrPrio button').forEach(x=>x.classList.remove('on'));b.classList.add('on');wrec.prioridad=p;}
 function wFuel(b,i){document.querySelectorAll('#wrFuel button').forEach(x=>x.classList.remove('on'));b.classList.add('on');wrec.combustible=i;}
 function wrClient(n){wrec.client=n;wrVehOptions();}
-function wrVehOptions(){const cvs=store.vehicles.filter(v=>v.owner===wrec.client&&v.activo!==false);wrec.vehId=cvs[0]?cvs[0].id:null;document.getElementById('wrVeh').innerHTML=cvs.map(v=>`<option value="${v.id}">${v.model} — ${v.plate}</option>`).join('')||'<option>Sin vehículos</option>';document.getElementById('wrVeh').onchange=function(){wrec.vehId=+this.value;};}
+function wrVehOptions(){const cvs=store.vehicles.filter(v=>v.owner===wrec.client&&v.activo!==false);wrec.vehId=cvs[0]?cvs[0].id:null;wCargarVehDatos();document.getElementById('wrVeh').innerHTML=cvs.map(v=>`<option value="${v.id}">${v.model} — ${v.plate}</option>`).join('')||'<option>Sin vehículos</option>';document.getElementById('wrVeh').onchange=function(){wrec.vehId=+this.value;wCargarVehDatos();renderWebRecep();};}
+function wCargarVehDatos(){const v=wrec.vehId?veh(wrec.vehId):null;if(v){if(v.tipoVeh)wrec.tipoVeh=v.tipoVeh;if(v.color)wrec.color=v.color;}}
 function wView(k,b){document.querySelectorAll('#wViews button').forEach(x=>x.classList.remove('on'));b.classList.add('on');wrec.view=k;wDrawCar();wPins();}
 function wType(b,t){const i=wrec.types.indexOf(t);if(i>=0){wrec.types.splice(i,1);b.classList.remove('on');}else{wrec.types.push(t);b.classList.add('on');}}
 function wSev(b,s){document.querySelectorAll('#wrSev button').forEach(x=>x.classList.remove('on'));b.classList.add('on');wrec.sev=s;}
@@ -1022,17 +1023,32 @@ function wPins(){const st=document.getElementById('wStage');[...st.querySelector
 function wAll(){return [].concat(...Object.values(wrec.dmg)).sort((a,b)=>a.id-b.id);}
 function wDList(){const all=wAll();const box=document.getElementById('wrList');if(!box)return;if(!all.length){box.innerHTML='<div class="empty">Aún no hay daños marcados.</div>';return;}const sn={leve:'Leve',mod:'Moderado',grave:'Grave'};box.innerHTML=all.map(d=>`<div class="di"><span class="num sev-${d.sev}">${d.id}</span><div><b>${d.type.join(', ')}</b> · ${sn[d.sev]}</div><button class="x" onclick="wDel(${d.id})">×</button></div>`).join('');}
 function wDel(id){for(const k in wrec.dmg)wrec.dmg[k]=wrec.dmg[k].filter(d=>d.id!==id);wPins();wDList();}
-function wConfirm(){if(!wrec.vehId){toast('Selecciona un vehículo');return;}const v=veh(wrec.vehId);const LADOS={sup:'Superior',front:'Frontal',izq:'Lat. Izq.',der:'Lat. Der.',post:'Posterior'};let n=0;const dmgs=[];['sup','front','izq','der','post'].forEach(k=>{(wrec.dmg[k]||[]).forEach(d=>{n++;dmgs.push({n,tipo:(Array.isArray(d.type)?d.type.join(', '):d.type),sev:d.sev,lado:LADOS[k]});});});
-  v.motivo=wrec.trabajo;v.color=wrec.color||v.color;v.tipoVeh=wrec.tipoVeh;v.ingreso=new Date().toISOString().slice(0,10);v.recepDamages=dmgs;v.recepLados=['sup','front','izq','der','post'].filter(k=>(wrec.dmg[k]||[]).length).map(k=>LADOS[k]);v.status='espera';v.progress=0;v.cerrada=false;
-  v.recepcion=mkRecep({motivo:wrec.motivo,trabajo:wrec.trabajo,tipoVeh:wrec.tipoVeh,color:wrec.color,prioridad:wrec.prioridad,combustible:FUELLBL[wrec.combustible],km:wrec.km,accesorios:wrec.accesorios,documentos:wrec.documentos,obs:wrec.obs,via:'Web 2D',firmaCli:!!(document.getElementById('wSigCli')||{})._inked,firmaRec:!!(document.getElementById('wSigRec')||{})._inked});
+async function wConfirm(){if(!wrec.vehId){toast('Selecciona un vehículo');return;}const v=veh(wrec.vehId);const LADOS={sup:'Superior',front:'Frontal',izq:'Lat. Izq.',der:'Lat. Der.',post:'Posterior'};let n=0;const dmgs=[];['sup','front','izq','der','post'].forEach(k=>{(wrec.dmg[k]||[]).forEach(d=>{n++;dmgs.push({n,tipo:(Array.isArray(d.type)?d.type.join(', '):d.type),sev:d.sev,lado:LADOS[k]});});});
+  v.motivo=wrec.trabajo;v.color=wrec.color||v.color;v.tipoVeh=wrec.tipoVeh;v.ingreso=new Date().toISOString().slice(0,10);v.recepDamages=dmgs;v.recepLados=['sup','front','izq','der','post'].filter(k=>(wrec.dmg[k]||[]).length).map(k=>LADOS[k]);v.status='espera';v.progress=0;v.cerrada=false;v.cost=0;v.pending=null;v.advances=[];v.entregado=false;v.fechaEntrega='';
+  v.recepcion=mkRecep({motivo:wrec.motivo,trabajo:wrec.trabajo,tipoVeh:wrec.tipoVeh,color:wrec.color,prioridad:wrec.prioridad,combustible:FUELLBL[wrec.combustible],km:wrec.km,accesorios:wrec.accesorios,documentos:wrec.documentos,obs:wrec.obs,via:'Web 2D',firmaCli:!!(document.getElementById('wSigCli')||{})._inked,firmaRec:!!(document.getElementById('wSigRec')||{})._inked,firmaCliImg:(document.getElementById('wSigCli')||{})._data||'',firmaRecImg:(document.getElementById('wSigRec')||{})._data||''});
   v.status='espera';v.progress=v.progress||0;
   if(wrec.mech&&wrec.mech!=='(Por asignar)')v.mech=wrec.mech;v.advances.push({t:'Vehículo recibido — recepción digital (web)',m:`${wrec.motivo} · ${dmgs.length} daño(s)`,type:'recep',ago:'ahora'});
-  wrec.seq=0;wrec.dmg={sup:[],front:[],post:[],izq:[],der:[]};wrec.types=['Rayón'];renderWebRecep();renderWeb();renderPhone();notify(v,`Tu ${v.model} fue recibido. Motivo: ${wrec.motivo}. Trabajo: ${wrec.trabajo}.`);toast('Recepción guardada con éxito ✓');abrirActaPDF(v.id);}
+  wrec.seq=0;wrec.dmg={sup:[],front:[],post:[],izq:[],der:[]};wrec.types=['Rayón'];renderWebRecep();renderWeb();renderPhone();notify(v,`Tu ${v.model} fue recibido. Motivo: ${wrec.motivo}. Trabajo: ${wrec.trabajo}.`);toast('Recepción guardada con éxito ✓');persistNow().then(()=>{setTimeout(()=>{if(confirm('Recepción registrada ✓\n\n¿Deseas ver / imprimir el acta ahora?'))abrirActaPDF(v.id);},200);});}
 function woptAdd(kind){const inp=document.getElementById('wNew_'+kind);if(!inp)return;const val=inp.value.trim();if(!val)return;const key=kind==='motivo'?'motivos':'trabajos';if(!store.config[key].includes(val))store.config[key].push(val);const sel=document.getElementById(kind==='motivo'?'wSelMotivo':'wSelTrabajo');const o=document.createElement('option');o.textContent=val;sel.appendChild(o);sel.value=val;if(kind==='motivo')wrec.motivo=val;else wrec.trabajo=val;inp.value='';toast(`Agregado: ${val}`);}
 
 /* ===== CONFIGURACIÓN ===== */
-function renderConfig(){persistData();const c=store.config;
+async function renderConfig(){persistData();const c=store.config;let _t=(window._talleresCache||[]).find(x=>x.id===CURRENT_TALLER)||null;
+  if(!_t){try{const ts=await apiReq('/api/talleres');window._talleresCache=ts;_t=ts.find(x=>x.id===CURRENT_TALLER)||{};}catch(e){_t={};}}
   document.getElementById('w-config').innerHTML=`
+   <div class="dcard" style="margin-bottom:14px"><h3 style="font-size:14px;margin-bottom:12px">📄 Encabezado y pie del acta</h3>
+     <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Esto aparece en la parte de arriba y abajo del acta que se imprime o comparte.</div>
+     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+       <div class="fld"><label>Nombre del taller</label><input id="acN" value="${(_t.nombre||'').replace(/"/g,'&quot;')}"></div>
+       <div class="fld"><label>Rubro / subtítulo</label><input id="acU" value="${(_t.rubro||'').replace(/"/g,'&quot;')}" placeholder="TALLER AUTOMOTRIZ"></div>
+       <div class="fld"><label>Teléfono</label><input id="acT" value="${(_t.telefono||'').replace(/"/g,'&quot;')}"></div>
+       <div class="fld"><label>Dirección</label><input id="acD" value="${(_t.direccion||'').replace(/"/g,'&quot;')}"></div>
+       <div class="fld"><label>RIF</label><input id="acR" value="${(_t.rif||'').replace(/"/g,'&quot;')}"></div>
+       <div class="fld"><label>Logo del taller</label><input id="acL" type="file" accept="image/*" onchange="acLeerLogo()"><span id="acLprev" style="font-size:11px;color:var(--muted)">${_t.logo?'Logo cargado ✓':''}</span></div>
+     </div>
+     <div class="fld"><label>Condiciones del servicio (pie del acta)</label><textarea id="acC" rows="3" style="width:100%;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:8px">${(_t.condiciones||'')}</textarea></div>
+     <div class="fld"><label>Pie de página (texto final)</label><input id="acP" value="${(_t.pie||'').replace(/"/g,'&quot;')}" placeholder="Ej. Gracias por su preferencia"></div>
+     <button class="wbtn wbtn-d" onclick="guardarEncabezado()">Guardar encabezado y pie</button>
+   </div>
    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start">
      <div class="dcard"><h3 style="font-size:14px;margin-bottom:12px">Moneda</h3>
        <div class="fld"><label>Símbolo</label><input value="${c.currency.sym}" oninput="curSym()=this.value;renderWeb();renderPhone()"></div>
@@ -1057,6 +1073,9 @@ function renderConfig(){persistData();const c=store.config;
 }
 function marcaAdd(){store.config.marcas.push({marca:'Nueva marca',modelos:['Modelo 1']});renderConfig();toast('Marca agregada — edítala y presiona Guardar');}
 function guardarMarcas(){persistData();renderWeb();toast('Marcas y modelos guardados con éxito ✓');}
+let _acLogoTmp='';
+function acLeerLogo(){const f=document.getElementById('acL').files[0];if(!f)return;const r=new FileReader();r.onload=()=>{_acLogoTmp=r.result;document.getElementById('acLprev').textContent='Logo nuevo cargado ✓';};r.readAsDataURL(f);}
+async function guardarEncabezado(){const g=x=>(document.getElementById(x)||{}).value||'';const body={nombre:g('acN')||undefined,rubro:g('acU')||undefined,telefono:g('acT')||undefined,direccion:g('acD')||undefined,rif:g('acR')||undefined,condiciones:g('acC')||undefined,pie:g('acP')||undefined};if(_acLogoTmp)body.logo=_acLogoTmp;try{const upd=await apiReq('/api/talleres/'+CURRENT_TALLER,{method:'PUT',body:JSON.stringify(body)});const i=(window._talleresCache||[]).findIndex(x=>x.id===CURRENT_TALLER);if(i>=0)window._talleresCache[i]=upd;else{window._talleresCache=window._talleresCache||[];window._talleresCache.push(upd);}_acLogoTmp='';toast('Encabezado del acta actualizado ✓');}catch(e){toast(e.message);}}
 function marcaDel(i){store.config.marcas.splice(i,1);renderConfig();}
 function cfgList(key){return store.config[key].map((v,i)=>`<div style="display:flex;gap:8px;margin-bottom:7px"><input style="flex:1;border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:13px" value="${v}" oninput="store.config.${key}[${i}]=this.value"><button class="wbtn wbtn-gr" onclick="cfgDel('${key}',${i})">✕</button></div>`).join('')||'<div style="font-size:12px;color:var(--muted)">Sin elementos.</div>';}
 function cfgAdd(key){store.config[key].push('Nuevo');renderConfig();}
@@ -1199,7 +1218,7 @@ function openVehForm(id){const v=id?veh(id):null;const act=v?v.activo!==false:tr
    <div class="fld"><label>Propietario</label><select id="veO">${acts.map(c=>`<option ${v&&v.owner===c.n?'selected':''}>${c.n}</option>`).join('')}</select></div>
    <div style="display:flex;gap:10px"><div class="fld" style="flex:1"><label>Marca</label><select id="veMarca" onchange="vehModelos(this.value)">${store.config.marcas.map(m=>`<option ${m.marca===curMarca?'selected':''}>${m.marca}</option>`).join('')}</select></div><div class="fld" style="flex:1"><label>Modelo</label><select id="veModelo"></select></div></div>
    <div style="display:flex;gap:10px"><div class="fld" style="flex:1"><label>Placa</label><input id="veP" value="${v?v.plate:''}" placeholder="AB123CD"></div><div class="fld" style="flex:1"><label>Año</label><input id="veY" value="${v?(v.anio||''):''}" placeholder="2022"></div></div>
-   <div class="fld"><label>Color</label><input id="veC" value="${v?(v.color||''):''}" placeholder="ej. Plata"></div>
+   <div style="display:flex;gap:10px"><div class="fld" style="flex:1"><label>Color</label><input id="veC" value="${v?(v.color||''):''}" placeholder="ej. Plata"></div><div class="fld" style="flex:1"><label>Tipo de vehículo</label><select id="veTv">${TIPO_VEH.map(t=>`<option ${v&&v.tipoVeh===t?'selected':''}>${t}</option>`).join('')}</select></div></div>
    <div style="display:flex;gap:10px"><div class="fld" style="flex:1"><label>Tipo de seguro</label><select id="veSg">${store.config.insuranceTypes.map(t=>`<option ${v&&v.tipoSeguro===t?'selected':''}>${t}</option>`).join('')}</select></div><div class="fld" style="flex:1"><label>N° de póliza</label><input id="veNs" value="${v?(v.nroSeguro||''):''}" placeholder="ej. RCV-00128"></div></div>
    <div class="fld"><label>Estado</label>${estadoSel('veA',act)}</div>
    <div style="font-size:11px;color:var(--muted);margin-bottom:10px">¿No aparece la marca o el modelo? Agrégalos en <b>Configuración › Marcas y modelos</b>.</div>
@@ -1209,7 +1228,7 @@ function openVehForm(id){const v=id?veh(id):null;const act=v?v.activo!==false:tr
 }
 function vehModelos(marca,sel){const m=store.config.marcas.find(x=>x.marca===marca);const opts=(m?m.modelos:[]);document.getElementById('veModelo').innerHTML=opts.map(o=>`<option ${o===sel?'selected':''}>${o}</option>`).join('')||'<option>—</option>';}
 function saveVeh(id){const marca=val('veMarca'),modelo=val('veModelo'),anio=val('veY').trim();const owner=val('veO');const model=`${marca} ${modelo}${anio?' '+anio:''}`.trim();
-  const data={model,marca,modelo,plate:val('veP').toUpperCase(),owner,anio,color:val('veC'),tipoSeguro:val('veSg'),nroSeguro:val('veNs'),activo:val('veA')==='1',ini:inits(marca+' '+modelo)};
+  const data={model,marca,modelo,plate:val('veP').toUpperCase(),owner,anio,color:val('veC'),tipoVeh:val('veTv'),tipoSeguro:val('veSg'),nroSeguro:val('veNs'),activo:val('veA')==='1',ini:inits(marca+' '+modelo)};
   if(id){Object.assign(veh(id),data);}else{if(data.plate&&store.vehicles.some(x=>x.plate&&x.plate.toUpperCase()===data.plate.toUpperCase())){toast('Ya existe un vehículo con esa placa');return;}const nid=Math.max(0,...store.vehicles.map(x=>x.id))+1;store.vehicles.push(Object.assign({id:nid,status:'espera',progress:0,mech:null,motivo:'Por definir',eta:'Por asignar',cost:0,nextMaint:{tipo:'Revisión general',fecha:'2026-12-31',km:'—'},reminderOn:false,ingreso:new Date().toISOString().slice(0,10),recepDamages:[],recepcion:null,advances:[],pending:null},data));COLORS[nid]=AVCOLORS[nid%AVCOLORS.length];}
   closeModal();renderWeb();renderPhone();renderWebRecep();store.emit(id?'Vehículo actualizado con éxito':'Vehículo registrado con éxito');}
 function toggleVeh(id){const v=veh(id);v.activo=v.activo===false;renderWeb();renderPhone();store.emit(v.activo?'Vehículo activado':'Vehículo inactivado');}
@@ -1327,6 +1346,7 @@ function aplicarPermisosMenu(){if(!ME||ME.rol==='superadmin')return;document.que
 const BASECONFIG=JSON.parse(JSON.stringify(store.config)); // catálogos base (moneda, docs, seguros, especialidades, marcas)
 let _persistT;
 function persistData(){if(!CURRENT_TALLER)return;clearTimeout(_persistT);_persistT=setTimeout(()=>{const d={vehicles:store.vehicles,clients:store.clients,mecanicos:store.mecanicos,usuarios:store.usuarios,history:store.history,citas:store.citas,notifs:store.notifs,facturas:store.facturas||[],config:store.config};fetch(API+'/api/state?taller='+CURRENT_TALLER,{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},body:JSON.stringify({data:d})}).catch(()=>{});},500);}
+async function persistNow(){if(!CURRENT_TALLER)return;clearTimeout(_persistT);const d={vehicles:store.vehicles,clients:store.clients,mecanicos:store.mecanicos,usuarios:store.usuarios,history:store.history,citas:store.citas,notifs:store.notifs,facturas:store.facturas||[],config:store.config};try{await fetch(API+'/api/state?taller='+CURRENT_TALLER,{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},body:JSON.stringify({data:d})});}catch(e){}}
 async function loadData(){if(!CURRENT_TALLER)return;
   // Taller nuevo = vacío (el admin carga clientes/vehículos/órdenes), pero CON catálogos base de configuración.
   store.vehicles=[];store.clients=[];store.mecanicos=[];store.usuarios=[];store.history=[];store.citas=[];store.notifs=[];store.facturas=[];

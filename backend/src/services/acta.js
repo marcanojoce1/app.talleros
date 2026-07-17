@@ -181,7 +181,7 @@ function generarActaHTML(o = {}) {
       <div class="col">
         <h3>Autorización</h3>
         <div style="font-size:9.5px;line-height:1.4">Estoy de acuerdo con las condiciones de servicio y autorizo la reparación con el material necesario, y concedo permiso para operar la unidad con fines de inspección y prueba.</div>
-        ${r.firmaCli ? `<div class="firmaimg">${firmaSVG(r.firmaCli)}</div>` : ''}
+        ${r.firmaCliImg ? `<div class="firmaimg"><img src="${esc(r.firmaCliImg)}" style="max-height:50px;max-width:180px"/></div>` : (r.firmaCli ? `<div class="firmaimg">${firmaSVG(r.firmaCli)}</div>` : '')}
         <div class="firma">Firma del Cliente</div>
       </div>
     </div>

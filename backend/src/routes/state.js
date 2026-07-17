@@ -98,6 +98,26 @@ router.post('/mis-notifs-leidas', async (req, res) => {
   res.json({ ok: true });
 });
 
+// POST /api/state/mi-autorizacion?taller=ID — cliente autoriza/deniega un trabajo adicional
+router.post('/mi-autorizacion', async (req, res) => {
+  const tallerId = Number(req.query.taller);
+  if (!tallerId) return res.status(400).json({ error: 'Falta el taller' });
+  if (!(await puedeAcceder(req.user, tallerId, false))) return res.status(403).json({ error: 'Sin acceso' });
+  const { vehId, texto, autorizado } = req.body || {};
+  const st = (await query('SELECT data FROM app_state WHERE taller_id=$1', [tallerId])).rows[0];
+  if (!st) return res.json({ ok: true });
+  let d = st.data; if (typeof d === 'string') { try { d = JSON.parse(d); } catch { d = {}; } }
+  const nombre = req.user.nombre || '';
+  d.vehicles = (d.vehicles || []).map((v) => {
+    if (v.id !== vehId || v.owner !== nombre) return v;
+    return { ...v, advances: (v.advances || []).map((a) => (a.type === 'atencion' && a.m === texto && !a.respondido ? { ...a, respondido: true, autorizado: !!autorizado } : a)) };
+  });
+  // Notificar al taller (aparece como aviso en la web)
+  d.notifs = [...(d.notifs || []), { owner: '__taller__', veh: '', text: (autorizado ? '✓ Cliente AUTORIZÓ' : '✕ Cliente DENEGÓ') + ' un trabajo adicional', time: 'ahora', read: false }];
+  await query('UPDATE app_state SET data=$2, updated_at=CURRENT_TIMESTAMP WHERE taller_id=$1', [tallerId, JSON.stringify(d)]);
+  res.json({ ok: true });
+});
+
 // DELETE /api/state?taller=ID  (reiniciar ese taller)
 router.delete('/', async (req, res) => {
   const tallerId = Number(req.query.taller);
