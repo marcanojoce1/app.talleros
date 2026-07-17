@@ -163,7 +163,9 @@ function generarActaHTML(o = {}) {
     </div>
 
     ${vistas.length ? `<div style="border-bottom:1.5px solid #111"><div style="background:#111;color:#fff;padding:3px 10px;font-size:11px;font-weight:bold">Inspección visual — vistas registradas</div>
-      <div class="cars">${vistaImgs}</div></div>` : ''}
+      <div class="cars">${vistaImgs}</div>
+      ${damages.length ? `<div style="padding:8px 12px"><b style="font-size:11px">Daños registrados (${damages.length}):</b><div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;font-size:10.5px;margin-top:5px">${damages.map((d) => `<div>● <b>#${d.n}</b> ${esc(d.tipo || 'Daño')} — ${esc(d.lado || '')} <span style="color:#888">(${esc(d.sev === 'grave' ? 'Grave' : d.sev === 'mod' ? 'Moderado' : 'Leve')})</span></div>`).join('')}</div></div>` : ''}
+      </div>` : ''}
 
     <div class="row serv">
       <div class="col">
