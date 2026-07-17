@@ -25,6 +25,8 @@ function generarActaHTML(o = {}) {
   const r = o.recepcion || {};
   const damages = o.damages || [];
   const baseUrl = o.baseUrl || '';
+  const mon = o.moneda || 'Bs.';
+  const pago = o.pago || null;
 
   // Vistas seleccionadas: SOLO las que tienen daño marcado (o las indicadas en r.lados)
   const seleccion = new Set();
@@ -36,7 +38,7 @@ function generarActaHTML(o = {}) {
   const accMarcados = (r.accesorios || []);
   const docsMarcados = (r.documentos || []);
 
-  const combN = { 'E': 0, '¼': 25, '½': 50, '¾': 75, 'F': 100 };
+  const combN = { 'E': 0, 'Vacío': 0, 'Vacio': 0, '¼': 25, '1/4': 25, '½': 50, '1/2': 50, '¾': 75, '3/4': 75, 'F': 100, 'Lleno': 100 };
   const combPct = combN[r.combustible] != null ? combN[r.combustible] : 50;
 
   // Servicios: solo el trabajo seleccionado (más los adicionales si los hay)
@@ -142,11 +144,14 @@ function generarActaHTML(o = {}) {
 
     <div class="row">
       <div class="col" style="flex:1.3">
-        <h3>Accesorios / Documentos recibidos</h3>
-        ${accMarcados.length || docsMarcados.length ? `<div class="acc">
+        <h3>Accesorios recibidos</h3>
+        ${accMarcados.length ? `<div class="acc">
           ${accMarcados.map((a) => `<div class="item"><span>${checkbox(true)} ${esc(a)}</span></div>`).join('')}
+        </div>` : `<div style="padding:6px 10px;color:#888;font-size:11px">Ninguno marcado.</div>`}
+        <h3 style="margin-top:10px">Documentos entregados</h3>
+        ${docsMarcados.length ? `<div class="acc">
           ${docsMarcados.map((a) => `<div class="item"><span>${checkbox(true)} ${esc(a)}</span></div>`).join('')}
-        </div>` : `<div style="padding:10px;color:#888;font-size:11px">No se registraron accesorios ni documentos.</div>`}
+        </div>` : `<div style="padding:6px 10px;color:#888;font-size:11px">Ninguno marcado.</div>`}
       </div>
       <div class="col fuel" style="max-width:150px">
         <h3>Combustible</h3>
@@ -163,10 +168,15 @@ function generarActaHTML(o = {}) {
     <div class="row serv">
       <div class="col">
         <h3>Servicios Solicitados</h3>
-        <table><tr><th>Descripción</th><th style="width:80px">Precio</th></tr>
-        ${servicios.map((sv) => `<tr><td>${esc(sv.desc || '')}</td><td>${esc(sv.precio || '')}</td></tr>`).join('')}
-        ${Array(Math.max(0, 3 - servicios.length)).fill('<tr><td>&nbsp;</td><td></td></tr>').join('')}
+        <table><tr><th>Descripción</th><th style="width:90px">Precio</th></tr>
+        ${servicios.map((sv) => `<tr><td>${esc(sv.desc || '')}</td><td>${sv.precio ? esc(mon) + ' ' + esc(sv.precio) : ''}</td></tr>`).join('')}
+        ${Array(Math.max(0, 2 - servicios.length)).fill('<tr><td>&nbsp;</td><td></td></tr>').join('')}
         </table>
+        ${pago ? `<table style="margin-top:6px">
+          <tr><td style="text-align:right"><b>Total</b></td><td style="width:110px"><b>${esc(mon)} ${Number(pago.total).toLocaleString('es-VE')}</b></td></tr>
+          <tr><td style="text-align:right;color:#16A34A">Pagado</td><td style="color:#16A34A">${esc(mon)} ${Number(pago.pagado).toLocaleString('es-VE')}</td></tr>
+          ${pago.saldo > 0 ? `<tr><td style="text-align:right;color:#D97706"><b>Saldo pendiente</b></td><td style="color:#D97706"><b>${esc(mon)} ${Number(pago.saldo).toLocaleString('es-VE')}</b></td></tr>` : `<tr><td style="text-align:right;color:#16A34A"><b>Estado</b></td><td style="color:#16A34A"><b>PAGADO ✓</b></td></tr>`}
+        </table>` : ''}
       </div>
       <div class="col">
         <h3>Autorización</h3>
@@ -176,7 +186,7 @@ function generarActaHTML(o = {}) {
       </div>
     </div>
 
-    ${r.obs ? `<div style="padding:8px 10px;border-bottom:1.5px solid #111"><b>Observaciones:</b> ${esc(r.obs)}</div>` : ''}
+    ${r.obs && r.obs !== '—' ? `<div style="padding:8px 10px;border-bottom:1.5px solid #111"><b>Observaciones:</b> ${esc(r.obs)}</div>` : ''}
 
     <div class="cond">
       <b>Condiciones del Servicio:</b><br/>
@@ -197,4 +207,34 @@ function firmaSVG(trazos) {
   return `<svg viewBox="0 0 300 120" width="140" height="44">${paths}</svg>`;
 }
 
-module.exports = { generarActaHTML };
+// Informe de TRABAJO REALIZADO: ficha de recepción + todas las fotos y avances del mecánico
+function generarTrabajoHTML(o = {}) {
+  const acta = generarActaHTML(o); // reusa el acta completa
+  const avances = o.avances || [];
+  const mon = o.moneda || 'Bs.';
+
+  // Sección extra: bitácora del mecánico con fotos
+  const bitacora = avances.length ? avances.map((a) => `
+    <div class="bit">
+      <div class="bit-t">${esc(a.t || 'Avance')}</div>
+      <div class="bit-m">${esc(a.m || '')}${a.ago ? ' · ' + esc(a.ago) : ''}</div>
+      ${a.foto ? `<img src="${esc(a.foto)}" class="bit-foto"/>` : ''}
+    </div>`).join('') : '<div style="color:#888;padding:10px">Sin avances registrados.</div>';
+
+  const extra = `
+    <div class="sheet" style="margin-top:16px">
+      <div style="background:#111;color:#fff;padding:8px 12px;font-weight:bold;font-size:13px">TRABAJO REALIZADO — Bitácora del mecánico</div>
+      <div style="padding:12px">${bitacora}</div>
+    </div>
+    <style>
+      .bit { border-left: 3px solid #F5B700; padding: 8px 12px; margin-bottom: 12px; background: #fafafa; }
+      .bit-t { font-weight: bold; font-size: 13px; }
+      .bit-m { color: #666; font-size: 11px; margin-top: 2px; }
+      .bit-foto { max-width: 100%; max-height: 260px; border-radius: 8px; margin-top: 8px; display: block; }
+    </style>`;
+
+  // Insertar la bitácora antes de cerrar el body
+  return acta.replace('</body>', extra + '</body>');
+}
+
+module.exports = { generarActaHTML, generarTrabajoHTML };
