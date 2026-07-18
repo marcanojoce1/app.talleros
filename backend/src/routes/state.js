@@ -132,16 +132,27 @@ router.delete('/', async (req, res) => {
 // (talleres, estados, y usuarios que no sean superadmin). Conserva el superadmin.
 router.post('/reset-total', async (req, res) => {
   if (req.user.rol !== 'superadmin') return res.status(403).json({ error: 'Solo el superadmin puede reiniciar todo' });
+  const pasos = [];
+  const borrar = async (sql, etiqueta) => {
+    try { const r = await query(sql); pasos.push(etiqueta + ': ok'); return r; }
+    catch (e) { pasos.push(etiqueta + ': ' + e.message); }
+  };
+  // Orden importa por las llaves foráneas: primero lo que depende, luego lo principal
+  await borrar('DELETE FROM app_state', 'app_state');
+  await borrar('DELETE FROM taller_admins', 'taller_admins');
+  await borrar('DELETE FROM auditoria', 'auditoria');
+  // desligar usuarios de talleres antes de borrar talleres
+  await borrar('UPDATE usuarios SET taller_id = NULL', 'desligar_usuarios');
+  await borrar("DELETE FROM usuarios WHERE rol <> 'superadmin'", 'usuarios');
+  await borrar('DELETE FROM talleres', 'talleres');
+  // conteo final para verificar
+  let quedan = {};
   try {
-    await query('DELETE FROM app_state');
-    await query('DELETE FROM taller_admins');
-    try { await query('DELETE FROM auditoria'); } catch (e) {}
-    await query("DELETE FROM usuarios WHERE rol <> 'superadmin'");
-    await query('DELETE FROM talleres');
-    res.json({ ok: true, mensaje: 'Todos los datos de prueba fueron borrados. Solo queda tu cuenta de superadmin.' });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+    quedan.usuarios = (await query('SELECT COUNT(*)::int AS c FROM usuarios')).rows[0].c;
+    quedan.talleres = (await query('SELECT COUNT(*)::int AS c FROM talleres')).rows[0].c;
+    quedan.app_state = (await query('SELECT COUNT(*)::int AS c FROM app_state')).rows[0].c;
+  } catch (e) {}
+  res.json({ ok: true, mensaje: 'Reset ejecutado. Quedan: ' + JSON.stringify(quedan), pasos, quedan });
 });
 
 module.exports = router;
