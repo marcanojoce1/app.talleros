@@ -33,7 +33,7 @@
       "checkAutomatically": "ON_LOAD"
     },
     "extra": {
-      "apiUrl": "https://PON-AQUI-TU-URL-DE-RENDER.onrender.com",
+      "apiUrl": "https://app-talleros.onrender.com",
       "eas": {
         "projectId": "efeefa2e-b6e4-497f-8c30-f96402e911c3"
       }

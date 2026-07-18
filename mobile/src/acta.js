@@ -3,26 +3,27 @@ import * as Sharing from 'expo-sharing';
 import { Alert } from 'react-native';
 import { API_URL, getToken } from './api';
 
-// Genera el acta en PDF y abre el menú de compartir del teléfono.
-export async function compartirActaPDF(tallerId, veh) {
+// Comparte el acta O el informe de trabajo realizado en PDF.
+export async function compartirActaPDF(tallerId, veh, tipo = 'acta') {
   try {
     if (!API_URL || API_URL.includes('PON-AQUI')) {
       Alert.alert('Configuración pendiente', 'La app no tiene configurada la dirección del servidor.');
       return;
     }
     const token = await getToken();
+    const ruta = tipo === 'trabajo' ? 'trabajo' : 'acta';
     let html;
     try {
-      const res = await fetch(`${API_URL}/api/acta/${tallerId}/${veh.id}?raw=1`, {
+      const res = await fetch(`${API_URL}/api/${ruta}/${tallerId}/${veh.id}?raw=1`, {
         headers: token ? { Authorization: 'Bearer ' + token } : {},
       });
       if (!res.ok) throw new Error('El servidor respondió ' + res.status);
       html = await res.text();
     } catch (netErr) {
-      Alert.alert('Sin conexión con el servidor', 'No se pudo obtener el acta. Verifica tu internet e intenta de nuevo.');
+      Alert.alert('Sin conexión con el servidor', 'No se pudo obtener el documento. Verifica tu internet e intenta de nuevo.');
       return;
     }
-    if (!html || html.length < 100) { Alert.alert('Acta vacía', 'El acta no tiene contenido todavía.'); return; }
+    if (!html || html.length < 100) { Alert.alert('Documento vacío', 'No tiene contenido todavía.'); return; }
 
     let uri;
     try {
@@ -37,13 +38,13 @@ export async function compartirActaPDF(tallerId, veh) {
     if (disponible) {
       await Sharing.shareAsync(uri, {
         mimeType: 'application/pdf',
-        dialogTitle: 'Compartir acta — ' + (veh.model || 'vehículo'),
+        dialogTitle: (tipo === 'trabajo' ? 'Trabajo realizado — ' : 'Acta — ') + (veh.model || 'vehículo'),
         UTI: 'com.adobe.pdf',
       });
     } else {
-      Alert.alert('Acta lista', 'El PDF se generó en: ' + uri);
+      Alert.alert('PDF listo', 'Se generó en: ' + uri);
     }
   } catch (e) {
-    Alert.alert('Error', e.message || 'No se pudo generar el acta.');
+    Alert.alert('Error', e.message || 'No se pudo generar el documento.');
   }
 }

@@ -35,7 +35,11 @@ export default function LoginScreen({ navigation }) {
       const esAdmin = d.user.rol === 'administrador' || d.user.rol === 'superadmin';
       const dest = esAdmin ? 'AdminHome' : 'Home';
       navigation.reset({ index: 0, routes: [{ name: dest, params: { me: d.user, talleres: d.talleres || [] } }] });
-    } catch (e) { setError(e.message); } finally { setLoading(false); }
+    } catch (e) {
+      let msg = e.message || 'No se pudo conectar';
+      if (msg.includes('Network') || msg.includes('fetch') || msg.includes('PON-AQUI')) msg = 'No se pudo conectar con el servidor. Verifica tu internet y que la app tenga la dirección correcta del servidor.';
+      setError(msg);
+    } finally { setLoading(false); }
   };
 
   const enviarCodigo = async () => {

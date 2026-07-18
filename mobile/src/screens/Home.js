@@ -28,6 +28,7 @@ export default function HomeScreen({ navigation, route }) {
   const [error, setError] = useState('');
   const [abierto, setAbierto] = useState(null);   // id del trabajo desplegado
   const [notifOpen, setNotifOpen] = useState(false);
+  const [fotoAmpliada, setFotoAmpliada] = useState(null);
 
   const cargar = useCallback(async () => {
     setError('');
@@ -114,6 +115,16 @@ export default function HomeScreen({ navigation, route }) {
     setData({ ...data, notifs: (data.notifs || []).map((n) => (n.owner === me.nombre ? { ...n, read: true } : n)) });
     try { await api('/api/state/mis-notifs-leidas?taller=' + taller.id, { method: 'POST' }); } catch (e) { /* silencioso */ }
   };
+  const responderAtencion = async (veh, avance, autorizado) => {
+    // Actualiza localmente
+    const vehicles = (data.vehicles || []).map((x) => {
+      if (x.id !== veh.id) return x;
+      return { ...x, advances: (x.advances || []).map((a) => (a === avance || (a.t === avance.t && a.m === avance.m) ? { ...a, respondido: true, autorizado } : a)) };
+    });
+    setData({ ...data, vehicles });
+    try { await api('/api/state/mi-autorizacion?taller=' + taller.id, { method: 'POST', body: JSON.stringify({ vehId: veh.id, texto: avance.m, autorizado }) }); } catch (e) { /* silencioso */ }
+    Alert.alert(autorizado ? 'Autorizado' : 'Denegado', autorizado ? 'El taller puede proceder con el trabajo.' : 'Se notificó al taller que no autorizas el trabajo.');
+  };
   return (
     <View style={s.wrap}>
       <Header titulo="Mi vehículo" sub={taller ? taller.nombre : ''} />
@@ -163,7 +174,15 @@ export default function HomeScreen({ navigation, route }) {
                     <View style={{ flex: 1 }}>
                       <Text style={s.timeT}>{a.t}</Text>
                       <Text style={s.timeM}>{a.m}{a.ago ? ' · ' + a.ago : ''}</Text>
-                      {a.foto ? <Image source={{ uri: a.foto }} style={s.timeFoto} /> : null}
+                      {a.foto ? <TouchableOpacity onPress={() => setFotoAmpliada(a.foto)}><Image source={{ uri: a.foto }} style={s.timeFoto} /><Text style={s.verFoto}>👁 Toca para ampliar</Text></TouchableOpacity> : null}
+                      {a.type === 'atencion' && !a.respondido ? (
+                        <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                          <TouchableOpacity style={s.autBtn} onPress={() => responderAtencion(v, a, true)}><Text style={s.autBtnT}>✓ Autorizar</Text></TouchableOpacity>
+                          <TouchableOpacity style={[s.autBtn, { backgroundColor: '#dc2626' }]} onPress={() => responderAtencion(v, a, false)}><Text style={s.autBtnT}>✕ Denegar</Text></TouchableOpacity>
+                        </View>
+                      ) : a.type === 'atencion' && a.respondido ? (
+                        <Text style={[s.timeM, { color: a.autorizado ? '#16A34A' : '#dc2626', fontWeight: '700', marginTop: 4 }]}>{a.autorizado ? '✓ Autorizado por ti' : '✕ Denegado por ti'}</Text>
+                      ) : null}
                     </View>
                   </View>
                 )) : <Text style={s.muted}>Aún no hay avances registrados.</Text>}
@@ -180,7 +199,7 @@ export default function HomeScreen({ navigation, route }) {
                 style={[s.actaBtn, v.status !== 'term' && v.status !== 'ent' && { opacity: 0.5 }]}
                 onPress={() => {
                   if (v.status !== 'term' && v.status !== 'ent') { Alert.alert('Aún no disponible', 'Podrás descargar el acta cuando el trabajo esté terminado.'); return; }
-                  compartirActaPDF(taller.id, v);
+                  compartirActaPDF(taller.id, v, (v.status === 'ent' || v.status === 'term') ? 'trabajo' : 'acta');
                 }}>
                 <Text style={s.actaBtnT}>📄 {v.status !== 'term' && v.status !== 'ent' ? 'Acta (al terminar)' : 'Descargar / compartir acta (PDF)'}</Text>
               </TouchableOpacity>
@@ -202,6 +221,13 @@ export default function HomeScreen({ navigation, route }) {
       </ScrollView>
 
       {/* Panel de notificaciones */}
+      <Modal visible={!!fotoAmpliada} transparent animationType="fade" onRequestClose={() => setFotoAmpliada(null)}>
+        <TouchableOpacity style={s.fotoModalWrap} activeOpacity={1} onPress={() => setFotoAmpliada(null)}>
+          {fotoAmpliada ? <Image source={{ uri: fotoAmpliada }} style={s.fotoModalImg} resizeMode="contain" /> : null}
+          <Text style={s.fotoModalCerrar}>Toca para cerrar</Text>
+        </TouchableOpacity>
+      </Modal>
+
       <Modal visible={notifOpen} transparent animationType="slide" onRequestClose={() => setNotifOpen(false)}>
         <View style={s.modalWrap}><View style={s.modalCard}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
@@ -422,8 +448,11 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
             </View>
           ) : null}
 
-          <TouchableOpacity style={s.actaBtn} onPress={() => compartirActaPDF(tallerId, v)}>
+          <TouchableOpacity style={s.actaBtn} onPress={() => compartirActaPDF(tallerId, v, 'acta')}>
             <Text style={s.actaBtnT}>📄 Compartir acta (PDF)</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[s.actaBtn, { backgroundColor: '#2563EB', marginTop: 8 }]} onPress={() => compartirActaPDF(tallerId, v, 'trabajo')}>
+            <Text style={s.actaBtnT}>📋 Trabajo realizado con fotos (PDF)</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -499,6 +528,12 @@ const s = StyleSheet.create({
   timeT: { fontWeight: '700', fontSize: 14, color: '#16191d' },
   timeM: { color: '#6b7480', fontSize: 12.5, marginTop: 2 },
   timeFoto: { width: '100%', height: 130, borderRadius: 10, marginTop: 8 },
+  verFoto: { fontSize: 11, color: '#2563EB', fontWeight: '700', marginTop: 4, textAlign: 'center' },
+  autBtn: { flex: 1, backgroundColor: '#16A34A', borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
+  autBtnT: { color: '#fff', fontWeight: '800', fontSize: 13 },
+  fotoModalWrap: { flex: 1, backgroundColor: 'rgba(0,0,0,.92)', justifyContent: 'center', alignItems: 'center' },
+  fotoModalImg: { width: '95%', height: '80%' },
+  fotoModalCerrar: { color: '#fff', marginTop: 16, fontSize: 14 },
   secTitle: { fontSize: 14, fontWeight: '800', color: '#16191d', marginBottom: 10 },
   muted: { color: '#6b7480', fontSize: 13.5, padding: 6 },
   avisoBar: { backgroundColor: '#fffaf0', borderWidth: 1.5, borderColor: '#f3d79a', borderRadius: 12, padding: 13, marginBottom: 14 },

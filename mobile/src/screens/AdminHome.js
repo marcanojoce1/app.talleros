@@ -74,7 +74,7 @@ export default function AdminHomeScreen({ navigation, route }) {
   const V = vehicles.filter((v) => v.activo !== false && v.recepcion && !v.cerrada);
 
   const kpis = {
-    espera: V.filter((v) => v.status === 'espera' || v.status === 'reprog').length,
+    espera: V.filter((v) => !v.status || v.status === 'espera' || v.status === 'reprog').length,
     rep: V.filter((v) => v.status === 'rep' || v.status === 'wait').length,
     term: V.filter((v) => v.status === 'term').length,
     entregados: (data.history || []).length,
@@ -165,7 +165,7 @@ export default function AdminHomeScreen({ navigation, route }) {
 
       {tab === 'ordenes' && taller && (() => {
         const grupos = [
-          { k: 'espera', t: 'En espera', filtro: (v) => v.status === 'espera' || v.status === 'reprog' },
+          { k: 'espera', t: 'En espera', filtro: (v) => !v.status || v.status === 'espera' || v.status === 'reprog' },
           { k: 'rep', t: 'Trabajando', filtro: (v) => v.status === 'rep' || v.status === 'wait' },
           { k: 'term', t: 'Terminado', filtro: (v) => v.status === 'term' },
         ];
@@ -459,11 +459,11 @@ function Recepcion({ data, guardar, onListo }) {
     LADOS.forEach(([k]) => { (dmg[k] || []).forEach((dd) => { n++; dmgs.push({ n, tipo: dd.tipo, sev: dd.sev, lado: LADO_NOMBRE[k] }); }); if ((dmg[k] || []).length) ladosCon.push(LADO_NOMBRE[k]); });
     const now = new Date();
     const vs = vehicles.map((v) => v.id !== vehId ? v : {
-      ...v, status: 'espera', progress: 0, cerrada: false, motivo: trabajo, mech: mech || v.mech || null,
+      ...v, status: 'espera', progress: 0, cerrada: false, cost: 0, pending: null, entregado: false, motivo: trabajo, mech: mech || v.mech || null,
       color: color || v.color, tipoVeh,
       ingreso: now.toISOString().slice(0, 10), recepDamages: dmgs, recepLados: ladosCon,
       recepcion: { fecha: now.toLocaleDateString('es-VE'), hora: now.toTimeString().slice(0, 5), tipoVeh, color, motivo, trabajo, prioridad: prio, combustible: comb, km: km || '—', accesorios: acc, documentos: docs, obs, via: 'App', firmaCli, firmaRec },
-      advances: [...(v.advances || []), { t: 'Vehículo recibido — recepción digital (app)', m: (motivo || trabajo) + ' · ' + dmgs.length + ' daño(s)', type: 'recep', ago: 'ahora' }],
+      advances: [{ t: 'Vehículo recibido — recepción digital (app)', m: (motivo || trabajo) + ' · ' + dmgs.length + ' daño(s)', type: 'recep', ago: 'ahora' }],
     });
     // guarda también los catálogos nuevos (motivos/trabajos/marcas) para que la web los vea
     guardar({ ...data, vehicles: vs, config: { ...cfg, motivos, trabajos, tiposDano: tipos, accesorios } });
@@ -476,7 +476,7 @@ function Recepcion({ data, guardar, onListo }) {
     <ScrollView contentContainerStyle={{ padding: 14 }}>
       <Dropdown label="Cliente" obligatorio value={cliente} placeholder="Selecciona el cliente"
         options={clients.map((c) => c.n)}
-        onChange={(v) => { setCliente(v); const nc = vehicles.filter((x) => x.owner === v && x.activo !== false); setVehId(nc[0] ? nc[0].id : null); }}
+        onChange={(v) => { setCliente(v); const nc = vehicles.filter((x) => x.owner === v && x.activo !== false); const pv = nc[0]; setVehId(pv ? pv.id : null); if (pv && pv.color) setColor(pv.color); if (pv && pv.tipoVeh) setTipoVeh(pv.tipoVeh); }}
         textoVacio="Aún no hay clientes. Regístralos en el módulo Clientes." />
       {cSel ? <Text style={s.muted}>{cSel.tipoDoc || ''} {cSel.doc || ''} · {cSel.tel || ''} · {cSel.correo || ''}</Text> : null}
 
@@ -484,18 +484,12 @@ function Recepcion({ data, guardar, onListo }) {
         placeholder={cliente ? 'Selecciona el vehículo' : 'Primero elige el cliente'}
         deshabilitado={!cliente}
         options={cvs.map((v) => v.model + ' · ' + v.plate)}
-        onChange={(txt) => { const v = cvs.find((x) => (x.model + ' · ' + x.plate) === txt); setVehId(v ? v.id : null); if (v && v.color) setColor(v.color); }}
+        onChange={(txt) => { const v = cvs.find((x) => (x.model + ' · ' + x.plate) === txt); setVehId(v ? v.id : null); if (v && v.color) setColor(v.color); if (v && v.tipoVeh) setTipoVeh(v.tipoVeh); }}
         textoVacio="Este cliente no tiene vehículos. Regístralos en el módulo Vehículos." />
-
-      <Dropdown label="Tipo de vehículo" value={tipoVeh} options={TIPOS_VEH} onChange={setTipoVeh} onAdd={() => {}} />
-      <Dropdown label="Color" value={color} placeholder="Selecciona el color" options={COLORES} onChange={setColor} onAdd={(t) => {}} />
 
       <Dropdown label="Mecánico responsable" value={mech} placeholder="Selecciona el mecánico"
         options={mecanicos.map((m) => m.n)} onChange={setMech}
         textoVacio="No hay mecánicos activos. Regístralos en el módulo Mecánicos." />
-
-      <Dropdown label="Tipo de vehículo" value={tipoVeh} options={TIPO_VEH} onChange={setTipoVeh} />
-      <Dropdown label="Color" value={color} placeholder="Selecciona el color" options={COLORES} onChange={setColor} onAdd={() => {}} />
 
       <Dropdown label="Motivo de ingreso" value={motivo} placeholder="Selecciona el motivo"
         options={motivos} onChange={setMotivo} onAdd={(t) => setMotivos([...motivos, t])} />
@@ -927,6 +921,7 @@ function FormModal({ modal, close, data, guardar, cur, pickFoto, taller }) {
               <Text style={s.label}>Año</Text><TextInput style={s.input} value={String(f.anio || '')} onChangeText={(v) => set('anio', v)} keyboardType="numeric" />
               <Text style={s.label}>Placa *</Text><TextInput style={s.input} value={f.plate} onChangeText={(v) => set('plate', v)} autoCapitalize="characters" />
               <Text style={s.label}>Color</Text><TextInput style={s.input} value={f.color} onChangeText={(v) => set('color', v)} />
+              <Dropdown label="Tipo de vehículo" value={f.tipoVeh || 'Automóvil'} options={TIPO_VEH} onChange={(v) => set('tipoVeh', v)} />
               <Dropdown label="Propietario" obligatorio value={f.owner} onChange={(v) => set('owner', v)}
                 options={(data.clients || []).map((c) => c.n)} placeholder="Selecciona el propietario"
                 textoVacio="Aún no hay clientes. Regístralos primero." />
