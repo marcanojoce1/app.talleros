@@ -128,4 +128,20 @@ router.delete('/', async (req, res) => {
   res.json({ ok: true });
 });
 
+// POST /api/state/reset-total — SOLO superadmin. Borra todos los datos de prueba
+// (talleres, estados, y usuarios que no sean superadmin). Conserva el superadmin.
+router.post('/reset-total', async (req, res) => {
+  if (req.user.rol !== 'superadmin') return res.status(403).json({ error: 'Solo el superadmin puede reiniciar todo' });
+  try {
+    await query('DELETE FROM app_state');
+    await query('DELETE FROM taller_admins');
+    try { await query('DELETE FROM auditoria'); } catch (e) {}
+    await query("DELETE FROM usuarios WHERE rol <> 'superadmin'");
+    await query('DELETE FROM talleres');
+    res.json({ ok: true, mensaje: 'Todos los datos de prueba fueron borrados. Solo queda tu cuenta de superadmin.' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 module.exports = router;
