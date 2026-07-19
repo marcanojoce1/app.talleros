@@ -48,7 +48,11 @@ function generarActaHTML(o = {}) {
     const v = CAR_VIEWS[k];
     const mirror = k === 'der' ? 'transform:scaleX(-1);' : '';
     const dañosVista = damages.filter((d) => (LADO_KEY[d.lado] || d.lado) === k);
-    const pins = dañosVista.map((d, i) => `<span class="pin">${d.n || i + 1}</span>`).join('');
+    const pins = dañosVista.map((d, i) => {
+      const left = (d.x != null ? d.x : 50) + '%';
+      const top = (d.y != null ? d.y : 50) + '%';
+      return `<span class="pin" style="left:${left};top:${top};transform:translate(-50%,-50%)">${d.n || i + 1}</span>`;
+    }).join('');
     return `<div class="carbox">
       <div class="carlbl">${esc(v.label)}</div>
       <div class="carimg">${baseUrl ? `<img src="${baseUrl}/img/${v.img}" style="${mirror}max-width:100%;max-height:150px"/>` : `<div style="color:#999;padding:30px">${esc(v.label)}</div>`}
@@ -93,8 +97,8 @@ function generarActaHTML(o = {}) {
   .serv td, .serv th { border: 1px solid #999; padding: 4px 6px; }
   .fuel { text-align: center; font-size: 10px; }
   .cond { font-size: 8.5px; color: #444; padding: 8px 10px; line-height: 1.4; border-top: 1.5px solid #111; }
-  .firma { border-top: 1px solid #333; margin-top: 26px; padding-top: 3px; text-align: center; font-size: 9px; }
-  .firmaimg { height: 44px; }
+  .firma { border-top: 1px solid #333; margin-top: 6px; padding-top: 3px; text-align: center; font-size: 9px; }
+  .firmaimg { min-height: 52px; display:flex; align-items:flex-end; justify-content:center; overflow:visible; }
   @media print { .noprint { display: none; } body { padding: 0; } }
   .toolbar { max-width: 780px; margin: 0 auto 10px; display: flex; gap: 8px; }
   .toolbar button { flex: 1; padding: 12px; border: 0; border-radius: 10px; font-weight: bold; font-size: 14px; cursor: pointer; }
@@ -183,7 +187,7 @@ function generarActaHTML(o = {}) {
       <div class="col">
         <h3>Autorización</h3>
         <div style="font-size:9.5px;line-height:1.4">Estoy de acuerdo con las condiciones de servicio y autorizo la reparación con el material necesario, y concedo permiso para operar la unidad con fines de inspección y prueba.</div>
-        ${r.firmaCliImg ? `<div class="firmaimg"><img src="${esc(r.firmaCliImg)}" style="max-height:50px;max-width:180px"/></div>` : (r.firmaCli ? `<div class="firmaimg">${firmaSVG(r.firmaCli)}</div>` : '')}
+        ${r.firmaCliImg ? `<div class="firmaimg"><img src="${esc(r.firmaCliImg)}" style="max-height:52px;max-width:200px;object-fit:contain"/></div>` : (r.firmaCli ? `<div class="firmaimg">${firmaSVG(r.firmaCli)}</div>` : '')}
         <div class="firma">Firma del Cliente</div>
       </div>
     </div>
