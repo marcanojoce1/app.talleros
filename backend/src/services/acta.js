@@ -209,8 +209,25 @@ function generarActaHTML(o = {}) {
 // Convierte los trazos de firma (paths) a un pequeño SVG
 function firmaSVG(trazos) {
   if (!Array.isArray(trazos) || !trazos.length) return '';
+  // Calcula el área real de la firma para que no se corte
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  trazos.forEach((p) => {
+    const nums = String(p).match(/-?\d+(\.\d+)?/g) || [];
+    for (let i = 0; i + 1 < nums.length; i += 2) {
+      const x = parseFloat(nums[i]), y = parseFloat(nums[i + 1]);
+      if (isNaN(x) || isNaN(y)) continue;
+      if (x < minX) minX = x; if (x > maxX) maxX = x;
+      if (y < minY) minY = y; if (y > maxY) maxY = y;
+    }
+  });
+  let vb = '0 0 300 120';
+  if (isFinite(minX)) {
+    const m = 8;
+    const w = Math.max(20, maxX - minX + m * 2), h = Math.max(20, maxY - minY + m * 2);
+    vb = `${minX - m} ${minY - m} ${w} ${h}`;
+  }
   const paths = trazos.map((p) => `<path d="${esc(p)}" stroke="#16191d" stroke-width="2" fill="none" stroke-linecap="round"/>`).join('');
-  return `<svg viewBox="0 0 300 120" width="140" height="44">${paths}</svg>`;
+  return `<svg viewBox="${vb}" width="170" height="50" preserveAspectRatio="xMidYMid meet">${paths}</svg>`;
 }
 
 // Informe de TRABAJO REALIZADO: ficha de recepción + todas las fotos y avances del mecánico
