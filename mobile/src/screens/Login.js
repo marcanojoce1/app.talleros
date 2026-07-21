@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { api, saveSession } from '../api';
+import { api, saveSession, getApiUrl, guardarApiUrl, cargarApiUrl } from '../api';
 
 const GRADS = [
   ['#0f2027', '#203a43', '#2c5364'],
@@ -26,6 +26,15 @@ export default function LoginScreen({ navigation }) {
   const [codigo, setCodigo] = useState('');
   const [nueva, setNueva] = useState('');
   const [step, setStep] = useState(1);
+  const [srvOpen, setSrvOpen] = useState(false);
+  const [srvUrl, setSrvUrl] = useState('');
+  React.useEffect(() => { cargarApiUrl().then((u) => { setSrvUrl(u || ''); if (!u) setSrvOpen(true); }); }, []);
+  const guardarServidor = async () => {
+    if (!srvUrl.trim()) { Alert.alert('Falta la dirección', 'Escribe la dirección de tu servidor.'); return; }
+    const u = await guardarApiUrl(srvUrl);
+    setSrvUrl(u); setSrvOpen(false); setError('');
+    Alert.alert('Servidor guardado', 'Ahora puedes iniciar sesión.\n\n' + u);
+  };
 
   const login = async () => {
     setError(''); setLoading(true);
@@ -37,7 +46,8 @@ export default function LoginScreen({ navigation }) {
       navigation.reset({ index: 0, routes: [{ name: dest, params: { me: d.user, talleres: d.talleres || [] } }] });
     } catch (e) {
       let msg = e.message || 'No se pudo conectar';
-      if (msg.includes('Network') || msg.includes('fetch') || msg.includes('PON-AQUI')) msg = 'No se pudo conectar con el servidor. Verifica tu internet y que la app tenga la dirección correcta del servidor.';
+      if (msg === 'SIN_SERVIDOR') { setSrvOpen(true); msg = 'Primero configura la dirección del servidor (botón de abajo).'; }
+      else if (msg.includes('Network') || msg.includes('fetch') || msg.includes('Failed')) { msg = 'No se pudo conectar con el servidor. Revisa tu internet o corrige la dirección del servidor abajo.'; setSrvOpen(true); }
       setError(msg);
     } finally { setLoading(false); }
   };
@@ -77,6 +87,28 @@ export default function LoginScreen({ navigation }) {
             <TouchableOpacity onPress={() => { setRecovering(true); setStep(1); }}>
               <Text style={s.link}>¿Olvidaste tu contraseña?</Text>
             </TouchableOpacity>
+
+            {srvOpen ? (
+              <View style={s.srvBox}>
+                <Text style={s.srvTit}>Dirección del servidor</Text>
+                <Text style={s.srvSub}>Es la misma dirección web donde entras desde la computadora.</Text>
+                <TextInput style={s.input} value={srvUrl} onChangeText={setSrvUrl}
+                  placeholder="app-talleros.onrender.com" placeholderTextColor="#7b838d"
+                  autoCapitalize="none" autoCorrect={false} keyboardType="url" />
+                <TouchableOpacity style={s.srvBtn} onPress={guardarServidor}>
+                  <Text style={s.srvBtnT}>Guardar servidor</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setSrvOpen(false)}>
+                  <Text style={[s.link, { marginTop: 8 }]}>Cerrar</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity onPress={() => setSrvOpen(true)}>
+                <Text style={[s.link, { fontSize: 11.5, opacity: 0.75, marginTop: 4 }]}>
+                  ⚙ Servidor: {getApiUrl() ? getApiUrl().replace(/^https?:\/\//, '') : 'sin configurar'}
+                </Text>
+              </TouchableOpacity>
+            )}
           </>
         ) : step === 1 ? (
           <>
@@ -123,6 +155,11 @@ const s = StyleSheet.create({
   btn: { backgroundColor: '#F5B700', borderRadius: 12, padding: 15, alignItems: 'center', marginTop: 18 },
   btnT: { fontWeight: '800', fontSize: 15, color: '#16191d' },
   link: { color: '#2563EB', fontWeight: '700', textAlign: 'center', marginTop: 14 },
+  srvBox: { marginTop: 16, padding: 14, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)' },
+  srvTit: { color: '#fff', fontWeight: '800', fontSize: 13.5, marginBottom: 3 },
+  srvSub: { color: '#aeb6bf', fontSize: 11.5, marginBottom: 10 },
+  srvBtn: { backgroundColor: '#F5B700', borderRadius: 11, paddingVertical: 12, alignItems: 'center', marginTop: 10 },
+  srvBtnT: { color: '#16191d', fontWeight: '800', fontSize: 13.5 },
   err: { color: '#dc2626', marginTop: 10, fontSize: 13 },
   hint: { color: '#6b7480', fontSize: 11, textAlign: 'center', marginTop: 14 },
   method: { flex: 1, borderWidth: 1.5, borderColor: '#e7e9ec', borderRadius: 11, padding: 13, alignItems: 'center' },

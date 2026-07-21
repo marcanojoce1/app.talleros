@@ -9,13 +9,19 @@ export const etiqueta = (o) => (typeof o === 'string' ? o : (o && (o.marca || o.
    - Se abre como lista vertical, con buscador
    - Opción "＋ Agregar…" al final para crear uno nuevo ahí mismo
 */
-export function Dropdown({ label, value, onChange, options, onAdd, placeholder, obligatorio, deshabilitado, textoVacio }) {
+export function Dropdown({ label, value, onChange, options, onAdd, placeholder, obligatorio, deshabilitado, textoVacio, meta }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   const [nuevo, setNuevo] = useState('');
   const [agregando, setAgregando] = useState(false);
   const opts = (options || []).map(etiqueta).filter(Boolean);
-  const filtradas = opts.filter((o) => !q.trim() || o.toLowerCase().includes(q.toLowerCase()));
+  const norm = (t) => (t == null ? '' : String(t)).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const textoDe = (o) => norm(o + ' ' + ((meta && meta[o]) || ''));
+  const filtradas = opts.filter((o) => {
+    if (!q.trim()) return true;
+    const t = textoDe(o);
+    return norm(q).split(/\s+/).filter(Boolean).every((w) => t.includes(w));
+  });
 
   const elegir = (o) => { onChange(o); setOpen(false); setQ(''); setAgregando(false); setNuevo(''); };
   const confirmarNuevo = () => {
@@ -46,14 +52,18 @@ export function Dropdown({ label, value, onChange, options, onAdd, placeholder, 
               <TouchableOpacity onPress={() => setOpen(false)}><Text style={{ fontSize: 20, color: '#6b7480' }}>✕</Text></TouchableOpacity>
             </View>
 
-            {opts.length > 6 && (
-              <TextInput style={d.search} value={q} onChangeText={setQ} placeholder="Buscar…" autoCorrect={false} />
+            {opts.length > 1 && (
+              <TextInput style={d.search} value={q} onChangeText={setQ}
+                placeholder="Buscar por nombre, cédula, teléfono…" autoCorrect={false} autoCapitalize="none" />
             )}
 
             <ScrollView style={{ maxHeight: 320 }} keyboardShouldPersistTaps="handled">
               {filtradas.length ? filtradas.map((o) => (
                 <TouchableOpacity key={o} style={[d.item, value === o && d.itemOn]} onPress={() => elegir(o)}>
-                  <Text style={[d.itemT, value === o && { fontWeight: '800' }]}>{o}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[d.itemT, value === o && { fontWeight: '800' }]}>{o}</Text>
+                    {meta && meta[o] ? <Text style={{ fontSize: 11.5, color: '#6b7480', marginTop: 2 }}>{meta[o]}</Text> : null}
+                  </View>
                   {value === o && <Text style={{ color: '#16A34A', fontWeight: '800' }}>✓</Text>}
                 </TouchableOpacity>
               )) : (
@@ -147,11 +157,29 @@ export function FirmaPad({ visible, titulo, onClose, onGuardar }) {
 }
 
 /* Muestra una firma ya guardada (miniatura) */
+// Calcula el rectángulo que ocupa la firma para que nunca se vea cortada
+export function cajaFirma(trazos) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  (trazos || []).forEach((p) => {
+    const nums = String(p).match(/-?\d+(\.\d+)?/g) || [];
+    for (let i = 0; i + 1 < nums.length; i += 2) {
+      const x = parseFloat(nums[i]), y = parseFloat(nums[i + 1]);
+      if (isNaN(x) || isNaN(y)) continue;
+      if (x < minX) minX = x; if (x > maxX) maxX = x;
+      if (y < minY) minY = y; if (y > maxY) maxY = y;
+    }
+  });
+  if (!isFinite(minX)) return { x: 0, y: 0, w: 300, h: 120 };
+  const m = 8; // margen para que no toque el borde
+  return { x: minX - m, y: minY - m, w: Math.max(20, maxX - minX + m * 2), h: Math.max(20, maxY - minY + m * 2) };
+}
+
 export function FirmaVista({ trazos, alto = 70 }) {
   if (!trazos || !trazos.length) return null;
+  const c = cajaFirma(trazos);
   return (
     <View style={{ height: alto, backgroundColor: '#fff', borderWidth: 1, borderColor: '#e7e9ec', borderRadius: 8 }}>
-      <Svg width="100%" height="100%" viewBox="0 0 300 120">
+      <Svg width="100%" height="100%" viewBox={`${c.x} ${c.y} ${c.w} ${c.h}`} preserveAspectRatio="xMidYMid meet">
         {trazos.map((p, i) => (<Path key={i} d={p} stroke="#16191d" strokeWidth={2.2} fill="none" strokeLinecap="round" />))}
       </Svg>
     </View>

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="theme-color" content="#F5B700"/>
+<link rel="manifest" href="manifest.json"/>
+<title>TallerOS</title>
+<style>
+  :root{--ink:#16191d;--muted:#6b7480;--line:#e7e9ec;--signal:#F5B700;--blue:#2563EB;--green:#16A34A}
+  *{box-sizing:border-box;margin:0;font-family:'Inter',system-ui,sans-serif}
+  body{background:#f3f4f6;color:var(--ink);max-width:480px;margin:0 auto}
+  .top{background:#16191d;color:#fff;padding:16px;display:flex;justify-content:space-between;align-items:center}
+  .top b span{color:var(--signal)}
+  .role{font-size:11px;background:#262b31;padding:4px 9px;border-radius:20px;color:#cfd4db}
+  main{padding:16px;padding-bottom:80px}
+  label{display:block;font-size:12px;font-weight:600;margin:10px 0 5px}
+  input,select{width:100%;border:1px solid var(--line);border-radius:10px;padding:12px;font-size:15px}
+  .btn{width:100%;border:none;border-radius:12px;padding:14px;font-weight:700;font-size:15px;margin-top:14px;background:var(--signal);color:#16191d}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px}
+  .pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#eef0f2}
+  .bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:1px solid var(--line);display:flex}
+  .bar button{flex:1;border:none;background:none;padding:12px;font-size:12px;font-weight:600;color:var(--muted)}
+  .bar button.on{color:var(--ink)}
+  .err{color:#dc2626;font-size:13px;margin-top:10px}
+  .muted{color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const API = localStorage.getItem('talleros_api') || 'http://localhost:4000';
+let token = localStorage.getItem('t_token') || '', me = JSON.parse(localStorage.getItem('t_me')||'null');
+async function api(p,o={}){const r=await fetch(API+p,{...o,headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{}),...(o.headers||{})}});if(!r.ok)throw new Error((await r.json().catch(()=>({}))).error||'Error');return r.json();}
+const root=()=>document.getElementById('root');
+
+function login(){root().innerHTML=`<div style="padding:24px">
+  <div style="text-align:center;margin:30px 0"><b style="font-size:28px">Taller<span style="color:#F5B700">OS</span></b></div>
+  <label>Usuario</label><input id="u" value="dcardenas">
+  <label>Contraseña</label><input id="p" type="password" value="demo1234">
+  <button class="btn" onclick="doLogin()">Ingresar</button>
+  <div class="err" id="e"></div>
+  <p class="muted" style="margin-top:14px;text-align:center">Mecánico: dcardenas · Cliente: cmendoza</p></div>`;}
+async function doLogin(){try{const d=await api('/api/auth/login',{method:'POST',body:JSON.stringify({usuario:u.value,password:p.value})});token=d.token;me=d.user;localStorage.setItem('t_token',token);localStorage.setItem('t_me',JSON.stringify(me));home();}catch(e){document.getElementById('e').textContent=e.message;}}
+function logout(){token='';me=null;localStorage.removeItem('t_token');localStorage.removeItem('t_me');login();}
+
+async function home(){
+  let body='';
+  try{
+    if(me.rol==='mecanico'){
+      const o=await api('/api/ordenes');
+      const mias=o.filter(x=>!['entregado','terminado','devolucion'].includes(x.estado));
+      body=`<h3>Órdenes asignadas</h3>${mias.map(x=>`<div class="card"><b>${x.marca||''} ${x.modelo||''}</b> <span class="pill">${x.estado}</span><div class="muted">${x.placa||''} · ${x.trabajo||''}</div>
+        <button class="btn" style="margin-top:10px" onclick="avanzar(${x.id})">Marcar en proceso</button></div>`).join('')||'<p class="muted">Sin órdenes asignadas.</p>'}`;
+    } else {
+      const o=await api('/api/ordenes');
+      body=`<h3>Mis vehículos</h3>${o.map(x=>`<div class="card"><b>${x.marca||''} ${x.modelo||''}</b> <span class="pill">${x.estado}</span><div class="muted">${x.placa||''} · Avance ${x.avance}%</div></div>`).join('')||'<p class="muted">Sin vehículos.</p>'}`;
+    }
+  }catch(e){body=`<div class="err">${e.message}. ¿Backend activo en ${API}?</div>`;}
+  root().innerHTML=`<div class="top"><b>Taller<span>OS</span></b><span class="role">${me.nombre} · ${me.rol}</span></div>
+    <main>${body}</main>
+    <div class="bar"><button class="on">Inicio</button><button onclick="logout()">Salir</button></div>`;
+}
+async function avanzar(id){try{await api('/api/ordenes/'+id+'/estado',{method:'PUT',body:JSON.stringify({estado:'en_proceso',avance:30})});home();}catch(e){alert(e.message);}}
+
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+if(token&&me)home();else login();
+</script>
+</body>
+</html>

@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Alert, ScrollView, TextInput, Image, Modal, Pressable, Linking } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { api, getState, putState, clearSession, API_URL } from '../api';
-import { compartirActaPDF } from '../acta';
+import { api, getState, putState, clearSession, getApiUrl } from '../api';
+import { compartirActaPDF, abrirEnNavegador } from '../acta';
 import { Dropdown, FirmaPad, FirmaVista, CarroSVG, etiqueta } from '../ui';
 
 const STATUS = {
@@ -38,6 +38,7 @@ export default function AdminHomeScreen({ navigation, route }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [modal, setModal] = useState(null);
+  const [qOrd, setQOrd] = useState('');
   const [fCod, setFCod] = useState(''); const [fMonto, setFMonto] = useState(''); const [fFoto, setFFoto] = useState(null);
 
   useEffect(() => {
@@ -112,6 +113,9 @@ export default function AdminHomeScreen({ navigation, route }) {
     { k: 'recep', ic: '📋', c: '#0891b2', t: 'Recepción', s: 'Recibir vehículo' },
     { k: 'ordenes', ic: '🔧', c: '#D97706', t: 'Órdenes', s: V.length + ' activas' },
     { k: 'hist', ic: '✅', c: '#16A34A', t: 'Trabajos', s: (data.history || []).length + ' realizados' },
+    { k: 'mant', ic: '🔔', c: '#ca8a04', t: 'Mantenimientos', s: vehicles.filter((v) => v.proximoMant).length + ' programados' },
+    { k: 'sos', ic: '🚨', c: (data.sos || []).some((x) => x.estado === 'abierto') ? '#dc2626' : '#16A34A', t: 'Auxilio vial',
+      s: (data.sos || []).filter((x) => x.estado === 'abierto').length ? '⚠ ' + (data.sos || []).filter((x) => x.estado === 'abierto').length + ' solicitando' : 'Sin solicitudes' },
     { k: 'cli', ic: '👥', c: '#7c3aed', t: 'Clientes', s: kpis.clientes + ' activos' },
     { k: 'veh', ic: '🚗', c: '#0f766e', t: 'Vehículos', s: vehicles.length + ' registrados' },
     { k: 'mec', ic: '🛠️', c: '#be185d', t: 'Mecánicos', s: kpis.mecanicos + ' activos' },
@@ -121,7 +125,7 @@ export default function AdminHomeScreen({ navigation, route }) {
   ];
   if (esSuper) MODULOS.push({ k: 'talleres', ic: '🏭', c: '#16191d', t: 'Talleres', s: 'Administrar' });
 
-  const TITULOS = { dash: 'Dashboard', recep: 'Recepción digital', ordenes: 'Órdenes de taller', hist: 'Trabajos realizados', cli: 'Clientes', veh: 'Vehículos', mec: 'Mecánicos', fact: 'Facturación', usuarios: 'Usuarios y accesos', config: 'Configuración', talleres: 'Talleres' };
+  const TITULOS = { dash: 'Dashboard', recep: 'Recepción digital', ordenes: 'Órdenes de taller', hist: 'Trabajos realizados', mant: 'Próximos mantenimientos', sos: 'Auxilio vial', cli: 'Clientes', veh: 'Vehículos', mec: 'Mecánicos', fact: 'Facturación', usuarios: 'Usuarios y accesos', config: 'Configuración', talleres: 'Talleres' };
 
   // Barra superior con botón Regresar en todos los módulos
   const Top = () => (
@@ -171,9 +175,11 @@ export default function AdminHomeScreen({ navigation, route }) {
         ];
         return (
           <ScrollView contentContainerStyle={{ padding: 14 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={recargar} />}>
+            <TextInput style={[s.input, { marginBottom: 14 }]} value={qOrd} onChangeText={setQOrd}
+              placeholder="Buscar por vehículo, placa, cliente o mecánico…" />
             {!V.length && !loading ? <Text style={s.muted}>Sin vehículos recibidos. Registra una recepción para generar la orden.</Text> : null}
             {grupos.map((g) => {
-              const items = V.filter(g.filtro);
+              const items = V.filter(g.filtro).filter((v) => coincide(v, qOrd));
               return (
                 <View key={g.k} style={{ marginBottom: 18 }}>
                   <View style={s.secHead}>
@@ -210,7 +216,8 @@ export default function AdminHomeScreen({ navigation, route }) {
                           )}
                         </View>
                         <View style={{ flexDirection: 'row', gap: 14, marginTop: 9 }}>
-                          <TouchableOpacity onPress={() => setModal({ tipo: 'acta', item })}><Text style={s.link}>Ver acta →</Text></TouchableOpacity>
+                          <TouchableOpacity onPress={() => setModal({ tipo: 'avances', item })}><Text style={[s.link, { color: '#F5B700' }]}>📸 Ver avances{(item.advances || []).filter((a) => a.foto).length ? ' (' + (item.advances || []).filter((a) => a.foto).length + ')' : ''} →</Text></TouchableOpacity>
+                          <TouchableOpacity onPress={() => abrirEnNavegador(taller.id, item, 'acta')}><Text style={s.link}>Ver acta →</Text></TouchableOpacity>
                           <TouchableOpacity onPress={() => compartirActaPDF(taller.id, item)}><Text style={s.link}>Compartir acta (PDF) →</Text></TouchableOpacity>
                         </View>
                       </View>
@@ -224,6 +231,8 @@ export default function AdminHomeScreen({ navigation, route }) {
       })()}
 
       {tab === 'hist' && taller && <Historial data={data} guardar={guardar} cur={cur} loading={loading} recargar={recargar} pickFoto={pickFoto} taller={taller} />}
+      {tab === 'mant' && taller && <Mantenimientos data={data} guardar={guardar} cur={cur} loading={loading} recargar={recargar} taller={taller} />}
+      {tab === 'sos' && taller && <AuxilioVial data={data} loading={loading} recargar={recargar} taller={taller} />}
 
       {tab === 'cli' && taller && (
         <Listado titulo="＋ Nuevo cliente" onAdd={() => setModal({ tipo: 'cliente', item: null })} datos={clients} loading={loading} recargar={recargar} vacio="Sin clientes."
@@ -287,23 +296,31 @@ export default function AdminHomeScreen({ navigation, route }) {
       {tab === 'talleres' && esSuper && <Talleres />}
 
       {modal && modal.tipo === 'acta' && <Acta item={modal.item} close={() => setModal(null)} />}
-      {modal && modal.tipo !== 'acta' && <FormModal modal={modal} close={() => setModal(null)} data={data} guardar={guardar} cur={cur} pickFoto={pickFoto} taller={taller} />}
+      {modal && modal.tipo === 'avances' && <AvancesModal item={modal.item} close={() => setModal(null)} taller={taller} />}
+      {modal && modal.tipo !== 'acta' && modal.tipo !== 'avances' && <FormModal modal={modal} close={() => setModal(null)} data={data} guardar={guardar} cur={cur} pickFoto={pickFoto} taller={taller} />}
     </View>
   );
 }
 
 /* =================== LISTADO GENÉRICO =================== */
+/* =================== BÚSQUEDA =================== */
+const norm = (t) => (t == null ? '' : String(t)).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+function coincide(x, q) {
+  if (!q || !q.trim()) return true;
+  const campos = [x.n, x.model, x.plate, x.owner, x.mech, x.motivo, x.marca, x.modelo, x.color,
+    x.anio, x.tipoVeh, x.doc, x.tel, x.mail, x.correo, x.usuario, x.nombre,
+    x.recepcion && x.recepcion.trabajo, x.recepcion && x.recepcion.motivo];
+  const t = norm(campos.filter(Boolean).join(' '));
+  return norm(q).split(/\s+/).filter(Boolean).every((w) => t.includes(w));
+}
+
 function Listado({ titulo, onAdd, datos, loading, recargar, vacio, render }) {
   const [q, setQ] = useState('');
-  const filtrados = (datos || []).filter((x) => {
-    if (!q.trim()) return true;
-    const t = (JSON.stringify(x) || '').toLowerCase();
-    return t.includes(q.toLowerCase());
-  });
+  const filtrados = (datos || []).filter((x) => coincide(x, q));
   return (
     <View style={{ flex: 1 }}>
       <View style={{ padding: 14, paddingBottom: 0, gap: 10 }}>
-        <TextInput style={s.input} value={q} onChangeText={setQ} placeholder="Buscar…" />
+        <TextInput style={s.input} value={q} onChangeText={setQ} placeholder="Buscar por nombre, placa, teléfono…" />
         <TouchableOpacity style={s.addBtn} onPress={onAdd}><Text style={s.addT}>{titulo}</Text></TouchableOpacity>
       </View>
       <FlatList data={filtrados} keyExtractor={(x, i) => String(x.id || i)} contentContainerStyle={{ padding: 14 }}
@@ -430,6 +447,8 @@ function Recepcion({ data, guardar, onListo }) {
   const [tipo, setTipo] = useState((cfg.tiposDano && cfg.tiposDano[0]) || 'Rayón');
   const [sev, setSev] = useState('leve');
   const [dmg, setDmg] = useState({ sup: [], front: [], izq: [], der: [], post: [] });
+  const [carSize, setCarSize] = useState({ w: 1, h: 1 });
+  const scrollRef = React.useRef(null);
   const [motivo, setMotivo] = useState('');
   const [trabajo, setTrabajo] = useState('');
   const [prio, setPrio] = useState('Media');
@@ -448,7 +467,7 @@ function Recepcion({ data, guardar, onListo }) {
   const vSel = vehicles.find((v) => v.id === vehId);
   const cSel = clients.find((c) => c.n === cliente);
   const togArr = (arr, set, v) => set(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
-  const marcar = (e) => { const { locationX, locationY } = e.nativeEvent; setDmg((d) => ({ ...d, [lado]: [...d[lado], { x: locationX, y: locationY, tipo, sev }] })); };
+  const marcar = (e) => { const { locationX, locationY } = e.nativeEvent; const xp = Math.max(0, Math.min(100, (locationX / (carSize.w || 1)) * 100)); const yp = Math.max(0, Math.min(100, (locationY / (carSize.h || 1)) * 100)); setDmg((d) => ({ ...d, [lado]: [...d[lado], { x: xp, y: yp, tipo, sev }] })); };
   const total = Object.values(dmg).reduce((a, arr) => a + arr.length, 0);
 
   const confirmar = () => {
@@ -456,7 +475,7 @@ function Recepcion({ data, guardar, onListo }) {
     if (!vehId) { Alert.alert('Falta', 'Selecciona un vehículo.'); return; }
     if (!trabajo.trim()) { Alert.alert('Falta', 'Indica el trabajo a realizar.'); return; }
     let n = 0; const dmgs = []; const ladosCon = [];
-    LADOS.forEach(([k]) => { (dmg[k] || []).forEach((dd) => { n++; dmgs.push({ n, tipo: dd.tipo, sev: dd.sev, lado: LADO_NOMBRE[k] }); }); if ((dmg[k] || []).length) ladosCon.push(LADO_NOMBRE[k]); });
+    LADOS.forEach(([k]) => { (dmg[k] || []).forEach((dd) => { n++; dmgs.push({ n, tipo: dd.tipo, sev: dd.sev, lado: LADO_NOMBRE[k], x: dd.x, y: dd.y }); }); if ((dmg[k] || []).length) ladosCon.push(LADO_NOMBRE[k]); });
     const now = new Date();
     const vs = vehicles.map((v) => v.id !== vehId ? v : {
       ...v, status: 'espera', progress: 0, cerrada: false, cost: 0, pending: null, entregado: false, motivo: trabajo, mech: mech || v.mech || null,
@@ -469,13 +488,17 @@ function Recepcion({ data, guardar, onListo }) {
     guardar({ ...data, vehicles: vs, config: { ...cfg, motivos, trabajos, tiposDano: tipos, accesorios } });
     setDmg({ sup: [], front: [], izq: [], der: [], post: [] }); setMotivo(''); setTrabajo(''); setAcc([]); setDocs([]); setObs('');
     setFirmaCli(null); setFirmaRec(null); setKm(''); setMech(''); setColor(''); setTipoVeh('Automóvil');
-    Alert.alert('Recepción registrada ✓', 'Se generó la Orden de Trabajo. El vehículo ya está en el módulo Órdenes.', [{ text: 'Ver órdenes', onPress: onListo }, { text: 'Seguir aquí' }]);
+    Alert.alert('Recepción registrada ✓', 'Se generó la Orden de Trabajo. El vehículo ya está en el módulo Órdenes.', [
+      { text: 'Ver órdenes', onPress: onListo },
+      { text: 'Registrar otra', onPress: () => { setCliente(''); setVehId(null); setPrio('Media'); setComb('½'); setDocs([]); if (scrollRef.current) scrollRef.current.scrollTo({ y: 0, animated: true }); } },
+    ]);
   };
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 14 }}>
+    <ScrollView ref={scrollRef} contentContainerStyle={{ padding: 14 }}>
       <Dropdown label="Cliente" obligatorio value={cliente} placeholder="Selecciona el cliente"
         options={clients.map((c) => c.n)}
+        meta={Object.fromEntries(clients.map((c) => [c.n, [c.tipoDoc, c.doc, c.tel, c.correo].filter(Boolean).join(' · ')]))}
         onChange={(v) => { setCliente(v); const nc = vehicles.filter((x) => x.owner === v && x.activo !== false); const pv = nc[0]; setVehId(pv ? pv.id : null); if (pv && pv.color) setColor(pv.color); if (pv && pv.tipoVeh) setTipoVeh(pv.tipoVeh); }}
         textoVacio="Aún no hay clientes. Regístralos en el módulo Clientes." />
       {cSel ? <Text style={s.muted}>{cSel.tipoDoc || ''} {cSel.doc || ''} · {cSel.tel || ''} · {cSel.correo || ''}</Text> : null}
@@ -484,11 +507,14 @@ function Recepcion({ data, guardar, onListo }) {
         placeholder={cliente ? 'Selecciona el vehículo' : 'Primero elige el cliente'}
         deshabilitado={!cliente}
         options={cvs.map((v) => v.model + ' · ' + v.plate)}
+        meta={Object.fromEntries(cvs.map((v) => [v.model + ' · ' + v.plate, [v.color, v.anio, v.tipoVeh].filter(Boolean).join(' · ')]))}
         onChange={(txt) => { const v = cvs.find((x) => (x.model + ' · ' + x.plate) === txt); setVehId(v ? v.id : null); if (v && v.color) setColor(v.color); if (v && v.tipoVeh) setTipoVeh(v.tipoVeh); }}
         textoVacio="Este cliente no tiene vehículos. Regístralos en el módulo Vehículos." />
 
       <Dropdown label="Mecánico responsable" value={mech} placeholder="Selecciona el mecánico"
-        options={mecanicos.map((m) => m.n)} onChange={setMech}
+        options={mecanicos.map((m) => m.n)}
+        meta={Object.fromEntries(mecanicos.map((m) => [m.n, [m.esp, m.tel, m.doc].filter(Boolean).join(' · ')]))}
+        onChange={setMech}
         textoVacio="No hay mecánicos activos. Regístralos en el módulo Mecánicos." />
 
       <Dropdown label="Motivo de ingreso" value={motivo} placeholder="Selecciona el motivo"
@@ -509,13 +535,13 @@ function Recepcion({ data, guardar, onListo }) {
       </ScrollView>
 
       <Text style={{ fontSize: 11, color: '#6b7480', marginTop: 8 }}>Toca sobre el vehículo para marcar un daño en la vista seleccionada.</Text>
-      <Pressable style={s.diagram} onPress={marcar}>
+      <Pressable style={s.diagram} onPress={marcar} onLayout={(e) => setCarSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
         <View style={s.diagramHead}><Text style={s.diagramHeadT}>{(LADO_NOMBRE[lado] || '').toUpperCase()}</Text></View>
         <View style={[lado === 'der' && { transform: [{ scaleX: -1 }] }]} pointerEvents="none">
           <CarroSVG lado={lado} />
         </View>
         {(dmg[lado] || []).map((dd, i) => (
-          <View key={i} style={[s.pin, { left: dd.x - 11, top: dd.y - 11, backgroundColor: dd.sev === 'grave' ? '#dc2626' : dd.sev === 'mod' ? '#D97706' : '#2563EB' }]}><Text style={s.pinT}>{i + 1}</Text></View>
+          <View key={i} style={[s.pin, { left: dd.x + '%', top: dd.y + '%', marginLeft: -11, marginTop: -11, backgroundColor: dd.sev === 'grave' ? '#dc2626' : dd.sev === 'mod' ? '#D97706' : '#2563EB' }]}><Text style={s.pinT}>{i + 1}</Text></View>
         ))}
       </Pressable>
 
@@ -578,8 +604,275 @@ function Recepcion({ data, guardar, onListo }) {
 }
 
 /* =================== HISTORIAL =================== */
+/* =================== AUXILIO VIAL =================== */
+function AuxilioVial({ data, loading, recargar, taller }) {
+  const [sel, setSel] = useState(null);
+  const [q, setQ] = useState('');
+  const todas = [...(data.sos || [])].sort((a, b) => (b.creado || '').localeCompare(a.creado || ''));
+  const lista = todas.filter((x) => coincide({ n: x.cliente, plate: x.placa, model: x.vehiculo, tel: x.telefono, motivo: x.descripcion }, q));
+  const abiertas = todas.filter((x) => x.estado === 'abierto');
+  const hayAlerta = abiertas.length > 0;
+
+  const cambiarEstado = async (x, estado) => {
+    try {
+      await api('/api/state/sos-estado?taller=' + taller.id, { method: 'POST', body: JSON.stringify({ id: x.id, estado }) });
+      setSel(null); recargar();
+    } catch (e) { Alert.alert('Error', (e && e.message) || 'No se pudo actualizar.'); }
+  };
+  const abrirMapa = (x) => {
+    const url = (x.lat && x.lng)
+      ? 'https://www.google.com/maps/search/?api=1&query=' + x.lat + ',' + x.lng
+      : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(x.ubicacionTexto || '');
+    Linking.openURL(url).catch(() => Alert.alert('Mapa', 'No se pudo abrir el mapa.'));
+  };
+  const EST = {
+    abierto: { t: 'SOLICITANDO', c: '#dc2626', bg: '#fdecec' },
+    atendido: { t: 'En camino', c: '#D97706', bg: '#fef3e2' },
+    cerrado: { t: 'Resuelto', c: '#16A34A', bg: '#e8f7ee' },
+  };
+
+  return (
+    <View style={{ flex: 1 }}>
+      <View style={[s.sosBanner, { backgroundColor: hayAlerta ? '#dc2626' : '#16A34A' }]}>
+        <Text style={s.sosBannerT}>
+          {hayAlerta ? '🚨 ' + abiertas.length + ' cliente(s) solicitando auxilio' : '✓ Sin solicitudes de auxilio'}
+        </Text>
+      </View>
+      <FlatList data={lista} keyExtractor={(x) => String(x.id)} contentContainerStyle={{ padding: 14 }}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={recargar} />}
+        ListHeaderComponent={<TextInput style={[s.input, { marginBottom: 12 }]} value={q} onChangeText={setQ} placeholder="Buscar por cliente, placa o teléfono…" />}
+        ListEmptyComponent={!loading && <Text style={s.muted}>No hay solicitudes de auxilio vial.</Text>}
+        renderItem={({ item }) => {
+          const e = EST[item.estado] || EST.abierto;
+          return (
+            <TouchableOpacity style={[s.card, { borderLeftWidth: 5, borderLeftColor: e.c }]} onPress={() => setSel(item)} activeOpacity={0.8}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <Text style={s.veh}>{item.cliente}</Text>
+                <Text style={[s.pill, { backgroundColor: e.bg, color: e.c }]}>{e.t}</Text>
+              </View>
+              <Text style={[s.muted, { marginTop: 4 }]}>🚗 {item.vehiculo} {item.placa ? '· ' + item.placa : ''}</Text>
+              <Text style={[s.muted, { marginTop: 3 }]} numberOfLines={2}>⚠️ {item.descripcion}</Text>
+              <Text style={[s.muted, { marginTop: 3 }]}>📅 {item.fecha} · {item.hora}</Text>
+            </TouchableOpacity>
+          );
+        }} />
+
+      <Modal visible={!!sel} transparent animationType="slide" onRequestClose={() => setSel(null)}>
+        <View style={s.modalWrap}><View style={s.modalCard}>
+          {sel ? (() => {
+            const e = EST[sel.estado] || EST.abierto;
+            return (
+              <ScrollView>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={s.h}>🚨 Auxilio vial</Text>
+                  <TouchableOpacity onPress={() => setSel(null)}><Text style={{ fontSize: 20, color: '#6b7480' }}>✕</Text></TouchableOpacity>
+                </View>
+                <View style={[s.card, { backgroundColor: e.bg, borderColor: e.c, marginTop: 10 }]}>
+                  <Text style={{ fontWeight: '800', color: e.c, fontSize: 15 }}>{e.t}</Text>
+                  <Text style={{ color: e.c, marginTop: 4, fontSize: 13 }}>{sel.fecha} a las {sel.hora}</Text>
+                </View>
+
+                <Text style={[s.label, { marginTop: 14 }]}>Cliente</Text>
+                <Text style={s.muted}>{sel.cliente}{sel.telefono ? ' · 📞 ' + sel.telefono : ''}</Text>
+
+                <Text style={[s.label, { marginTop: 12 }]}>Vehículo</Text>
+                <Text style={s.muted}>{sel.vehiculo} {sel.placa ? '· ' + sel.placa : ''}</Text>
+
+                <Text style={[s.label, { marginTop: 12 }]}>Avería reportada</Text>
+                <Text style={s.muted}>{sel.descripcion}</Text>
+
+                <Text style={[s.label, { marginTop: 12 }]}>Ubicación</Text>
+                <Text style={s.muted}>{sel.ubicacionTexto || 'No indicada'}</Text>
+                {sel.lat && sel.lng ? <Text style={[s.muted, { marginTop: 2 }]}>📍 {Number(sel.lat).toFixed(5)}, {Number(sel.lng).toFixed(5)}</Text> : null}
+
+                {(sel.lat && sel.lng) || sel.ubicacionTexto ? (
+                  <TouchableOpacity style={[s.avBtn, { marginTop: 16, backgroundColor: '#0891b2' }]} onPress={() => abrirMapa(sel)}>
+                    <Text style={s.avBtnT}>🗺️ Ver en el mapa</Text>
+                  </TouchableOpacity>
+                ) : null}
+                {sel.telefono ? (
+                  <>
+                    <TouchableOpacity style={[s.avBtn, { marginTop: 8 }]} onPress={() => Linking.openURL('tel:' + sel.telefono)}>
+                      <Text style={s.avBtnT}>📞 Llamar al cliente</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[s.avBtn, { marginTop: 8, backgroundColor: '#16A34A' }]}
+                      onPress={() => Linking.openURL('https://wa.me/' + String(sel.telefono).replace(/\D/g, '') + '?text=' + encodeURIComponent('Hola ' + sel.cliente + ', recibimos tu solicitud de auxilio vial. Vamos en camino.'))}>
+                      <Text style={s.avBtnT}>💬 WhatsApp</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : null}
+
+                {sel.estado === 'abierto' ? (
+                  <TouchableOpacity style={[s.avBtn, { marginTop: 14, backgroundColor: '#D97706' }]} onPress={() => cambiarEstado(sel, 'atendido')}>
+                    <Text style={s.avBtnT}>🚐 Marcar: vamos en camino</Text>
+                  </TouchableOpacity>
+                ) : null}
+                {sel.estado !== 'cerrado' ? (
+                  <TouchableOpacity style={[s.avBtn, { marginTop: 8, backgroundColor: '#16191d' }]} onPress={() => cambiarEstado(sel, 'cerrado')}>
+                    <Text style={s.avBtnT}>✓ Marcar como resuelto</Text>
+                  </TouchableOpacity>
+                ) : null}
+                <View style={{ height: 14 }} />
+              </ScrollView>
+            );
+          })() : null}
+        </View></View>
+      </Modal>
+    </View>
+  );
+}
+
+/* =================== PRÓXIMOS MANTENIMIENTOS =================== */
+function Mantenimientos({ data, guardar, cur, loading, recargar, taller }) {
+  const [q, setQ] = useState('');
+  const [sel, setSel] = useState(null);
+  const aNum = (f) => {
+    if (!f) return 0;
+    const t = String(f).trim(); let d, m, a;
+    if (t.includes('/')) { const p = t.split('/'); d = +p[0]; m = +p[1]; a = +p[2]; }
+    else if (t.includes('-')) { const p = t.split('-'); if (p[0].length === 4) { a = +p[0]; m = +p[1]; d = +p[2]; } else { d = +p[0]; m = +p[1]; a = +p[2]; } }
+    else return 0;
+    if (!a || !m || !d) return 0;
+    if (a < 100) a += 2000;
+    return a * 10000 + m * 100 + d;
+  };
+  const hoy = (() => { const d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); })();
+  const lista = (data.vehicles || [])
+    .filter((v) => v.proximoMant && coincide({ ...v, ...(v.proximoMant || {}) }, q))
+    .sort((a, b) => aNum(a.proximoMant.fecha) - aNum(b.proximoMant.fecha));
+
+  const estadoDe = (f) => {
+    const n = aNum(f);
+    if (!n) return { t: 'Sin fecha', c: '#6b7480', bg: '#f1f3f5' };
+    if (n < hoy) return { t: 'Vencido', c: '#dc2626', bg: '#fdecec' };
+    if (n === hoy) return { t: 'Es hoy', c: '#D97706', bg: '#fef3e2' };
+    return { t: 'Programado', c: '#16A34A', bg: '#e8f7ee' };
+  };
+
+  const quitar = (v) => {
+    Alert.alert('Quitar recordatorio', '¿Eliminar el próximo mantenimiento de ' + v.model + '?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Quitar', style: 'destructive', onPress: () => {
+        const vehicles = (data.vehicles || []).map((x) => (x.id === v.id ? { ...x, proximoMant: null } : x));
+        guardar({ ...data, vehicles }); setSel(null);
+      } },
+    ]);
+  };
+
+  const avisar = (v) => {
+    const p = v.proximoMant || {};
+    const txt = 'Recordatorio de mantenimiento\n' + v.model + ' (' + v.plate + ')\n'
+      + p.tipo + (p.km && p.km !== '—' ? ' · ' + p.km + ' km' : '') + '\nFecha sugerida: ' + p.fecha
+      + '\n\n' + (taller ? taller.nombre : '');
+    Linking.openURL('https://wa.me/?text=' + encodeURIComponent(txt)).catch(() => Alert.alert('WhatsApp', 'No se pudo abrir WhatsApp.'));
+  };
+
+  return (
+    <View style={{ flex: 1 }}>
+      <FlatList data={lista} keyExtractor={(v) => String(v.id)} contentContainerStyle={{ padding: 14 }}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={recargar} />}
+        ListHeaderComponent={
+          <TextInput style={[s.input, { marginBottom: 12 }]} value={q} onChangeText={setQ}
+            placeholder="Buscar por vehículo, placa, cliente o tipo…" />
+        }
+        ListEmptyComponent={!loading && <Text style={s.muted}>No hay mantenimientos programados. Se crean cuando el mecánico marca un trabajo como terminado.</Text>}
+        renderItem={({ item }) => {
+          const p = item.proximoMant || {};
+          const e = estadoDe(p.fecha);
+          return (
+            <TouchableOpacity style={[s.card, { borderLeftWidth: 5, borderLeftColor: e.c }]} onPress={() => setSel(item)} activeOpacity={0.8}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <Text style={s.veh}>{item.model}</Text>
+                <Text style={[s.pill, { backgroundColor: e.bg, color: e.c }]}>{e.t}</Text>
+              </View>
+              <View style={s.plate}><Text style={s.plateT}>{item.plate}</Text></View>
+              <Text style={[s.muted, { marginTop: 6 }]}>👤 {item.owner || 'Sin cliente'}</Text>
+              <Text style={[s.muted, { marginTop: 2 }]}>🔧 {p.tipo}{p.km && p.km !== '—' ? ' · ' + p.km + ' km' : ''}</Text>
+              <Text style={{ marginTop: 6, fontWeight: '800', color: e.c }}>📅 {p.fecha}</Text>
+            </TouchableOpacity>
+          );
+        }} />
+
+      <Modal visible={!!sel} transparent animationType="slide" onRequestClose={() => setSel(null)}>
+        <View style={s.modalWrap}><View style={s.modalCard}>
+          {sel ? (() => {
+            const p = sel.proximoMant || {};
+            const e = estadoDe(p.fecha);
+            const cli = (data.clients || []).find((c) => c.n === sel.owner) || {};
+            return (
+              <ScrollView>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <Text style={s.h}>{sel.model}</Text>
+                  <TouchableOpacity onPress={() => setSel(null)}><Text style={{ fontSize: 20, color: '#6b7480' }}>✕</Text></TouchableOpacity>
+                </View>
+                <View style={s.plate}><Text style={s.plateT}>{sel.plate}</Text></View>
+
+                <View style={[s.card, { backgroundColor: e.bg, borderColor: e.c, marginTop: 12 }]}>
+                  <Text style={{ fontWeight: '800', color: e.c, fontSize: 14 }}>🔔 {p.tipo}</Text>
+                  <Text style={{ color: e.c, marginTop: 4 }}>Fecha programada: {p.fecha} ({e.t})</Text>
+                  {p.km && p.km !== '—' ? <Text style={{ color: e.c, marginTop: 2 }}>Kilometraje: {p.km} km</Text> : null}
+                  {p.mech ? <Text style={{ color: e.c, marginTop: 2 }}>Indicado por: {p.mech}</Text> : null}
+                </View>
+
+                <Text style={[s.label, { marginTop: 14 }]}>Cliente</Text>
+                <Text style={s.muted}>{sel.owner || '—'}{cli.tel ? ' · 📞 ' + cli.tel : ''}{cli.doc ? ' · ' + cli.doc : ''}</Text>
+
+                <Text style={[s.label, { marginTop: 12 }]}>Último trabajo</Text>
+                <Text style={s.muted}>{sel.motivo || '—'}{sel.mech ? ' · 🔧 ' + sel.mech : ''}</Text>
+
+                <TouchableOpacity style={[s.avBtn, { marginTop: 16 }]} onPress={() => abrirEnNavegador(taller.id, sel, 'acta')}>
+                  <Text style={s.avBtnT}>📄 Ver acta</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[s.avBtn, { backgroundColor: '#16191d', marginTop: 8 }]} onPress={() => abrirEnNavegador(taller.id, sel, 'trabajo')}>
+                  <Text style={s.avBtnT}>📋 Ver trabajo realizado</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[s.avBtn, { backgroundColor: '#16A34A', marginTop: 8 }]} onPress={() => avisar(sel)}>
+                  <Text style={s.avBtnT}>💬 Recordar por WhatsApp</Text>
+                </TouchableOpacity>
+                {cli.tel ? (
+                  <TouchableOpacity style={[s.avBtn, { backgroundColor: '#0891b2', marginTop: 8 }]} onPress={() => Linking.openURL('tel:' + cli.tel)}>
+                    <Text style={s.avBtnT}>📞 Llamar al cliente</Text>
+                  </TouchableOpacity>
+                ) : null}
+                <TouchableOpacity onPress={() => quitar(sel)}>
+                  <Text style={{ textAlign: 'center', color: '#dc2626', marginTop: 16, fontWeight: '700' }}>Quitar recordatorio</Text>
+                </TouchableOpacity>
+                <View style={{ height: 10 }} />
+              </ScrollView>
+            );
+          })() : null}
+        </View></View>
+      </Modal>
+    </View>
+  );
+}
+
 function Historial({ data, guardar, cur, loading, recargar, pickFoto, taller }) {
-  const hist = data.history || [];
+  const histTodo = data.history || [];
+  const [qHist, setQHist] = useState('');
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
+  // Convierte "20/7/2026" o "2026-07-20" a número comparable AAAAMMDD
+  const aNum = (f) => {
+    if (!f) return 0;
+    const t = String(f).trim();
+    let d, m, a;
+    if (t.includes('/')) { const p = t.split('/'); d = +p[0]; m = +p[1]; a = +p[2]; }
+    else if (t.includes('-')) { const p = t.split('-'); if (p[0].length === 4) { a = +p[0]; m = +p[1]; d = +p[2]; } else { d = +p[0]; m = +p[1]; a = +p[2]; } }
+    else return 0;
+    if (!a || !m || !d) return 0;
+    if (a < 100) a += 2000;
+    return a * 10000 + m * 100 + d;
+  };
+  const hist = histTodo.filter((x) => {
+    const campos = [x.veh, x.placa, x.cliente, x.mech, x.trabajo, x.fecha, x.doc, x.tel];
+    const t = norm(campos.filter(Boolean).join(' '));
+    const pasaTexto = !qHist.trim() || norm(qHist).split(/\s+/).filter(Boolean).every((w) => t.includes(w));
+    const f = aNum(x.fecha);
+    const pasaDesde = !desde.trim() || (f && f >= aNum(desde));
+    const pasaHasta = !hasta.trim() || (f && f <= aNum(hasta));
+    return pasaTexto && pasaDesde && pasaHasta;
+  });
   const [selIdx, setSelIdx] = useState(null);
   const [ab, setAb] = useState({ monto: '', codigo: '', prox: '', foto: null });
   const h = selIdx != null ? hist[selIdx] : null;
@@ -596,14 +889,34 @@ function Historial({ data, guardar, cur, loading, recargar, pickFoto, taller }) 
     Alert.alert('Listo', 'Cuota registrada.');
   };
   const compartir = (x) => {
+    // Comparte el informe completo en PDF (ficha + fotos + observaciones + pago)
+    if (taller && x.vehId) { compartirActaPDF(taller.id, { id: x.vehId, model: x.veh }, 'trabajo'); return; }
     const txt = 'TALLER ' + (taller ? taller.nombre : '') + '\nTrabajo: ' + x.trabajo + '\nVehículo: ' + x.veh + ' (' + x.placa + ')\nCliente: ' + x.cliente + '\nFecha: ' + x.fecha + '\nTotal: ' + cur + ' ' + (+x.total || 0) + '\nPagado: ' + cur + ' ' + (+x.pagado || 0) + '\nSaldo: ' + cur + ' ' + (+x.saldo || 0);
-    Alert.alert('Resumen del trabajo', txt + '\n\n(Para PDF e impresión usa la plataforma web.)');
+    Alert.alert('Resumen del trabajo', txt);
   };
   return (
     <View style={{ flex: 1 }}>
       <FlatList data={hist} keyExtractor={(x, i) => String(x.id || i)} contentContainerStyle={{ padding: 14 }}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={recargar} />}
-        ListEmptyComponent={!loading && <Text style={s.muted}>Aún no hay trabajos realizados.</Text>}
+        ListHeaderComponent={
+          <View style={{ marginBottom: 12 }}>
+            <TextInput style={s.input} value={qHist} onChangeText={setQHist}
+              placeholder="Buscar por placa, cliente, mecánico, trabajo…" />
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+              <TextInput style={[s.input, { flex: 1 }]} value={desde} onChangeText={setDesde} placeholder="Desde d/m/aaaa" />
+              <TextInput style={[s.input, { flex: 1 }]} value={hasta} onChangeText={setHasta} placeholder="Hasta d/m/aaaa" />
+            </View>
+            {(qHist || desde || hasta) ? (
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                <Text style={s.muted}>{hist.length} de {histTodo.length} trabajo(s)</Text>
+                <TouchableOpacity onPress={() => { setQHist(''); setDesde(''); setHasta(''); }}>
+                  <Text style={[s.link, { marginTop: 0 }]}>Limpiar filtros</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+          </View>
+        }
+        ListEmptyComponent={!loading && <Text style={s.muted}>{(qHist || desde || hasta) ? 'Ningún trabajo coincide con la búsqueda.' : 'Aún no hay trabajos realizados.'}</Text>}
         renderItem={({ item, index }) => (
           <View style={s.card}>
             <TouchableOpacity onPress={() => setSelIdx(index)}>
@@ -614,7 +927,14 @@ function Historial({ data, guardar, cur, loading, recargar, pickFoto, taller }) 
               <Text style={s.muted}>{item.fecha} · {item.cliente} · {item.trabajo}</Text>
               <Text style={s.muted}>Total {cur} {(+item.total || 0).toLocaleString('es-VE')} · Pagado {cur} {(+item.pagado || 0).toLocaleString('es-VE')}</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => compartir(item)} style={{ marginTop: 8 }}><Text style={s.link}>Compartir resumen →</Text></TouchableOpacity>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginTop: 8 }}>
+              <TouchableOpacity onPress={() => taller && item.vehId && abrirEnNavegador(taller.id, { id: item.vehId, model: item.veh }, 'trabajo')}>
+                <Text style={[s.link, { marginTop: 0 }]}>👁 Ver trabajo realizado →</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => compartir(item)}>
+                <Text style={[s.link, { marginTop: 0 }]}>📄 Compartir (PDF) →</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )} />
       <Modal visible={h != null} transparent animationType="slide" onRequestClose={() => setSelIdx(null)}>
@@ -645,6 +965,59 @@ function Historial({ data, guardar, cur, loading, recargar, pickFoto, taller }) 
 }
 
 /* =================== ACTA =================== */
+/* =================== AVANCES DEL MECÁNICO =================== */
+function AvancesModal({ item, close, taller }) {
+  const [foto, setFoto] = useState(null);
+  const avs = [...(item.advances || [])].reverse();
+  const ico = { nota: '📝', atencion: '⚠️', recep: '🔧', check: '✅', term: '✅' };
+  return (
+    <Modal visible transparent animationType="slide" onRequestClose={close}>
+      <View style={s.modalWrap}><View style={s.modalCard}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+            <Text style={s.h}>Avances del mecánico</Text>
+            <TouchableOpacity onPress={close}><Text style={{ fontSize: 20, color: '#6b7480' }}>✕</Text></TouchableOpacity>
+          </View>
+          <Text style={s.muted}>{item.model} · {item.plate} · {item.mech || 'sin mecánico'}</Text>
+          <ScrollView style={{ maxHeight: 430, marginTop: 8 }}>
+            {avs.length ? avs.map((a, i) => (
+              <View key={i} style={s.avItem}>
+                <View style={s.avIco}><Text style={{ fontSize: 14 }}>{ico[a.type] || '🔧'}</Text></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.avTit}>{a.t}</Text>
+                  <Text style={s.avSub}>{a.m}{a.ago ? ' · ' + a.ago : ''}</Text>
+                  {a.foto ? (
+                    <TouchableOpacity onPress={() => setFoto(a.foto)}>
+                      <Image source={{ uri: a.foto }} style={s.avImg} />
+                      <Text style={s.avVer}>👁 Toca para ampliar</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                  {a.respondido !== undefined ? (
+                    <Text style={{ fontSize: 12, fontWeight: '700', marginTop: 4, color: a.autorizado ? '#16A34A' : '#dc2626' }}>
+                      {a.autorizado ? '✓ Autorizado por el cliente' : '✕ Denegado por el cliente'}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
+            )) : <Text style={{ color: '#6b7480', paddingVertical: 20 }}>El mecánico aún no ha registrado avances.</Text>}
+            <View style={{ height: 10 }} />
+          </ScrollView>
+          <TouchableOpacity style={s.avBtn} onPress={() => compartirActaPDF(taller.id, item, 'trabajo')}>
+            <Text style={s.avBtnT}>📋 Compartir informe con fotos (PDF)</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[s.avBtn, { backgroundColor: '#16191d', marginTop: 8 }]} onPress={() => abrirEnNavegador(taller.id, item, 'trabajo')}>
+            <Text style={s.avBtnT}>🌐 Abrir informe en el navegador</Text>
+          </TouchableOpacity>
+      </View></View>
+      <Modal visible={!!foto} transparent animationType="fade" onRequestClose={() => setFoto(null)}>
+        <TouchableOpacity style={s.zoomWrap} activeOpacity={1} onPress={() => setFoto(null)}>
+          {foto ? <Image source={{ uri: foto }} style={s.zoomImg} resizeMode="contain" /> : null}
+          <Text style={{ color: '#fff', marginTop: 14 }}>Toca para cerrar</Text>
+        </TouchableOpacity>
+      </Modal>
+    </Modal>
+  );
+}
+
 function Acta({ item, close }) {
   const r = (item && item.recepcion) || {};
   const sn = { leve: 'Leve', mod: 'Moderado', grave: 'Grave' };
@@ -1044,6 +1417,18 @@ const s = StyleSheet.create({
   pillBtnT: { fontWeight: '700', color: '#6b7480', fontSize: 13 },
   diagram: { backgroundColor: '#eef2f6', borderRadius: 14, height: 230, marginTop: 8, position: 'relative', overflow: 'hidden', borderWidth: 1, borderColor: '#dfe4ea', justifyContent: 'center', alignItems: 'center' },
   diagramHead: { position: 'absolute', top: 8, left: 0, right: 0, alignItems: 'center' },
+  sosBanner: { paddingVertical: 12, paddingHorizontal: 16 },
+  sosBannerT: { color: '#fff', fontWeight: '800', fontSize: 14, textAlign: 'center' },
+  avItem: { flexDirection: 'row', gap: 10, paddingVertical: 10, borderBottomWidth: 1, borderColor: '#f1f3f5' },
+  avIco: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#f2f4f7', justifyContent: 'center', alignItems: 'center' },
+  avTit: { fontSize: 13, fontWeight: '700', color: '#16191d' },
+  avSub: { fontSize: 11.5, color: '#6b7480', marginTop: 2 },
+  avImg: { width: '100%', height: 165, borderRadius: 10, marginTop: 8 },
+  avVer: { fontSize: 11, color: '#2563EB', fontWeight: '700', marginTop: 4, textAlign: 'center' },
+  avBtn: { backgroundColor: '#2563EB', borderRadius: 12, paddingVertical: 13, alignItems: 'center', marginTop: 10 },
+  avBtnT: { color: '#fff', fontWeight: '800', fontSize: 13.5 },
+  zoomWrap: { flex: 1, backgroundColor: 'rgba(0,0,0,.93)', justifyContent: 'center', alignItems: 'center' },
+  zoomImg: { width: '95%', height: '80%' },
   diagramHeadT: { color: '#8a929c', fontWeight: '800', fontSize: 12, letterSpacing: 1 },
   // vista superior
   carTop: { width: 110, height: 175, backgroundColor: '#fff', borderWidth: 2, borderColor: '#c2c9d2', borderRadius: 30, marginTop: 12 },

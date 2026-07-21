@@ -4,13 +4,30 @@ import Constants from 'expo-constants';
 
 // Dirección del backend. Cámbiala por la de tu servidor en producción.
 // En desarrollo con teléfono físico, usa la IP de tu PC (no localhost), p. ej. http://192.168.1.10:4000
-export const API_URL =
-  (Constants.expoConfig && Constants.expoConfig.extra && Constants.expoConfig.extra.apiUrl) ||
-  'http://localhost:4000';
+const URL_CONFIGURADA =
+  (Constants.expoConfig && Constants.expoConfig.extra && Constants.expoConfig.extra.apiUrl) || '';
+const URL_VALIDA = URL_CONFIGURADA && !URL_CONFIGURADA.includes('PON-AQUI') ? URL_CONFIGURADA : '';
 
+// URL activa: la guardada por el usuario tiene prioridad sobre la compilada
+let _apiUrl = URL_VALIDA;
+export function getApiUrl() { return _apiUrl; }
+export function apiUrlLista() { return !!_apiUrl; }
+export async function cargarApiUrl() {
+  const guardada = await AsyncStorage.getItem('t_api_url');
+  if (guardada) _apiUrl = guardada;
+  return _apiUrl;
+}
+export async function guardarApiUrl(url) {
+  let u = (url || '').trim().replace(/\/+$/, '');
+  if (u && !/^https?:\/\//i.test(u)) u = 'https://' + u;
+  _apiUrl = u;
+  await AsyncStorage.setItem('t_api_url', u);
+  return u;
+}
 let token = null;
 
 export async function loadSession() {
+  await cargarApiUrl();
   token = await AsyncStorage.getItem('t_token');
   const me = await AsyncStorage.getItem('t_me');
   const talleres = await AsyncStorage.getItem('t_talleres');
@@ -28,7 +45,8 @@ export async function clearSession() {
 }
 
 export async function api(path, options = {}) {
-  const res = await fetch(API_URL + path, {
+  if (!_apiUrl) throw new Error('SIN_SERVIDOR');
+  const res = await fetch(_apiUrl + path, {
     ...options,
     headers: {
       'Content-Type': 'application/json',

@@ -3,7 +3,6 @@ import { ActivityIndicator, View, Text, TouchableOpacity } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import * as Updates from 'expo-updates';
 import { loadSession } from './src/api';
 import LoginScreen from './src/screens/Login';
 import HomeScreen from './src/screens/Home';
@@ -37,21 +36,6 @@ export default function App() {
   const [ready, setReady] = useState(false);
   const [session, setSession] = useState(null);
   const [actualizando, setActualizando] = useState(false);
-
-  // Busca actualizaciones "por el aire" (OTA) al abrir la app.
-  useEffect(() => {
-    (async () => {
-      try {
-        if (!Updates.isEnabled) return; // en Expo Go / desarrollo no aplica
-        const r = await Updates.checkForUpdateAsync();
-        if (r.isAvailable) {
-          setActualizando(true);
-          await Updates.fetchUpdateAsync();
-          await Updates.reloadAsync(); // reinicia con la versión nueva
-        }
-      } catch (e) { /* si falla, la app sigue con la versión instalada */ }
-    })();
-  }, []);
 
   useEffect(() => {
     loadSession().then((s) => { setSession(s); setReady(true); });

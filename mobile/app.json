@@ -22,15 +22,11 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#F5B700"
-      }
-    },
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
-    "updates": {
-      "url": "https://u.expo.dev/efeefa2e-b6e4-497f-8c30-f96402e911c3",
-      "fallbackToCacheTimeout": 0,
-      "checkAutomatically": "ON_LOAD"
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
     },
     "extra": {
       "apiUrl": "https://app-talleros.onrender.com",
@@ -41,6 +37,14 @@
     "icon": "./assets/icon.png",
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Permite compartir tu ubicación cuando solicitas auxilio vial."
+        }
+      ]
+    ]
   }
 }

@@ -319,6 +319,8 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover{background:var(--surface-2)}
 .searchbar svg{width:16px;height:16px;color:var(--muted);flex:none}
 .searchbar input{flex:1;border:0;outline:0;font-size:13.5px;font-family:inherit;background:transparent}
 .searchbar button{border:0;background:#eef0f3;border-radius:50%;width:20px;height:20px;cursor:pointer;color:var(--muted);font-size:12px;line-height:1}
+.sosdot{width:9px;height:9px;border-radius:50%;background:#16A34A;margin-left:auto;flex:none}
+.sosdot.on{background:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,.25)}
 </style>
 </head>
 <body>
@@ -358,12 +360,14 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover{background:var(--surface-2)}
 
   <div class="web-wrap"><div class="web">
     <div class="wside">
-      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v55</span></div>
+      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v58</span></div>
       <div class="wlbl op-item">Operación</div>
       <a class="on op-item" data-w="dash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
       <a class="op-item" data-w="recep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-6 0v4"/><rect x="2" y="9" width="20" height="11" rx="2"/></svg>Recepción digital</a>
       <a class="op-item" data-w="board"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg>Órdenes de taller</a>
       <a class="op-item" data-w="hist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>Trabajos realizados</a>
+        <a class="witem" data-w="mant"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span>Próximos mantenimientos</span></a>
+        <a class="witem" data-w="sos" id="navSOS"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg><span>Auxilio vial</span><span id="sosDot" class="sosdot"></span></a>
       <a class="op-item" data-w="citas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Citas <span class="nb" id="citasNb"></span></a>
       <div class="wlbl op-item">Gestión</div>
       <a class="op-item" data-w="cli"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Clientes</a>
@@ -385,7 +389,7 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover{background:var(--surface-2)}
       <div class="wbody">
         <div class="wview on" id="w-dash"></div><div class="wview" id="w-recep"></div><div class="wview" id="w-board"></div>
         <div class="wview" id="w-hist"></div><div class="wview" id="w-citas"></div>
-        <div class="wview" id="w-veh"></div><div class="wview" id="w-cli"></div><div class="wview" id="w-mec"></div><div class="wview" id="w-fact"></div><div class="wview" id="w-talleres"></div><div class="wview" id="w-usuarios"></div><div class="wview" id="w-config"></div><div class="wview" id="w-audit"></div>
+        <div class="wview" id="w-veh"></div><div class="wview" id="w-cli"></div><div class="wview" id="w-mec"></div><div class="wview" id="w-fact"></div><div class="wview" id="w-talleres"></div><div class="wview" id="w-usuarios"></div><div class="wview" id="w-config"></div><div class="wview" id="w-audit"></div><div class="wview" id="w-mant"></div><div class="wview" id="w-sos"></div>
       </div>
     </div>
   </div></div>
@@ -459,6 +463,7 @@ function unread(owner){return store.notifs.filter(n=>n.owner===owner&&!n.read).l
 function toast(t){const el=document.getElementById('toast');document.getElementById('toastTxt').textContent=t;el.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('on'),2600);}
 function curSym(){try{return (store.config&&store.config.currency&&store.config.currency.sym)||'Bs.';}catch(e){return 'Bs.';}}
 function closeModal(){document.getElementById('modal').classList.remove('on');}
+function openModal(titulo,html){const t=document.getElementById('modalH');if(t)t.textContent=titulo;document.getElementById('modalB').innerHTML=html;document.getElementById('modal').classList.add('on');}
 function openMiClave(){document.getElementById('modalT').textContent='Cambiar mi contraseña';
   document.getElementById('modalB').innerHTML=`<div style="font-size:13px;color:var(--muted);margin-bottom:12px">Usuario: <b>${(ME&&ME.usuario)||''}</b></div>
    <div class="fld"><label>Contraseña actual</label><input id="mcA" type="password" autocomplete="off"></div>
@@ -923,11 +928,19 @@ function dashHTML(){
 }
 function renderWeb(){
   const ingresos=store.history.reduce((a,h)=>a+h.costo,0);
+  try{renderMant();}catch(e){}
+  try{renderSOS();}catch(e){}
   document.getElementById('w-dash').innerHTML=dashHTML();
   const cols=[["espera","En espera"],["rep","En reparación"],["term","Terminado"]];
   document.getElementById('w-board').innerHTML=`<div class="searchbar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="qBoard" value="${(BUSCA.board||'').replace(/"/g,'&quot;')}" placeholder="Buscar por vehículo, placa, cliente, mecánico o trabajo…" oninput="BUSCA.board=this.value;renderBoardOnly()">${BUSCA.board?`<button onclick="BUSCA.board='';renderBoardOnly()">✕</button>`:''}</div><div class="board">${cols.map(([k,l])=>{const items=store.vehicles.filter(v=>v.activo!==false&&v.recepcion&&!v.cerrada&&coincideVeh(v,BUSCA.board)&&(k==='espera'?(!v.status||v.status==='espera'||v.status==='reprog'):k==='rep'?(v.status==='rep'||v.status==='wait'):k==='term'?(v.status==='term'||v.status==='ent'):v.status===k));return `<div class="col"><h3>${l}<span class="cnt">${items.length}</span></h3>${items.map(v=>{const st=STATUS[v.status];const d=dias(v.ingreso);return `<div class="ocard" style="cursor:pointer" onclick="openOrder(${v.id})"><div class="ot">${v.model.split(' ').slice(0,2).join(' ')}<span class="plate">${v.plate}</span></div><div class="om">${v.motivo}</div><span class="pill s-${st.c}"><span class="pd"></span>${st.l}</span><div style="font-size:11px;color:var(--muted);margin-top:7px">👤 ${v.owner}${v.mech?` · 🔧 ${v.mech}`:''}</div>${(()=>{const cl=store.clients.find(c=>c.n===v.owner);const me=store.mecanicos.find(m=>m.n===v.mech);const tel=cl&&cl.tel;const telM=me&&me.tel;return (tel||telM)?`<div style="display:flex;gap:6px;margin-top:7px;flex-wrap:wrap" onclick="event.stopPropagation()">${tel?`<a href="tel:${tel}" class="telchip">📞 ${tel}</a><a href="https://wa.me/${(tel||'').replace(/[^0-9]/g,'')}" target="_blank" class="telchip wa">💬 Cliente</a>`:''}${telM?`<a href="https://wa.me/${(telM||'').replace(/[^0-9]/g,'')}" target="_blank" class="telchip wa">💬 Mecánico</a>`:''}</div>`:'';})()}<div style="font-size:10.5px;color:var(--muted);margin-top:6px;display:flex;align-items:center;gap:5px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Ingresó ${fmtDate(v.ingreso)} · <b style="color:${d>5?'var(--red)':'var(--amber)'}">${d} día${d===1?'':'s'}</b> en taller</div>${v.status!=='espera'&&v.status!=='reprog'?`<div class="opr"><div class="pbar"><i style="width:${v.progress}%"></i></div>${v.progress}%</div>`:''}</div>`;}).join('')||'<div class="empty">Vacío</div>'}</div>`;}).join('')}</div>`;
   // HISTORIAL
-  document.getElementById('w-hist').innerHTML=`<table><thead><tr><th>Fecha</th><th>Cliente</th><th>Vehículo</th><th>Trabajo</th><th>Mecánico</th><th>Total</th><th>Pagado</th><th>Saldo</th></tr></thead><tbody>${store.history.map((h,i)=>`<tr class="clk" onclick="histDetail(${i})"><td class="mono" style="font-size:12px">${h.fecha}</td><td><div class="cell-u"><div class="av-sm">${(h.cliente.split(' ').map(x=>x[0]).slice(0,2).join(''))}</div><b>${h.cliente}</b></div></td><td>${h.veh}</td><td>${h.trabajo}</td><td style="color:var(--muted)">${h.mech}</td><td><b>${curSym()} ${(+h.total||h.costo||0).toLocaleString('es-VE')}</b></td><td style="color:var(--green)">${curSym()} ${(+h.pagado||0).toLocaleString('es-VE')}</td><td>${(+h.saldo>0)?`<span class="pill s-espera"><span class="pd"></span>${curSym()} ${(+h.saldo).toLocaleString('es-VE')}</span>`:'<span class="pill s-term"><span class="pd"></span>Pagado</span>'}</td></tr>`).join('')}</tbody></table>`;
+  document.getElementById('w-hist').innerHTML=`<div class="searchbar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="qHist" value="${(BUSCA.hist||'').replace(/"/g,'&quot;')}" placeholder="Buscar por placa, cliente, mecánico, trabajo…" oninput="BUSCA.hist=this.value;renderHistOnly()">${BUSCA.hist?`<button onclick="BUSCA.hist='';renderHistOnly()">✕</button>`:''}</div>
+   <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+     <div class="fld" style="margin:0"><label style="font-size:11px">Desde</label><input id="hDesde" value="${BUSCA.hd||''}" placeholder="d/m/aaaa" style="width:130px" oninput="BUSCA.hd=this.value;renderHistOnly()"></div>
+     <div class="fld" style="margin:0"><label style="font-size:11px">Hasta</label><input id="hHasta" value="${BUSCA.hh||''}" placeholder="d/m/aaaa" style="width:130px" oninput="BUSCA.hh=this.value;renderHistOnly()"></div>
+     ${(BUSCA.hist||BUSCA.hd||BUSCA.hh)?`<button class="wbtn wbtn-g" style="align-self:flex-end" onclick="BUSCA.hist='';BUSCA.hd='';BUSCA.hh='';renderHistOnly()">Limpiar filtros</button><span style="font-size:12px;color:var(--muted);align-self:flex-end;padding-bottom:8px">${histFiltrado().length} de ${store.history.length}</span>`:''}
+   </div>
+   <table><thead><tr><th>Fecha</th><th>Cliente</th><th>Vehículo</th><th>Trabajo</th><th>Mecánico</th><th>Total</th><th>Pagado</th><th>Saldo</th></tr></thead><tbody>${histFiltrado().map((h)=>{const i=store.history.indexOf(h);return `<tr class="clk" onclick="histDetail(${i})"><td class="mono" style="font-size:12px">${h.fecha}</td><td><div class="cell-u"><div class="av-sm">${(h.cliente.split(' ').map(x=>x[0]).slice(0,2).join(''))}</div><b>${h.cliente}</b></div></td><td>${h.veh}</td><td>${h.trabajo}</td><td style="color:var(--muted)">${h.mech}</td><td><b>${curSym()} ${(+h.total||h.costo||0).toLocaleString('es-VE')}</b></td><td style="color:var(--green)">${curSym()} ${(+h.pagado||0).toLocaleString('es-VE')}</td><td>${(+h.saldo>0)?`<span class="pill s-espera"><span class="pd"></span>${curSym()} ${(+h.saldo).toLocaleString('es-VE')}</span>`:'<span class="pill s-term"><span class="pd"></span>Pagado</span>'}</td></tr>`;}).join('')||'<tr><td colspan="8" style="color:var(--muted);padding:18px">Ningún trabajo coincide con la búsqueda.</td></tr>'}</tbody></table>`;
   // CITAS
   const pend=store.citas.filter(c=>c.status==='pendiente').length;
   document.getElementById('citasNb').textContent=pend||'';document.getElementById('citasNb').style.display=pend?'':'none';
@@ -968,12 +981,21 @@ function histDetail(i){const h=store.history[i];window._actaId=h.vehId;window._h
    <div class="noprint" style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap"><button class="wbtn wbtn-p" style="flex:1;justify-content:center;min-width:150px" onclick="abrirActaPDF(window._actaId)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Acta (PDF)</button><button class="wbtn wbtn-d" style="flex:1;justify-content:center;min-width:170px" onclick="window.open(API+'/api/trabajo/'+CURRENT_TALLER+'/'+window._histVehId,'_blank')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg> Trabajo realizado (PDF)</button><button class="wbtn" style="flex:1;justify-content:center;min-width:120px;background:#25D366;color:#0b3d20" onclick="waShare('TRABAJO REALIZADO — ${h.veh} (${h.placa})\\nCliente: ${h.cliente}\\nTrabajo: ${h.trabajo}\\nMecánico: ${h.mech}\\nFecha: ${h.fecha}\\n\\nTotal: ${curSym()} ${(+h.total||h.costo||0).toLocaleString('es-VE')}\\nPagado: ${curSym()} ${(+h.pagado||0).toLocaleString('es-VE')}\\n${(+h.saldo>0)?`Saldo pendiente: ${curSym()} ${(+h.saldo).toLocaleString('es-VE')}`:'Estado: PAGADO ✓'}\\n\\n📄 Informe completo con fotos:\\n'+API+'/api/trabajo/'+CURRENT_TALLER+'/'+${h.vehId}+'\\n— TallerOS')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2z"/></svg> WhatsApp</button></div>`;
   document.getElementById('modal').classList.add('on');
 }
-let BUSCA={board:'',veh:'',cli:'',hist:'',recep:''};
+let BUSCA={board:'',veh:'',cli:'',hist:'',recep:'',mant:'',hd:'',hh:'',sos:''};
 function norm(t){return (t==null?'':String(t)).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
 function coincideVeh(v,q){if(!q||!q.trim())return true;const cl=store.clients.find(c=>c.n===v.owner)||{};const campos=[v.model,v.plate,v.owner,v.mech,v.motivo,v.marca,v.modelo,v.color,v.anio,v.tipoVeh,cl.doc,cl.tel,cl.mail,(v.recepcion&&v.recepcion.trabajo),(v.recepcion&&v.recepcion.motivo)];const t=norm(campos.filter(Boolean).join(' '));return norm(q).split(/\s+/).filter(Boolean).every(w=>t.includes(w));}
 function coincideCli(c,q){if(!q||!q.trim())return true;const vs=store.vehicles.filter(v=>v.owner===c.n).map(v=>v.model+' '+v.plate).join(' ');const t=norm([c.n,c.doc,c.tel,c.mail,vs].filter(Boolean).join(' '));return norm(q).split(/\s+/).filter(Boolean).every(w=>t.includes(w));}
 function renderVehOnly(){const el=document.getElementById('qVeh');const pos=el?el.selectionStart:null;renderWeb();const n=document.getElementById('qVeh');if(n){n.focus();if(pos!=null)try{n.setSelectionRange(pos,pos)}catch(e){}}}
 function renderCliOnly(){const el=document.getElementById('qCli');const pos=el?el.selectionStart:null;renderWeb();const n=document.getElementById('qCli');if(n){n.focus();if(pos!=null)try{n.setSelectionRange(pos,pos)}catch(e){}}}
+function histFiltrado(){const q=BUSCA.hist||'',d=BUSCA.hd||'',hh=BUSCA.hh||'';
+  return store.history.filter(h=>{
+    const t=norm([h.veh,h.placa,h.cliente,h.mech,h.trabajo,h.fecha].filter(Boolean).join(' '));
+    const okT=!q.trim()||norm(q).split(/\s+/).filter(Boolean).every(w=>t.includes(w));
+    const f=fNum(h.fecha);
+    const okD=!d.trim()||(f&&f>=fNum(d));
+    const okH=!hh.trim()||(f&&f<=fNum(hh));
+    return okT&&okD&&okH;});}
+function renderHistOnly(){const el=document.getElementById('qHist');const pos=el?el.selectionStart:null;renderWeb();const n=document.getElementById('qHist');if(n&&document.activeElement!==document.getElementById('hDesde')&&document.activeElement!==document.getElementById('hHasta')){n.focus();if(pos!=null)try{n.setSelectionRange(pos,pos)}catch(e){}}}
 function renderBoardOnly(){const el=document.getElementById('qBoard');const pos=el?el.selectionStart:null;renderWeb();const n=document.getElementById('qBoard');if(n){n.focus();if(pos!=null)try{n.setSelectionRange(pos,pos)}catch(e){}}}
 function webFeed(){const rows=[];store.vehicles.forEach(v=>v.advances.forEach((a,i)=>rows.push({v,a})));const recent=rows.slice(-7).reverse();if(!recent.length)return '<div class="empty">Sin actividad. Haz algo en la app →</div>';return recent.map(({v,a})=>{const ic=TYPEICON[a.type]||TYPEICON.nota;return `<div class="fi-row"><div class="ic2 ${ic[0]}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ic[1]}</svg></div><div><div class="t1">${a.t}</div><div class="t2">${v.model} · ${a.m}</div></div><div class="tm">${a.ago}</div></div>`;}).join('');}
 
@@ -1042,6 +1064,96 @@ async function wConfirm(){if(!wrec.vehId){toast('Selecciona un vehículo');retur
 function woptAdd(kind){const inp=document.getElementById('wNew_'+kind);if(!inp)return;const val=inp.value.trim();if(!val)return;const key=kind==='motivo'?'motivos':'trabajos';if(!store.config[key].includes(val))store.config[key].push(val);const sel=document.getElementById(kind==='motivo'?'wSelMotivo':'wSelTrabajo');const o=document.createElement('option');o.textContent=val;sel.appendChild(o);sel.value=val;if(kind==='motivo')wrec.motivo=val;else wrec.trabajo=val;inp.value='';toast(`Agregado: ${val}`);}
 
 /* ===== CONFIGURACIÓN ===== */
+function fNum(f){if(!f)return 0;const t=String(f).trim();let d,m,a;
+  if(t.includes('/')){const p=t.split('/');d=+p[0];m=+p[1];a=+p[2];}
+  else if(t.includes('-')){const p=t.split('-');if(p[0].length===4){a=+p[0];m=+p[1];d=+p[2];}else{d=+p[0];m=+p[1];a=+p[2];}}
+  else return 0;
+  if(!a||!m||!d)return 0; if(a<100)a+=2000; return a*10000+m*100+d;}
+function hoyN(){const d=new Date();return d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate();}
+function estadoMant(f){const n=fNum(f);if(!n)return{t:'Sin fecha',c:'#6b7480',bg:'#f1f3f5'};
+  if(n<hoyN())return{t:'Vencido',c:'#dc2626',bg:'#fdecec'};
+  if(n===hoyN())return{t:'Es hoy',c:'#D97706',bg:'#fef3e2'};
+  return{t:'Programado',c:'#16A34A',bg:'#e8f7ee'};}
+const SOSEST={abierto:{t:'SOLICITANDO',c:'#dc2626',bg:'#fdecec'},atendido:{t:'En camino',c:'#D97706',bg:'#fef3e2'},cerrado:{t:'Resuelto',c:'#16A34A',bg:'#e8f7ee'}};
+function coincideSOS(x,q){if(!q||!q.trim())return true;const t=norm([x.cliente,x.placa,x.vehiculo,x.telefono,x.descripcion,x.ubicacionTexto].filter(Boolean).join(' '));return norm(q).split(/\s+/).filter(Boolean).every(w=>t.includes(w));}
+function renderSOS(){const el=document.getElementById('w-sos');if(!el)return;
+  const todas=[...(store.sos||[])].sort((a,b)=>String(b.creado||'').localeCompare(String(a.creado||'')));
+  const abiertas=todas.filter(x=>x.estado==='abierto');
+  const dot=document.getElementById('sosDot');if(dot)dot.classList.toggle('on',abiertas.length>0);
+  const lista=todas.filter(x=>coincideSOS(x,BUSCA.sos||''));
+  el.innerHTML=`<div style="background:${abiertas.length?'#dc2626':'#16A34A'};color:#fff;padding:12px 16px;border-radius:12px;font-weight:700;text-align:center;margin-bottom:14px">
+      ${abiertas.length?'🚨 '+abiertas.length+' cliente(s) solicitando auxilio vial':'✓ Sin solicitudes de auxilio'}</div>
+    <div class="searchbar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="qSos" value="${(BUSCA.sos||'').replace(/"/g,'&quot;')}" placeholder="Buscar por cliente, placa o teléfono…" oninput="BUSCA.sos=this.value;renderSOSOnly()">${BUSCA.sos?`<button onclick="BUSCA.sos='';renderSOSOnly()">✕</button>`:''}</div>
+    ${lista.length?`<div style="display:grid;gap:10px">${lista.map(x=>{const e=SOSEST[x.estado]||SOSEST.abierto;
+      return `<div class="dcard" style="border-left:5px solid ${e.c};cursor:pointer" onclick="openSOS(${x.id})">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+          <div><div style="font-weight:700;font-size:14px">${x.cliente}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:5px">🚗 ${x.vehiculo||'—'}${x.placa?' · '+x.placa:''}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:3px">⚠️ ${x.descripcion}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:3px">📅 ${x.fecha} · ${x.hora}</div></div>
+          <span style="background:${e.bg};color:${e.c};padding:4px 10px;border-radius:20px;font-size:11.5px;font-weight:700;white-space:nowrap">${e.t}</span>
+        </div></div>`;}).join('')}</div>`
+    :'<div style="font-size:13px;color:var(--muted);padding:20px 0">No hay solicitudes de auxilio vial.</div>'}`;}
+function renderSOSOnly(){const el=document.getElementById('qSos');const pos=el?el.selectionStart:null;renderSOS();const n=document.getElementById('qSos');if(n){n.focus();if(pos!=null)try{n.setSelectionRange(pos,pos)}catch(e){}}}
+function openSOS(id){const x=(store.sos||[]).find(v=>v.id===id);if(!x)return;const e=SOSEST[x.estado]||SOSEST.abierto;
+  const mapa=(x.lat&&x.lng)?`https://www.google.com/maps/search/?api=1&query=${x.lat},${x.lng}`:(x.ubicacionTexto?`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(x.ubicacionTexto)}`:'');
+  const tel=String(x.telefono||'').replace(/\D/g,'');
+  openModal('🚨 Auxilio vial',`
+    <div class="dcard" style="background:${e.bg};border-color:${e.c}">
+      <div style="font-weight:800;color:${e.c};font-size:15px">${e.t}</div>
+      <div style="color:${e.c};margin-top:4px;font-size:13px">${x.fecha} a las ${x.hora}</div>
+    </div>
+    <h3 style="font-size:13px;margin:14px 0 4px">Cliente</h3>
+    <div style="font-size:13px;color:var(--muted)">${x.cliente}${x.telefono?' · <a class="telchip" href="tel:'+x.telefono+'">📞 '+x.telefono+'</a>':''}</div>
+    <h3 style="font-size:13px;margin:14px 0 4px">Vehículo</h3>
+    <div style="font-size:13px;color:var(--muted)">${x.vehiculo||'—'}${x.placa?' · '+x.placa:''}</div>
+    <h3 style="font-size:13px;margin:14px 0 4px">Avería reportada</h3>
+    <div style="font-size:13px;color:var(--muted)">${x.descripcion}</div>
+    <h3 style="font-size:13px;margin:14px 0 4px">Ubicación</h3>
+    <div style="font-size:13px;color:var(--muted)">${x.ubicacionTexto||'No indicada'}${(x.lat&&x.lng)?'<br>📍 '+Number(x.lat).toFixed(5)+', '+Number(x.lng).toFixed(5):''}</div>
+    <div class="noprint" style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap">
+      ${mapa?`<button class="wbtn wbtn-d" style="flex:1;min-width:150px;justify-content:center;background:#0891b2" onclick="window.open('${mapa}','_blank')">🗺️ Ver en el mapa</button>`:''}
+      ${tel?`<button class="wbtn" style="flex:1;min-width:140px;justify-content:center;background:#25D366;color:#0b3d20" onclick="window.open('https://wa.me/${tel}?text='+encodeURIComponent('Hola ${x.cliente}, recibimos tu solicitud de auxilio vial. Vamos en camino.'),'_blank')">💬 WhatsApp</button>`:''}
+    </div>
+    ${x.estado==='abierto'?`<button class="wbtn wbtn-d" style="width:100%;justify-content:center;margin-top:10px;background:#D97706" onclick="sosEstado(${x.id},'atendido')">🚐 Marcar: vamos en camino</button>`:''}
+    ${x.estado!=='cerrado'?`<button class="wbtn wbtn-d" style="width:100%;justify-content:center;margin-top:8px" onclick="sosEstado(${x.id},'cerrado')">✓ Marcar como resuelto</button>`:''}`);}
+async function sosEstado(id,estado){try{await apiReq('/api/state/sos-estado?taller='+CURRENT_TALLER,{method:'POST',body:JSON.stringify({id,estado})});
+  store.sos=(store.sos||[]).map(x=>x.id===id?{...x,estado}:x);closeModal();renderSOS();toast('Solicitud actualizada ✓');}catch(e){toast(e.message);}}
+function renderMant(){const el=document.getElementById('w-mant');if(!el)return;
+  const lista=store.vehicles.filter(v=>v.proximoMant&&coincideVeh(v,BUSCA.mant||'')).sort((a,b)=>fNum(a.proximoMant.fecha)-fNum(b.proximoMant.fecha));
+  el.innerHTML=`<div class="searchbar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="qMant" value="${(BUSCA.mant||'').replace(/"/g,'&quot;')}" placeholder="Buscar por vehículo, placa, cliente o tipo…" oninput="BUSCA.mant=this.value;renderMantOnly()">${BUSCA.mant?`<button onclick="BUSCA.mant='';renderMantOnly()">✕</button>`:''}</div>
+  ${lista.length?`<div style="display:grid;gap:10px">${lista.map(v=>{const p=v.proximoMant;const e=estadoMant(p.fecha);const cl=store.clients.find(c=>c.n===v.owner)||{};
+    return `<div class="dcard" style="border-left:5px solid ${e.c};cursor:pointer" onclick="openMant(${v.id})">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div><div style="font-weight:700;font-size:14px">${v.model} <span class="plate">${v.plate}</span></div>
+          <div style="font-size:12px;color:var(--muted);margin-top:5px">👤 ${v.owner||'—'}${cl.tel?' · 📞 '+cl.tel:''}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px">🔧 ${p.tipo}${p.km&&p.km!=='—'?' · '+p.km+' km':''}</div>
+          <div style="font-weight:700;color:${e.c};margin-top:6px;font-size:13px">📅 ${p.fecha}</div></div>
+        <span style="background:${e.bg};color:${e.c};padding:4px 10px;border-radius:20px;font-size:11.5px;font-weight:700;white-space:nowrap">${e.t}</span>
+      </div></div>`;}).join('')}</div>`
+    :'<div style="font-size:13px;color:var(--muted);padding:20px 0">No hay mantenimientos programados. Se crean cuando el mecánico marca un trabajo como terminado.</div>'}`;}
+function renderMantOnly(){const el=document.getElementById('qMant');const pos=el?el.selectionStart:null;renderMant();const n=document.getElementById('qMant');if(n){n.focus();if(pos!=null)try{n.setSelectionRange(pos,pos)}catch(e){}}}
+function openMant(id){const v=veh(id);if(!v||!v.proximoMant)return;const p=v.proximoMant;const e=estadoMant(p.fecha);const cl=store.clients.find(c=>c.n===v.owner)||{};
+  window._actaId=id;
+  openModal(`Próximo mantenimiento — ${v.model}`,`
+    <div class="plate" style="display:inline-block">${v.plate}</div>
+    <div class="dcard" style="background:${e.bg};border-color:${e.c};margin-top:12px">
+      <div style="font-weight:800;color:${e.c};font-size:14px">🔔 ${p.tipo}</div>
+      <div style="color:${e.c};margin-top:5px;font-size:13px">Fecha programada: <b>${p.fecha}</b> (${e.t})</div>
+      ${p.km&&p.km!=='—'?`<div style="color:${e.c};margin-top:3px;font-size:13px">Kilometraje: ${p.km} km</div>`:''}
+      ${p.mech?`<div style="color:${e.c};margin-top:3px;font-size:13px">Indicado por: ${p.mech}</div>`:''}
+    </div>
+    <h3 style="font-size:13px;margin:14px 0 4px">Cliente</h3>
+    <div style="font-size:13px;color:var(--muted)">${v.owner||'—'}${cl.tel?' · <a class="telchip" href="tel:'+cl.tel+'">📞 '+cl.tel+'</a>':''}${cl.doc?' · '+cl.doc:''}</div>
+    <h3 style="font-size:13px;margin:14px 0 4px">Último trabajo</h3>
+    <div style="font-size:13px;color:var(--muted)">${v.motivo||'—'}${v.mech?' · 🔧 '+v.mech:''}</div>
+    <div class="noprint" style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap">
+      <button class="wbtn wbtn-p" style="flex:1;min-width:140px;justify-content:center" onclick="abrirActaPDF(${id})">📄 Ver acta</button>
+      <button class="wbtn wbtn-d" style="flex:1;min-width:170px;justify-content:center" onclick="window.open(API+'/api/trabajo/'+CURRENT_TALLER+'/'+${id},'_blank')">📋 Ver trabajo realizado</button>
+      <button class="wbtn" style="flex:1;min-width:140px;justify-content:center;background:#25D366;color:#0b3d20" onclick="waShare('Recordatorio de mantenimiento\\n${v.model} (${v.plate})\\n${p.tipo}${p.km&&p.km!=='—'?' · '+p.km+' km':''}\\nFecha sugerida: ${p.fecha}\\n\\n— '+CURRENT_TALLER_NAME)">💬 Recordar por WhatsApp</button>
+    </div>
+    <button class="wbtn wbtn-g" style="width:100%;justify-content:center;margin-top:10px;color:#dc2626" onclick="quitarMant(${id})">Quitar recordatorio</button>`);}
+function quitarMant(id){if(!confirm('¿Quitar el recordatorio de mantenimiento de este vehículo?'))return;const v=veh(id);if(v)v.proximoMant=null;closeModal();renderMant();persistNow();toast('Recordatorio quitado');}
 async function renderConfig(){persistData();const c=store.config;let _t=(window._talleresCache||[]).find(x=>x.id===CURRENT_TALLER)||null;
   if(!_t){try{const ts=await apiReq('/api/talleres');window._talleresCache=ts;_t=ts.find(x=>x.id===CURRENT_TALLER)||{};}catch(e){_t={};}}
   document.getElementById('w-config').innerHTML=`
@@ -1365,14 +1477,14 @@ function can(mod,acc){if(!ME)return false;if(ME.rol==='superadmin')return true;c
 function aplicarPermisosMenu(){if(!ME||ME.rol==='superadmin')return;document.querySelectorAll('.wside a[data-w]').forEach(a=>{const m=WMAP[a.dataset.w];if(m&&!can(m,'ver'))a.style.display='none';});}
 const BASECONFIG=JSON.parse(JSON.stringify(store.config)); // catálogos base (moneda, docs, seguros, especialidades, marcas)
 let _persistT;
-function persistData(){if(!CURRENT_TALLER)return;clearTimeout(_persistT);_persistT=setTimeout(()=>{const d={vehicles:store.vehicles,clients:store.clients,mecanicos:store.mecanicos,usuarios:store.usuarios,history:store.history,citas:store.citas,notifs:store.notifs,facturas:store.facturas||[],config:store.config};fetch(API+'/api/state?taller='+CURRENT_TALLER,{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},body:JSON.stringify({data:d})}).catch(()=>{});},500);}
-async function persistNow(){if(!CURRENT_TALLER)return;clearTimeout(_persistT);const d={vehicles:store.vehicles,clients:store.clients,mecanicos:store.mecanicos,usuarios:store.usuarios,history:store.history,citas:store.citas,notifs:store.notifs,facturas:store.facturas||[],config:store.config};try{await fetch(API+'/api/state?taller='+CURRENT_TALLER,{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},body:JSON.stringify({data:d})});}catch(e){}}
+function persistData(){if(!CURRENT_TALLER)return;clearTimeout(_persistT);_persistT=setTimeout(()=>{const d={vehicles:store.vehicles,clients:store.clients,mecanicos:store.mecanicos,usuarios:store.usuarios,history:store.history,citas:store.citas,notifs:store.notifs,facturas:store.facturas||[],config:store.config,sos:store.sos||[]};fetch(API+'/api/state?taller='+CURRENT_TALLER,{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},body:JSON.stringify({data:d})}).catch(()=>{});},500);}
+async function persistNow(){if(!CURRENT_TALLER)return;clearTimeout(_persistT);const d={vehicles:store.vehicles,clients:store.clients,mecanicos:store.mecanicos,usuarios:store.usuarios,history:store.history,citas:store.citas,notifs:store.notifs,facturas:store.facturas||[],config:store.config,sos:store.sos||[]};try{await fetch(API+'/api/state?taller='+CURRENT_TALLER,{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},body:JSON.stringify({data:d})});}catch(e){}}
 async function loadData(){if(!CURRENT_TALLER)return;
   // Taller nuevo = vacío (el admin carga clientes/vehículos/órdenes), pero CON catálogos base de configuración.
-  store.vehicles=[];store.clients=[];store.mecanicos=[];store.usuarios=[];store.history=[];store.citas=[];store.notifs=[];store.facturas=[];
+  store.vehicles=[];store.clients=[];store.mecanicos=[];store.usuarios=[];store.history=[];store.citas=[];store.notifs=[];store.facturas=[];store.sos=[];
   store.config=JSON.parse(JSON.stringify(BASECONFIG));
   try{const r=await fetch(API+'/api/state?taller='+CURRENT_TALLER,{headers:{'Authorization':'Bearer '+TOKEN}});const j=await r.json();const d=j&&j.data;
-    if(d){['vehicles','clients','mecanicos','usuarios','history','citas','notifs','facturas'].forEach(k=>{if(d[k])store[k]=d[k];});
+    if(d){['vehicles','clients','mecanicos','usuarios','history','citas','notifs','facturas','sos'].forEach(k=>{if(d[k])store[k]=d[k];});
       if(d.config)store.config={...BASECONFIG,...d.config,currency:{...(BASECONFIG.currency||{}),...(d.config.currency||{})}};}
   }catch(e){}}
 function resetData(){if(!CURRENT_TALLER)return;fetch(API+'/api/state?taller='+CURRENT_TALLER,{method:'DELETE',headers:{'Authorization':'Bearer '+TOKEN}}).catch(()=>{}).finally(()=>enterTaller(CURRENT_TALLER,CURRENT_TALLER_NAME));}

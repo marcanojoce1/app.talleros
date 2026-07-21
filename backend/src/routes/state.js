@@ -98,6 +98,62 @@ router.post('/mis-notifs-leidas', async (req, res) => {
   res.json({ ok: true });
 });
 
+// POST /api/state/sos?taller=ID — el cliente pide auxilio vial (no requiere permiso de escritura)
+router.post('/sos', async (req, res) => {
+  const tallerId = Number(req.query.taller);
+  if (!tallerId) return res.status(400).json({ error: 'Falta el taller' });
+  if (!(await puedeAcceder(req.user, tallerId, false))) return res.status(403).json({ error: 'Sin acceso' });
+  const { vehId, vehiculo, placa, descripcion, ubicacionTexto, lat, lng, telefono } = req.body || {};
+  if (!descripcion || !String(descripcion).trim()) return res.status(400).json({ error: 'Describe la avería' });
+
+  const st = (await query('SELECT data FROM app_state WHERE taller_id=$1', [tallerId])).rows[0];
+  let d = st ? st.data : {}; if (typeof d === 'string') { try { d = JSON.parse(d); } catch { d = {}; } }
+  if (!st) await query('INSERT INTO app_state (taller_id, data) VALUES ($1,$2)', [tallerId, JSON.stringify({})]);
+
+  const ahora = new Date();
+  const sos = {
+    id: Date.now(),
+    cliente: req.user.nombre || '',
+    telefono: telefono || '',
+    vehId: vehId || null,
+    vehiculo: vehiculo || '',
+    placa: placa || '',
+    descripcion: String(descripcion).trim(),
+    ubicacionTexto: ubicacionTexto || '',
+    lat: lat || null,
+    lng: lng || null,
+    fecha: ahora.toLocaleDateString('es-VE'),
+    hora: ahora.toTimeString().slice(0, 5),
+    creado: ahora.toISOString(),
+    estado: 'abierto', // abierto | atendido | cerrado
+  };
+  d.sos = [...(d.sos || []), sos];
+  d.notifs = [...(d.notifs || []), {
+    owner: '__taller__', veh: sos.vehiculo,
+    text: '🚨 AUXILIO VIAL: ' + sos.cliente + ' — ' + sos.vehiculo + ' (' + sos.placa + ')',
+    time: 'ahora', read: false, sos: true,
+  }];
+  await query('UPDATE app_state SET data=$2, updated_at=CURRENT_TIMESTAMP WHERE taller_id=$1', [tallerId, JSON.stringify(d)]);
+  res.json({ ok: true, sos });
+});
+
+// POST /api/state/sos-estado?taller=ID — el taller cambia el estado de una solicitud
+router.post('/sos-estado', async (req, res) => {
+  const tallerId = Number(req.query.taller);
+  if (!tallerId) return res.status(400).json({ error: 'Falta el taller' });
+  if (req.user.rol !== 'superadmin' && req.user.rol !== 'administrador' && req.user.rol !== 'mecanico') {
+    return res.status(403).json({ error: 'Sin permiso' });
+  }
+  if (!(await puedeAcceder(req.user, tallerId, true))) return res.status(403).json({ error: 'Sin permiso' });
+  const { id, estado } = req.body || {};
+  const st = (await query('SELECT data FROM app_state WHERE taller_id=$1', [tallerId])).rows[0];
+  if (!st) return res.json({ ok: true });
+  let d = st.data; if (typeof d === 'string') { try { d = JSON.parse(d); } catch { d = {}; } }
+  d.sos = (d.sos || []).map((x) => (x.id === id ? { ...x, estado, atendidoPor: req.user.nombre || '', atendidoEn: new Date().toISOString() } : x));
+  await query('UPDATE app_state SET data=$2, updated_at=CURRENT_TIMESTAMP WHERE taller_id=$1', [tallerId, JSON.stringify(d)]);
+  res.json({ ok: true });
+});
+
 // POST /api/state/mi-autorizacion?taller=ID — cliente autoriza/deniega un trabajo adicional
 router.post('/mi-autorizacion', async (req, res) => {
   const tallerId = Number(req.query.taller);

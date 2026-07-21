@@ -1,0 +1,12 @@
+{
+  "name": "talleros",
+  "version": "1.0.0",
+  "description": "TallerOS — redirige el despliegue al backend",
+  "scripts": {
+    "install": "cd backend && npm install",
+    "start": "cd backend && npm start"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}
