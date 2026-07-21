@@ -18,6 +18,9 @@ function checkbox(marcado) {
 }
 
 // data: { taller, cliente, tecnico, vehiculo, recepcion, damages, lados, servicios, baseUrl }
+// Mismos colores que la app y la web: grave=rojo, moderado=naranja, leve=azul
+const COLOR_SEV = { grave: '#DC2626', mod: '#D97706', moderado: '#D97706', leve: '#2563EB' };
+
 function generarActaHTML(o = {}) {
   const taller = o.taller || {};
   const cli = o.cliente || {};
@@ -51,7 +54,8 @@ function generarActaHTML(o = {}) {
     const pins = dañosVista.map((d, i) => {
       const left = (d.x != null ? d.x : 50) + '%';
       const top = (d.y != null ? d.y : 50) + '%';
-      return `<span class="pin" style="left:${left};top:${top};transform:translate(-50%,-50%)">${d.n || i + 1}</span>`;
+      const col = COLOR_SEV[d.sev] || COLOR_SEV.leve;
+      return `<span class="pin" style="left:${left};top:${top};transform:translate(-50%,-50%);background:${col}">${d.n || i + 1}</span>`;
     }).join('');
     return `<div class="carbox">
       <div class="carlbl">${esc(v.label)}</div>
@@ -89,7 +93,7 @@ function generarActaHTML(o = {}) {
   .carlbl { font-size: 9px; font-weight: bold; color: #666; letter-spacing: 1px; margin-bottom: 4px; }
   .carimg { position: relative; display: inline-block; }
   .pins { position: absolute; inset: 0; }
-  .pin { position: absolute; background: #dc2626; color: #fff; border-radius: 50%; width: 16px; height: 16px; font-size: 9px; line-height: 16px; text-align: center; font-weight: bold; }
+  .pin { position: absolute; background: #2563EB; color: #fff; border-radius: 50%; width: 16px; height: 16px; font-size: 9px; line-height: 16px; text-align: center; font-weight: bold; }
   .acc { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 14px; font-size: 10px; padding: 8px 10px; }
   .acc .item { display: flex; justify-content: space-between; border-bottom: 1px dotted #ccc; padding: 1px 0; }
   .sino { white-space: nowrap; }
@@ -168,7 +172,19 @@ function generarActaHTML(o = {}) {
 
     ${vistas.length ? `<div style="border-bottom:1.5px solid #111"><div style="background:#111;color:#fff;padding:3px 10px;font-size:11px;font-weight:bold">Inspección visual — vistas registradas</div>
       <div class="cars">${vistaImgs}</div>
-      ${damages.length ? `<div style="padding:8px 12px"><b style="font-size:11px">Daños registrados (${damages.length}):</b><div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;font-size:10.5px;margin-top:5px">${damages.map((d) => `<div>● <b>#${d.n}</b> ${esc(d.tipo || 'Daño')} — ${esc(d.lado || '')} <span style="color:#888">(${esc(d.sev === 'grave' ? 'Grave' : d.sev === 'mod' ? 'Moderado' : 'Leve')})</span></div>`).join('')}</div></div>` : ''}
+      ${damages.length ? `<div style="padding:8px 12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+          <b style="font-size:11px">Daños registrados (${damages.length}):</b>
+          <div style="font-size:9.5px;display:flex;gap:10px;align-items:center">
+            <span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${COLOR_SEV.leve};vertical-align:middle"></span> Leve</span>
+            <span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${COLOR_SEV.mod};vertical-align:middle"></span> Moderado</span>
+            <span><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${COLOR_SEV.grave};vertical-align:middle"></span> Grave</span>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;font-size:10.5px;margin-top:5px">${damages.map((d) => {
+          const c = COLOR_SEV[d.sev] || COLOR_SEV.leve;
+          return `<div><span style="color:${c}">●</span> <b>#${d.n}</b> ${esc(d.tipo || 'Daño')} — ${esc(d.lado || '')} <span style="color:${c};font-weight:bold">(${esc(d.sev === 'grave' ? 'Grave' : d.sev === 'mod' ? 'Moderado' : 'Leve')})</span></div>`;
+        }).join('')}</div></div>` : ''}
       </div>` : ''}
 
     <div class="row serv">

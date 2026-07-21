@@ -150,6 +150,19 @@ router.post('/sos-estado', async (req, res) => {
   if (!st) return res.json({ ok: true });
   let d = st.data; if (typeof d === 'string') { try { d = JSON.parse(d); } catch { d = {}; } }
   d.sos = (d.sos || []).map((x) => (x.id === id ? { ...x, estado, atendidoPor: req.user.nombre || '', atendidoEn: new Date().toISOString() } : x));
+  // Avisar al cliente en su campana
+  const sol = (d.sos || []).find((x) => x.id === id);
+  if (sol && sol.cliente) {
+    const texto = estado === 'atendido'
+      ? '🚐 ¡Vamos en camino! El taller ya salió hacia tu ubicación (' + (sol.vehiculo || 'tu vehículo') + ').'
+      : estado === 'cerrado'
+        ? '✅ Tu solicitud de auxilio vial fue marcada como resuelta.'
+        : 'Tu solicitud de auxilio vial fue actualizada.';
+    d.notifs = [...(d.notifs || []), {
+      owner: sol.cliente, veh: sol.vehiculo || '', text: texto,
+      time: 'ahora', read: false, sosEstado: estado,
+    }];
+  }
   await query('UPDATE app_state SET data=$2, updated_at=CURRENT_TIMESTAMP WHERE taller_id=$1', [tallerId, JSON.stringify(d)]);
   res.json({ ok: true });
 });
