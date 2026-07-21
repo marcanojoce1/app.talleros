@@ -18,6 +18,36 @@ function checkbox(marcado) {
 }
 
 // data: { taller, cliente, tecnico, vehiculo, recepcion, damages, lados, servicios, baseUrl }
+// Distintivo de marca: color propio para cada fabricante (no usa logos registrados)
+const COLOR_MARCA = {
+  toyota: '#EB0A1E', kia: '#05141F', hyundai: '#002C5F', ford: '#003478', chevrolet: '#D1A650',
+  nissan: '#C3002F', honda: '#CC0000', mazda: '#101010', volkswagen: '#001E50', renault: '#FFCC33',
+  peugeot: '#00615F', fiat: '#941E32', jeep: '#0B4C34', mitsubishi: '#E60012', suzuki: '#E30613',
+  bmw: '#0066B1', mercedes: '#00ADEF', audi: '#BB0A30', dodge: '#B5121B', chery: '#C8102E',
+  byd: '#003E7E', jac: '#0072BC', great: '#C8102E', changan: '#004B87', geely: '#0B2C5F',
+  encava: '#0057A6', iveco: '#003B7E', mack: '#B4975A', volvo: '#003057', scania: '#041E42',
+};
+function marcaDe(veh) {
+  const t = String(veh.marca || veh.model || '').trim();
+  return t.split(/[\s/·-]+/)[0] || '';
+}
+function colorMarca(nombre) {
+  const k = String(nombre || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  for (const m in COLOR_MARCA) if (k.startsWith(m) || k === m) return COLOR_MARCA[m];
+  // color estable derivado del nombre para marcas no listadas
+  let h = 0; for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) % 360;
+  return 'hsl(' + h + ',55%,32%)';
+}
+function badgeMarca(veh) {
+  const nombre = marcaDe(veh);
+  if (!nombre) return '';
+  const col = colorMarca(nombre);
+  const ini = nombre.slice(0, 2).toUpperCase();
+  return `<span style="display:inline-flex;align-items:center;gap:5px;vertical-align:middle">
+    <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:${col};color:#fff;font-size:8.5px;font-weight:bold;letter-spacing:-.3px">${esc(ini)}</span>
+    <b style="color:${col}">${esc(nombre.toUpperCase())}</b></span>`;
+}
+
 // Mismos colores que la app y la web: grave=rojo, moderado=naranja, leve=azul
 const COLOR_SEV = { grave: '#DC2626', mod: '#D97706', moderado: '#D97706', leve: '#2563EB' };
 
@@ -57,10 +87,12 @@ function generarActaHTML(o = {}) {
       const col = COLOR_SEV[d.sev] || COLOR_SEV.leve;
       return `<span class="pin" style="left:${left};top:${top};transform:translate(-50%,-50%);background:${col}">${d.n || i + 1}</span>`;
     }).join('');
+    // En la vista frontal se muestra el distintivo de la marca
+    const emblema = (k === 'front' && marcaDe(veh)) ? `<span style="position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:16px;padding:0 5px;border-radius:9px;background:${colorMarca(marcaDe(veh))};color:#fff;font-size:8px;font-weight:bold;letter-spacing:.3px;box-shadow:0 1px 3px rgba(0,0,0,.35)">${esc(marcaDe(veh).toUpperCase())}</span>` : '';
     return `<div class="carbox">
       <div class="carlbl">${esc(v.label)}</div>
       <div class="carimg">${baseUrl ? `<img src="${baseUrl}/img/${v.img}" style="${mirror}max-width:100%;max-height:150px"/>` : `<div style="color:#999;padding:30px">${esc(v.label)}</div>`}
-        <div class="pins">${pins}</div></div>
+        ${emblema}<div class="pins">${pins}</div></div>
     </div>`;
   }).join('');
 
@@ -143,7 +175,7 @@ function generarActaHTML(o = {}) {
       </div>
       <div class="col">
         <h3>Datos del Vehículo</h3>
-        <div class="fld"><span>Marca / Modelo:</span> ${esc(veh.model || veh.marca || '')}</div>
+        <div class="fld"><span>Marca / Modelo:</span> ${badgeMarca(veh)} ${esc(veh.model || '')}</div>
         <div class="fld"><span>Placa:</span> ${esc(veh.plate || '')}</div>
         <div class="fld"><span>Tipo:</span> ${esc(r.tipoVeh || veh.tipoVeh || '')} &nbsp; <span>Color:</span> ${esc(r.color || veh.color || '')}</div>
         <div class="fld"><span>Kilometraje:</span> ${esc(r.km || '')} &nbsp; <span>Mecánico:</span> ${esc(veh.mech || '')}</div>
