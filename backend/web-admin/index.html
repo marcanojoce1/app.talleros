@@ -385,7 +385,7 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover{background:var(--surface-2)}
 
   <div class="web-wrap"><div class="web">
     <div class="wside">
-      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v64</span></div>
+      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v65</span></div>
       <div class="wlbl op-item">Operación</div>
       <a class="on op-item" data-w="dash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
       <a class="op-item" data-w="recep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-6 0v4"/><rect x="2" y="9" width="20" height="11" rx="2"/></svg>Recepción digital</a>
@@ -890,7 +890,7 @@ function createCitaWeb(){const cli=document.getElementById('ncCli').value;const 
 
 /* ===== WEB RENDER ===== */
 const WTITLES={dash:["Dashboard","Todo se actualiza al instante desde la app"],recep:["Recepción digital","Inspección y registro de ingreso del vehículo"],board:["Órdenes de taller","Tablero en vivo por estado"],hist:["Trabajos realizados","Historial de servicios completados"],citas:["Citas","Solicitudes y agenda del taller"],veh:["Vehículos","Estado actual de la flota"],cli:["Clientes","Cartera registrada"],mec:["Mecánicos","Equipo técnico y desempeño"],usuarios:["Usuarios y accesos","Cuentas y roles del sistema"],fact:["Facturación","Pagos y facturas del servicio"],talleres:["Talleres","Gestión de talleres y asignación de administradores"],config:["Configuración","Moneda, documentos y seguros — Venezuela"],audit:["Auditoría","Registro de acciones: quién, cuándo, IP y dispositivo"]};
-document.querySelectorAll('.wside a[data-w]').forEach(a=>a.addEventListener('click',()=>{document.querySelectorAll('.wside a').forEach(x=>x.classList.remove('on'));a.classList.add('on');const w=a.dataset.w;document.querySelectorAll('.wview').forEach(s=>s.classList.remove('on'));document.getElementById('w-'+w).classList.add('on');document.getElementById('wTitle').textContent=WTITLES[w][0];document.getElementById('wSub').textContent=WTITLES[w][1];if(w==='talleres')renderSuperPanel();if(w==='usuarios')renderUsuariosView();if(w==='fact')renderFacturacion();if(w==='audit')renderAuditoria();}));
+document.querySelectorAll('.wside a[data-w]').forEach(a=>a.addEventListener('click',()=>{document.querySelectorAll('.wside a').forEach(x=>x.classList.remove('on'));a.classList.add('on');const w=a.dataset.w;document.querySelectorAll('.wview').forEach(s=>s.classList.remove('on'));document.getElementById('w-'+w).classList.add('on');document.getElementById('wTitle').textContent=WTITLES[w][0];document.getElementById('wSub').textContent=WTITLES[w][1];if(w==='talleres'){renderSuperPanel();setTimeout(idxCargar,300);}if(w==='usuarios')renderUsuariosView();if(w==='fact')renderFacturacion();if(w==='audit')renderAuditoria();}));
 function cnt(s){return store.vehicles.filter(v=>v.status===s).length;}
 const DINCOME=[28,31,27,35,33,38,41,39,44,42,46,48],DMONTHS=["E","F","M","A","M","J","J","A","S","O","N","D"];
 const DSERV=[{l:"Cambio de aceite",v:34,c:"#16191d"},{l:"Frenos",v:24,c:"#2563EB"},{l:"Suspensión",v:18,c:"#F5B700"},{l:"Diagnóstico",v:14,c:"#16A34A"},{l:"Otros",v:10,c:"#cbd2da"}];
@@ -1193,7 +1193,7 @@ function openMant(id){const v=veh(id);if(!v||!v.proximoMant)return;const p=v.pro
     </div>
     <button class="wbtn wbtn-g" style="width:100%;justify-content:center;margin-top:10px;color:#dc2626" onclick="quitarMant(${id})">Quitar recordatorio</button>`);}
 function quitarMant(id){if(!confirm('¿Quitar el recordatorio de mantenimiento de este vehículo?'))return;const v=veh(id);if(v)v.proximoMant=null;closeModal();renderMant();persistNow();toast('Recordatorio quitado');}
-async function renderConfig(){persistData();const c=store.config;setTimeout(idxCargar,100);let _t=(window._talleresCache||[]).find(x=>x.id===CURRENT_TALLER)||null;
+async function renderConfig(){persistData();const c=store.config;let _t=(window._talleresCache||[]).find(x=>x.id===CURRENT_TALLER)||null;
   if(!_t){try{const ts=await apiReq('/api/talleres');window._talleresCache=ts;_t=ts.find(x=>x.id===CURRENT_TALLER)||{};}catch(e){_t={};}}
   document.getElementById('w-config').innerHTML=`
    <div class="dcard" style="margin-bottom:14px"><h3 style="font-size:14px;margin-bottom:12px">📄 Encabezado y pie del acta</h3>
@@ -1209,12 +1209,6 @@ async function renderConfig(){persistData();const c=store.config;setTimeout(idxC
      <div class="fld"><label>Condiciones del servicio (pie del acta)</label><textarea id="acC" rows="3" style="width:100%;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:8px">${(_t.condiciones||'')}</textarea></div>
      <div class="fld"><label>Pie de página (texto final)</label><input id="acP" value="${(_t.pie||'').replace(/"/g,'&quot;')}" placeholder="Ej. Gracias por su preferencia"></div>
      <button class="wbtn wbtn-d" onclick="guardarEncabezado()">Guardar encabezado y pie</button>
-   </div>
-   <div class="dcard" style="margin-bottom:14px"><h3 style="font-size:14px;margin-bottom:6px">🖼️ Imágenes del inicio de sesión</h3>
-     <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Sube fotos de tu taller, reparaciones o consejos. Aparecen en el panel derecho de la pantalla de inicio, rotando automáticamente.</div>
-     <div class="fld"><label>Agregar imagen</label><input id="idxFile" type="file" accept="image/*" multiple onchange="idxAgregar()"></div>
-     <div id="idxLista" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-top:6px"></div>
-     <button class="wbtn wbtn-d" style="margin-top:12px" onclick="idxGuardar()">Guardar imágenes</button>
    </div>
    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start">
      <div class="dcard"><h3 style="font-size:14px;margin-bottom:12px">Moneda</h3>
@@ -1779,6 +1773,12 @@ async function renderSuperPanel(){const _cont=document.getElementById('w-tallere
      <div id="spList">${talleres.map(spTallerCard).join('')||'<div class="dcard" style="color:var(--muted)">Aún no hay talleres. Crea el primero arriba.</div>'}</div>
      <h3 style="font-size:15px;margin:18px 0 10px">Administradores (${admins.length}) — editar talleres</h3>
      <div>${admins.length?admins.map(a=>spAdminEditCard(a,talleres)).join(''):'<div class="dcard" style="color:var(--muted)">Aún no hay administradores. Créalos arriba.</div>'}</div>
+     <div class="dcard" style="margin-top:14px"><h3 style="font-size:15px;margin-bottom:6px">🖼️ Imágenes del inicio de sesión</h3>
+       <div style="font-size:12.5px;color:var(--muted);margin-bottom:12px">Estas fotos aparecen en el panel derecho de la pantalla de inicio de TODA la plataforma, rotando junto con los consejos de mantenimiento. Si no subes ninguna, se muestran fondos de color.</div>
+       <div class="fld"><label>Agregar imagen (puedes elegir varias)</label><input id="idxFile" type="file" accept="image/*" multiple onchange="idxAgregar()"></div>
+       <div id="idxLista" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-top:6px"></div>
+       <button class="wbtn wbtn-d" style="margin-top:12px" onclick="idxGuardar()">Guardar imágenes</button>
+     </div>
      <div class="dcard" style="margin-top:14px;border:1px solid #f3c2c2;background:#fff7f7">
        <h3 style="font-size:15px;margin-bottom:6px;color:#c0392b">Zona de peligro</h3>
        <div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Borra TODOS los datos de prueba (talleres, clientes, vehiculos, recepciones, mecanicos, historial). Conserva solo tu cuenta de superadmin. No se puede deshacer.</div>
