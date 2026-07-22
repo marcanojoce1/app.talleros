@@ -17,9 +17,11 @@ router.get('/acta/:tallerId/:vehId', async (req, res) => {
     if (!veh) return res.status(404).send('<h3>Vehículo no encontrado</h3>');
     const cli = (d.clients || []).find((c) => c.n === veh.owner) || { n: veh.owner };
 
-    // Precio: si ya hay historial (trabajo cobrado), úsalo
-    const hist = (d.history || []).find((h) => h.vehId === vehId);
-    const precio = hist ? hist.total : (veh.cost || '');
+    // El pago solo aplica si ESTE ingreso ya fue cobrado/entregado.
+    // Una recepción nueva (aunque sea el mismo carro) NO debe mostrar el monto anterior.
+    const yaCobrado = veh.cerrada === true || veh.entregado === true || veh.status === 'ent';
+    const hist = yaCobrado ? (d.history || []).filter((h) => h.vehId === vehId).slice(-1)[0] : null;
+    const precio = hist ? hist.total : '';
     const pago = hist ? { total: hist.total || 0, pagado: hist.pagado || 0, saldo: hist.saldo != null ? hist.saldo : Math.max(0, (hist.total || 0) - (hist.pagado || 0)) } : null;
     const moneda = (d.config && d.config.currency && d.config.currency.sym) || 'Bs.';
 
@@ -59,7 +61,8 @@ router.get('/trabajo/:tallerId/:vehId', async (req, res) => {
     let d = st ? st.data : {}; if (typeof d === 'string') { try { d = JSON.parse(d); } catch { d = {}; } }
     // buscar en vehículos activos o en historial
     let veh = (d.vehicles || []).find((v) => v.id === vehId);
-    const hist = (d.history || []).find((h) => h.vehId === vehId);
+    const yaCobrado = veh && (veh.cerrada === true || veh.entregado === true || veh.status === 'ent');
+    const hist = yaCobrado ? (d.history || []).filter((h) => h.vehId === vehId).slice(-1)[0] : null;
     if (!veh && hist) veh = { id: vehId, model: hist.veh, plate: hist.placa, owner: hist.cliente, mech: hist.mech, motivo: hist.trabajo, recepcion: hist.recepcion, recepDamages: hist.damages, recepLados: hist.lados, advances: [] };
     if (!veh) return res.status(404).send('<h3>Vehículo no encontrado</h3>');
     const cli = (d.clients || []).find((c) => c.n === veh.owner) || { n: veh.owner };

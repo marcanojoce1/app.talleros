@@ -267,7 +267,20 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover{background:var(--surface-2)}
 .mbx .mb2{padding:20px 22px}
 .kv{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}.kv:last-child{border:none}.kv .k{color:var(--muted)}.kv .vv{font-weight:600}
 #login{position:fixed;inset:0;z-index:200;background:radial-gradient(120% 120% at 50% 0%,#1f242b 0%,#0e1014 60%);display:flex;align-items:center;justify-content:center;padding:24px}
-.lcard{width:100%;max-width:380px;background:var(--surface);border-radius:20px;box-shadow:0 30px 80px rgba(0,0,0,.5);overflow:hidden}
+.lsplit{display:flex;width:100%;max-width:1040px;min-height:560px;background:var(--surface);border-radius:22px;box-shadow:0 30px 80px rgba(0,0,0,.5);overflow:hidden}
+.lcard{width:100%;max-width:420px;flex:none;background:var(--surface);display:flex;flex-direction:column;justify-content:center;padding:8px 6px}
+.lpanel{position:relative;flex:1;overflow:hidden;display:flex;align-items:flex-end;min-height:100%}
+.lpanel-bg{position:absolute;inset:0;transition:opacity .8s ease;background-size:cover;background-position:center}
+.lpanel-ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,20,40,.15) 0%,rgba(10,20,40,.55) 55%,rgba(10,16,30,.88) 100%)}
+.lpanel-in{position:relative;z-index:2;padding:40px;color:#fff;width:100%}
+.lpanel-ico{width:46px;height:46px;border-radius:13px;background:rgba(255,255,255,.16);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+.lpanel-ico svg{width:26px;height:26px;stroke:#fff}
+.lpanel-in h2{font-size:26px;font-weight:800;margin:0 0 8px;color:#fff;line-height:1.15;text-shadow:0 2px 12px rgba(0,0,0,.4)}
+.lpanel-in p{font-size:14.5px;color:#e8eef7;margin:0;max-width:360px;line-height:1.5;text-shadow:0 1px 8px rgba(0,0,0,.4)}
+.lpanel-dots{display:flex;gap:8px;margin-top:22px}
+.lpanel-dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.4);transition:all .3s;cursor:pointer}
+.lpanel-dots i.on{background:#fff;width:22px;border-radius:5px}
+@media(max-width:820px){.lpanel{display:none}.lsplit{max-width:420px;min-height:auto}}
 .lhead{background:var(--sidebar);padding:22px 24px;display:flex;align-items:center;gap:11px}
 .lhead .mk{width:36px;height:36px;border-radius:9px;background:var(--signal);display:grid;place-items:center;flex:none}.lhead .mk svg{width:20px;height:20px}
 .lhead b{font-family:'Space Grotesk';font-size:19px;font-weight:700;color:#fff}.lhead b span{color:var(--signal)}
@@ -324,9 +337,21 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover{background:var(--surface-2)}
 </style>
 </head>
 <body>
-<div id="login"><div class="lcard">
-  <div class="lhead"><div class="mk"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4 2.3-2.3z"/><path d="m14 8 3 3"/></svg></div><div><b>Taller<span>OS</span></b><small>Gestión inteligente · Venezuela</small></div></div>
-  <div class="lbody" id="loginBody"></div>
+<div id="login"><div class="lsplit">
+  <div class="lcard">
+    <div class="lhead"><div class="mk"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4 2.3-2.3z"/><path d="m14 8 3 3"/></svg></div><div><b>Taller<span>OS</span></b><small>Gestión inteligente · Venezuela</small></div></div>
+    <div class="lbody" id="loginBody"></div>
+  </div>
+  <div class="lpanel" id="lpanel">
+    <div class="lpanel-bg" id="lpanelBg"></div>
+    <div class="lpanel-ov"></div>
+    <div class="lpanel-in">
+      <div class="lpanel-ico" id="lpanelIco"></div>
+      <h2 id="lpanelTit">Tu taller, bajo control</h2>
+      <p id="lpanelTxt">Órdenes, recepción digital y clientes en un solo lugar.</p>
+      <div class="lpanel-dots" id="lpanelDots"></div>
+    </div>
+  </div>
 </div></div>
 
 <div class="demobar">
@@ -360,7 +385,7 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover{background:var(--surface-2)}
 
   <div class="web-wrap"><div class="web">
     <div class="wside">
-      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v61</span></div>
+      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v63</span></div>
       <div class="wlbl op-item">Operación</div>
       <a class="on op-item" data-w="dash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
       <a class="op-item" data-w="recep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-6 0v4"/><rect x="2" y="9" width="20" height="11" rx="2"/></svg>Recepción digital</a>
@@ -666,8 +691,8 @@ function renderDlist(){
   box.innerHTML=rec.damages.map(d=>`<div class="di"><span class="num sev-${d.sev}">${d.n}</span><div><b>${d.tipo.join(', ')}</b> · ${sn[d.sev]}</div><button class="x" onclick="delRecDmg(${d.n})">×</button></div>`).join('');
 }
 function delRecDmg(n){rec.damages=rec.damages.filter(d=>d.n!==n);const m=markers3D.find(x=>x.n===n);if(m){rGroup.remove(m.sphere);rGroup.remove(m.sprite);markers3D=markers3D.filter(x=>x.n!==n);}renderDlist();}
-function setupSig(id){const cv=document.getElementById(id);if(!cv)return;cv.style.touchAction='none';const dpr=window.devicePixelRatio||1;const r=cv.getBoundingClientRect();cv.width=r.width*dpr;cv.height=r.height*dpr;const ctx=cv.getContext('2d');ctx.scale(dpr,dpr);ctx.lineWidth=2;ctx.lineCap='round';ctx.strokeStyle='#16191d';cv._inked=false;let drawing=false;function pos(e){const b=cv.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return{x:t.clientX-b.left,y:t.clientY-b.top};}function start(e){drawing=true;cv._inked=true;const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);e.preventDefault();}function move(e){if(!drawing)return;const p=pos(e);ctx.lineTo(p.x,p.y);ctx.stroke();e.preventDefault();}function end(){if(drawing){drawing=false;try{cv._data=cv.toDataURL('image/png');}catch(e){}}}cv.addEventListener('mousedown',start);cv.addEventListener('mousemove',move);window.addEventListener('mouseup',end);cv.addEventListener('touchstart',start,{passive:false});cv.addEventListener('touchmove',move,{passive:false});cv.addEventListener('touchend',end);}
-function clearSig(id){const cv=document.getElementById(id);if(!cv)return;cv.getContext('2d').clearRect(0,0,cv.width,cv.height);cv._inked=false;}
+function setupSig(id){const cv=document.getElementById(id);if(!cv)return;if(cv._sigReady)return;cv.style.touchAction='none';const dpr=window.devicePixelRatio||1;let r=cv.getBoundingClientRect();if(!r.width||!r.height){setTimeout(()=>setupSig(id),200);return;}cv._sigReady=true;cv.width=r.width*dpr;cv.height=r.height*dpr;const ctx=cv.getContext('2d');ctx.scale(dpr,dpr);ctx.lineWidth=2;ctx.lineCap='round';ctx.strokeStyle='#16191d';cv._inked=false;let drawing=false;function pos(e){const b=cv.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return{x:t.clientX-b.left,y:t.clientY-b.top};}function start(e){drawing=true;cv._inked=true;const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);e.preventDefault();}function move(e){if(!drawing)return;const p=pos(e);ctx.lineTo(p.x,p.y);ctx.stroke();e.preventDefault();}function end(){if(drawing){drawing=false;try{cv._data=cv.toDataURL('image/png');}catch(e){}}}cv.addEventListener('mousedown',start);cv.addEventListener('mousemove',move);window.addEventListener('mouseup',end);cv.addEventListener('touchstart',start,{passive:false});cv.addEventListener('touchmove',move,{passive:false});cv.addEventListener('touchend',end);}
+function clearSig(id){const c0=document.getElementById(id);if(c0){c0._inked=false;c0._data='';}const cv=document.getElementById(id);if(!cv)return;cv.getContext('2d').clearRect(0,0,cv.width,cv.height);cv._inked=false;}
 function confirmRecep(){
   const v=veh(rec.vehId);v.motivo=rec.trabajo;v.ingreso=new Date().toISOString().slice(0,10);
   v.recepDamages=rec.damages.map(d=>({n:d.n,tipo:d.tipo.join(', '),sev:d.sev,lado:d.lado||d.side||''}));
@@ -1524,7 +1549,50 @@ const LOGIN_BGS=[
  'radial-gradient(120% 120% at 80% 10%,#14312e,#0d1113 60%)',
  'linear-gradient(135deg,#141e30,#243b55)'
 ];
-function applyLoginBg(){const el=document.getElementById('login');if(!el)return;el.style.background=LOGIN_BGS[Math.floor(Math.random()*LOGIN_BGS.length)];}
+// ===== Carrusel del panel de login: consejos de mantenimiento + escenas de taller =====
+// Cada slide usa un degradado temático. Si subes fotos a /img/login/ (slide1.jpg…),
+// se usarán automáticamente en lugar del degradado.
+const LOGIN_SLIDES = [
+  { tit:'Tu taller, bajo control', txt:'Órdenes, recepción digital, clientes e historial en un solo lugar.',
+    grad:'linear-gradient(135deg,#0f2c4d 0%,#1c5a8f 55%,#2b7fb8 100%)', img:'slide1.jpg',
+    ico:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/><path d="m14 8 3 3"/>' },
+  { tit:'Recepción con evidencia', txt:'Marca daños sobre el vehículo, firma digital y todo queda en el acta.',
+    grad:'linear-gradient(135deg,#3a1c00 0%,#8a4b12 55%,#d98324 100%)', img:'slide2.jpg',
+    ico:'<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>' },
+  { tit:'Consejo: aceite a tiempo', txt:'Cambia el aceite cada 5.000–10.000 km. Un motor lubricado dura años más.',
+    grad:'linear-gradient(135deg,#1a1a1a 0%,#3d3d3d 50%,#6b6b6b 100%)', img:'slide3.jpg',
+    ico:'<path d="M3 12h4l2 5 4-10 2 5h6"/>' },
+  { tit:'Consejo: revisa los frenos', txt:'Pastillas y discos en buen estado salvan vidas. Inspección cada 15.000 km.',
+    grad:'linear-gradient(135deg,#4a0d0d 0%,#992d2d 55%,#e24b4a 100%)', img:'slide4.jpg',
+    ico:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/>' },
+  { tit:'Consejo: presión de cauchos', txt:'La presión correcta ahorra combustible y evita desgaste irregular.',
+    grad:'linear-gradient(135deg,#0d3320 0%,#1d7a4a 55%,#2bb673 100%)', img:'slide5.jpg',
+    ico:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 8v8M8 12h8"/>' },
+];
+let _lslide = 0, _ltimer = null;
+function pintarSlide(i){
+  _lslide = (i + LOGIN_SLIDES.length) % LOGIN_SLIDES.length;
+  const sl = LOGIN_SLIDES[_lslide];
+  const bg = document.getElementById('lpanelBg');
+  const tit = document.getElementById('lpanelTit');
+  const txt = document.getElementById('lpanelTxt');
+  const ico = document.getElementById('lpanelIco');
+  const dots = document.getElementById('lpanelDots');
+  if(!bg) return;
+  // Si existe la foto, la usa; si no, el degradado temático
+  const test = new Image();
+  test.onload = () => { bg.style.backgroundImage = `url(img/login/${sl.img})`; bg.style.background = `url(img/login/${sl.img}) center/cover`; };
+  test.onerror = () => { bg.style.backgroundImage = 'none'; bg.style.background = sl.grad; };
+  test.src = 'img/login/' + sl.img;
+  bg.style.background = sl.grad;
+  if(tit) tit.textContent = sl.tit;
+  if(txt) txt.textContent = sl.txt;
+  if(ico) ico.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${sl.ico}</svg>`;
+  if(dots) dots.innerHTML = LOGIN_SLIDES.map((_,k)=>`<i class="${k===_lslide?'on':''}" onclick="irSlide(${k})"></i>`).join('');
+}
+function irSlide(i){ pintarSlide(i); reiniciarCarrusel(); }
+function reiniciarCarrusel(){ clearInterval(_ltimer); _ltimer = setInterval(()=>pintarSlide(_lslide+1), 5000); }
+function applyLoginBg(){ pintarSlide(Math.floor(Math.random()*LOGIN_SLIDES.length)); reiniciarCarrusel(); }
 applyLoginBg();
 async function doLogin(){const usuario=(document.getElementById('lgU').value||'').trim();const password=document.getElementById('lgP').value||'';if(!usuario||!password){loginErr('Ingresa usuario y contraseña');return;}
   loginErr('');
