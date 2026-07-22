@@ -268,8 +268,8 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover{background:var(--surface-2)}
 .kv{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}.kv:last-child{border:none}.kv .k{color:var(--muted)}.kv .vv{font-weight:600}
 #login{position:fixed;inset:0;z-index:200;background:radial-gradient(120% 120% at 50% 0%,#1f242b 0%,#0e1014 60%);display:flex;align-items:center;justify-content:center;padding:24px}
 .lsplit{display:flex;width:100%;max-width:1040px;min-height:560px;background:var(--surface);border-radius:22px;box-shadow:0 30px 80px rgba(0,0,0,.5);overflow:hidden}
-.lcard{width:100%;max-width:420px;flex:none;background:var(--surface);display:flex;flex-direction:column;justify-content:center;padding:8px 6px}
-.lpanel{position:relative;flex:1;overflow:hidden;display:flex;align-items:flex-end;min-height:100%}
+.lcard{width:420px;max-width:44%;flex:none;background:var(--surface);display:flex;flex-direction:column;justify-content:center;padding:36px 34px}
+.lpanel{position:relative;flex:1;overflow:hidden;display:flex;align-items:flex-end;align-self:stretch}
 .lpanel-bg{position:absolute;inset:0;transition:opacity .8s ease;background-size:cover;background-position:center}
 .lpanel-ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,20,40,.15) 0%,rgba(10,20,40,.55) 55%,rgba(10,16,30,.88) 100%)}
 .lpanel-in{position:relative;z-index:2;padding:40px;color:#fff;width:100%}
@@ -281,11 +281,11 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover{background:var(--surface-2)}
 .lpanel-dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.4);transition:all .3s;cursor:pointer}
 .lpanel-dots i.on{background:#fff;width:22px;border-radius:5px}
 @media(max-width:820px){.lpanel{display:none}.lsplit{max-width:420px;min-height:auto}}
-.lhead{background:var(--sidebar);padding:22px 24px;display:flex;align-items:center;gap:11px}
+.lhead{padding:0 0 20px;display:flex;align-items:center;gap:11px}
 .lhead .mk{width:36px;height:36px;border-radius:9px;background:var(--signal);display:grid;place-items:center;flex:none}.lhead .mk svg{width:20px;height:20px}
 .lhead b{font-family:'Space Grotesk';font-size:19px;font-weight:700;color:#fff}.lhead b span{color:var(--signal)}
 .lhead small{display:block;font-size:10px;color:var(--sidebar-muted);letter-spacing:.14em;text-transform:uppercase;font-weight:600}
-.lbody{padding:24px}
+.lbody{padding:0}
 .lbody h3{font-size:17px;margin-bottom:3px}.lbody .sub{font-size:12.5px;color:var(--muted);margin-bottom:16px}
 .lfld{margin-bottom:13px}.lfld label{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:5px}
 .lfld input{width:100%;border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-size:14px;outline:none}
@@ -385,7 +385,7 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover{background:var(--surface-2)}
 
   <div class="web-wrap"><div class="web">
     <div class="wside">
-      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v63</span></div>
+      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v64</span></div>
       <div class="wlbl op-item">Operación</div>
       <a class="on op-item" data-w="dash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
       <a class="op-item" data-w="recep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-6 0v4"/><rect x="2" y="9" width="20" height="11" rx="2"/></svg>Recepción digital</a>
@@ -1193,7 +1193,7 @@ function openMant(id){const v=veh(id);if(!v||!v.proximoMant)return;const p=v.pro
     </div>
     <button class="wbtn wbtn-g" style="width:100%;justify-content:center;margin-top:10px;color:#dc2626" onclick="quitarMant(${id})">Quitar recordatorio</button>`);}
 function quitarMant(id){if(!confirm('¿Quitar el recordatorio de mantenimiento de este vehículo?'))return;const v=veh(id);if(v)v.proximoMant=null;closeModal();renderMant();persistNow();toast('Recordatorio quitado');}
-async function renderConfig(){persistData();const c=store.config;let _t=(window._talleresCache||[]).find(x=>x.id===CURRENT_TALLER)||null;
+async function renderConfig(){persistData();const c=store.config;setTimeout(idxCargar,100);let _t=(window._talleresCache||[]).find(x=>x.id===CURRENT_TALLER)||null;
   if(!_t){try{const ts=await apiReq('/api/talleres');window._talleresCache=ts;_t=ts.find(x=>x.id===CURRENT_TALLER)||{};}catch(e){_t={};}}
   document.getElementById('w-config').innerHTML=`
    <div class="dcard" style="margin-bottom:14px"><h3 style="font-size:14px;margin-bottom:12px">📄 Encabezado y pie del acta</h3>
@@ -1209,6 +1209,12 @@ async function renderConfig(){persistData();const c=store.config;let _t=(window.
      <div class="fld"><label>Condiciones del servicio (pie del acta)</label><textarea id="acC" rows="3" style="width:100%;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:8px">${(_t.condiciones||'')}</textarea></div>
      <div class="fld"><label>Pie de página (texto final)</label><input id="acP" value="${(_t.pie||'').replace(/"/g,'&quot;')}" placeholder="Ej. Gracias por su preferencia"></div>
      <button class="wbtn wbtn-d" onclick="guardarEncabezado()">Guardar encabezado y pie</button>
+   </div>
+   <div class="dcard" style="margin-bottom:14px"><h3 style="font-size:14px;margin-bottom:6px">🖼️ Imágenes del inicio de sesión</h3>
+     <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Sube fotos de tu taller, reparaciones o consejos. Aparecen en el panel derecho de la pantalla de inicio, rotando automáticamente.</div>
+     <div class="fld"><label>Agregar imagen</label><input id="idxFile" type="file" accept="image/*" multiple onchange="idxAgregar()"></div>
+     <div id="idxLista" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-top:6px"></div>
+     <button class="wbtn wbtn-d" style="margin-top:12px" onclick="idxGuardar()">Guardar imágenes</button>
    </div>
    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start">
      <div class="dcard"><h3 style="font-size:14px;margin-bottom:12px">Moneda</h3>
@@ -1236,6 +1242,51 @@ function marcaAdd(){store.config.marcas.push({marca:'Nueva marca',modelos:['Mode
 function guardarMarcas(){persistData();renderWeb();toast('Marcas y modelos guardados con éxito ✓');}
 let _acLogoTmp='';
 function acLeerLogo(){const f=document.getElementById('acL').files[0];if(!f)return;const r=new FileReader();r.onload=()=>{_acLogoTmp=r.result;document.getElementById('acLprev').textContent='Logo nuevo cargado ✓';};r.readAsDataURL(f);}
+let _idxImgs = null; // imágenes del login en edición
+async function idxCargar(){
+  if(_idxImgs!==null) { idxPintar(); return; }
+  try{ const r=await apiReq('/api/branding/login-imgs'); _idxImgs=(r&&r.imgs)||[]; }catch(e){ _idxImgs=[]; }
+  idxPintar();
+}
+function idxPintar(){
+  const box=document.getElementById('idxLista'); if(!box) return;
+  if(!_idxImgs||!_idxImgs.length){ box.innerHTML='<div style="font-size:12px;color:var(--muted);grid-column:1/-1">Aún no hay imágenes. Si no subes ninguna, se muestran fondos de color con consejos.</div>'; return; }
+  box.innerHTML=_idxImgs.map((im,i)=>`<div style="position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--line)">
+    <img src="${im}" style="width:100%;height:90px;object-fit:cover;display:block">
+    <button onclick="idxQuitar(${i})" style="position:absolute;top:4px;right:4px;background:rgba(220,38,38,.92);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-weight:bold">×</button>
+    <span style="position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,.6);color:#fff;font-size:10px;padding:1px 6px;border-radius:8px">${i+1}</span>
+  </div>`).join('');
+}
+function idxAgregar(){
+  const inp=document.getElementById('idxFile'); if(!inp||!inp.files.length) return;
+  _idxImgs=_idxImgs||[];
+  const files=[...inp.files].slice(0,8);
+  let pend=files.length;
+  files.forEach(f=>{
+    const rd=new FileReader();
+    rd.onload=()=>{ // reducir tamaño para no pesar demasiado
+      const img=new Image();
+      img.onload=()=>{
+        const max=1000; let w=img.width,h=img.height;
+        if(w>max||h>max){ if(w>h){h=h*max/w;w=max;}else{w=w*max/h;h=max;} }
+        const c=document.createElement('canvas'); c.width=w; c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        _idxImgs.push(c.toDataURL('image/jpeg',0.82));
+        if(--pend===0){ idxPintar(); }
+      };
+      img.onerror=()=>{ if(--pend===0) idxPintar(); };
+      img.src=rd.result;
+    };
+    rd.readAsDataURL(f);
+  });
+  inp.value='';
+}
+function idxQuitar(i){ _idxImgs.splice(i,1); idxPintar(); }
+async function idxGuardar(){
+  try{ await apiReq('/api/branding/login-imgs',{method:'PUT',body:JSON.stringify({imgs:_idxImgs||[]})});
+    toast('Imágenes del inicio guardadas ✓ ('+((_idxImgs||[]).length)+')'); }
+  catch(e){ toast(e.message||'No se pudo guardar'); }
+}
 async function guardarEncabezado(){const g=x=>(document.getElementById(x)||{}).value||'';const body={nombre:g('acN')||undefined,rubro:g('acU')||undefined,telefono:g('acT')||undefined,direccion:g('acD')||undefined,rif:g('acR')||undefined,condiciones:g('acC')||undefined,pie:g('acP')||undefined};if(_acLogoTmp)body.logo=_acLogoTmp;try{const upd=await apiReq('/api/talleres/'+CURRENT_TALLER,{method:'PUT',body:JSON.stringify(body)});const i=(window._talleresCache||[]).findIndex(x=>x.id===CURRENT_TALLER);if(i>=0)window._talleresCache[i]=upd;else{window._talleresCache=window._talleresCache||[];window._talleresCache.push(upd);}_acLogoTmp='';toast('Encabezado del acta actualizado ✓');}catch(e){toast(e.message);}}
 function marcaDel(i){store.config.marcas.splice(i,1);renderConfig();}
 function cfgList(key){return store.config[key].map((v,i)=>`<div style="display:flex;gap:8px;margin-bottom:7px"><input style="flex:1;border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:13px" value="${v}" oninput="store.config.${key}[${i}]=this.value"><button class="wbtn wbtn-gr" onclick="cfgDel('${key}',${i})">✕</button></div>`).join('')||'<div style="font-size:12px;color:var(--muted)">Sin elementos.</div>';}
@@ -1592,7 +1643,28 @@ function pintarSlide(i){
 }
 function irSlide(i){ pintarSlide(i); reiniciarCarrusel(); }
 function reiniciarCarrusel(){ clearInterval(_ltimer); _ltimer = setInterval(()=>pintarSlide(_lslide+1), 5000); }
-function applyLoginBg(){ pintarSlide(Math.floor(Math.random()*LOGIN_SLIDES.length)); reiniciarCarrusel(); }
+let _loginImgs = [];  // imágenes subidas por el admin
+function pintarSlideImg(i){
+  // Carrusel basado en las imágenes subidas (con los mismos consejos de texto)
+  _lslide = (i + _loginImgs.length) % _loginImgs.length;
+  const bg=document.getElementById('lpanelBg'), tit=document.getElementById('lpanelTit'),
+        txt=document.getElementById('lpanelTxt'), ico=document.getElementById('lpanelIco'),
+        dots=document.getElementById('lpanelDots');
+  if(!bg) return;
+  bg.style.background = `url(${_loginImgs[_lslide]}) center/cover`;
+  const cons = LOGIN_SLIDES[_lslide % LOGIN_SLIDES.length];
+  if(tit) tit.textContent = cons.tit;
+  if(txt) txt.textContent = cons.txt;
+  if(ico) ico.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${cons.ico}</svg>`;
+  if(dots) dots.innerHTML = _loginImgs.map((_,k)=>`<i class="${k===_lslide?'on':''}" onclick="irSlide(${k})"></i>`).join('');
+}
+function irSlide(i){ (_loginImgs.length?pintarSlideImg:pintarSlide)(i); reiniciarCarrusel(); }
+function reiniciarCarrusel(){ clearInterval(_ltimer); const n=_loginImgs.length||LOGIN_SLIDES.length; _ltimer=setInterval(()=>(_loginImgs.length?pintarSlideImg:pintarSlide)(_lslide+1),5000); }
+async function applyLoginBg(){
+  try{ const r=await fetch(API+'/api/branding/login-imgs'); const j=await r.json(); _loginImgs=(j&&j.imgs)||[]; }catch(e){ _loginImgs=[]; }
+  const start=Math.floor(Math.random()*(_loginImgs.length||LOGIN_SLIDES.length));
+  (_loginImgs.length?pintarSlideImg:pintarSlide)(start); reiniciarCarrusel();
+}
 applyLoginBg();
 async function doLogin(){const usuario=(document.getElementById('lgU').value||'').trim();const password=document.getElementById('lgP').value||'';if(!usuario||!password){loginErr('Ingresa usuario y contraseña');return;}
   loginErr('');
@@ -1622,7 +1694,7 @@ async function enterMainAsSuper(){removeSuper();
   const tl=document.querySelector('.wside a[data-w="talleres"]');if(tl)tl.click();
   try{const r=await apiReq('/api/talleres/facturas/all');setFactBadge(r.pendientes);if(r.pendientes>0)toast('🔔 Tienes '+r.pendientes+' pago(s) pendiente(s) por revisar en Facturación');}catch(e){}}
 function appEnter(){doLogin();}
-function logout(){borrarSesion();TOKEN='';ME=null;TALLERES=[];CURRENT_TALLER=null;removeSuper();document.getElementById('stage').style.display='';applyLoginBg();document.getElementById('login').style.display='flex';loginView();}
+function logout(){borrarSesion();TOKEN='';ME=null;TALLERES=[];CURRENT_TALLER=null;removeSuper();document.getElementById('stage').style.display='';_idxImgs=null;applyLoginBg();document.getElementById('login').style.display='flex';loginView();}
 async function apiReq(path,opts={}){const r=await fetch(API+path,{...opts,headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN,...(opts.headers||{})}});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||('Error '+r.status));return j;}
 function removeSuper(){const e=document.getElementById('superPanel');if(e)e.remove();}
 function setWho(){const av=document.getElementById('whoAv'),nm=document.getElementById('whoName');if(av)av.textContent=inits(ME.nombre);if(nm)nm.textContent=ME.nombre+' · '+(ME.rol==='administrador'?'Admin':ME.rol);}
