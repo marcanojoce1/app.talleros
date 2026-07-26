@@ -71,7 +71,7 @@ function generarActaHTML(o = {}) {
   const accMarcados = (r.accesorios || []);
   const docsMarcados = (r.documentos || []);
 
-  const combN = { 'E': 0, 'Vacío': 0, 'Vacio': 0, '¼': 25, '1/4': 25, '½': 50, '1/2': 50, '¾': 75, '3/4': 75, 'F': 100, 'Lleno': 100 };
+  const combN = { 'E': 0, 'Vacío': 0, 'Vacio': 0, '⅛': 12.5, '¼': 25, '⅜': 37.5, '½': 50, '⅝': 62.5, '¾': 75, '⅞': 87.5, '1/4': 25, '1/2': 50, '3/4': 75, 'F': 100, 'Lleno': 100 };
   const combPct = combN[r.combustible] != null ? combN[r.combustible] : 50;
 
   // Servicios: solo el trabajo seleccionado (más los adicionales si los hay)
@@ -178,7 +178,7 @@ function generarActaHTML(o = {}) {
         <div class="fld"><span>Marca / Modelo:</span> ${badgeMarca(veh)} ${esc(veh.model || '')}</div>
         <div class="fld"><span>Placa:</span> ${esc(veh.plate || '')}</div>
         <div class="fld"><span>Tipo:</span> ${esc(r.tipoVeh || veh.tipoVeh || '')} &nbsp; <span>Color:</span> ${esc(r.color || veh.color || '')}</div>
-        <div class="fld"><span>Kilometraje:</span> ${esc(r.km || '')} &nbsp; <span>Mecánico:</span> ${esc(veh.mech || '')}</div>
+        <div class="fld"><span>Kilometraje:</span> ${esc(r.km || '')} &nbsp; <span>Técnico:</span> ${esc(veh.mech || '')}</div>
       </div>
     </div>
 
@@ -286,13 +286,13 @@ function firmaSVG(trazos) {
   return `<svg viewBox="${vb}" width="170" height="50" preserveAspectRatio="xMidYMid meet">${paths}</svg>`;
 }
 
-// Informe de TRABAJO REALIZADO: ficha de recepción + todas las fotos y avances del mecánico
+// Informe de TRABAJO REALIZADO: ficha de recepción + todas las fotos y avances del técnico
 function generarTrabajoHTML(o = {}) {
   const acta = generarActaHTML(o); // reusa el acta completa
   const avances = o.avances || [];
   const mon = o.moneda || 'Bs.';
 
-  // Sección extra: bitácora del mecánico con fotos
+  // Sección extra: bitácora del técnico con fotos
   const bitacora = avances.length ? avances.map((a) => `
     <div class="bit">
       <div class="bit-t">${esc(a.t || 'Avance')}</div>
@@ -302,7 +302,7 @@ function generarTrabajoHTML(o = {}) {
 
   const extra = `
     <div class="sheet" style="margin-top:16px">
-      <div style="background:#111;color:#fff;padding:8px 12px;font-weight:bold;font-size:13px">TRABAJO REALIZADO — Bitácora del mecánico</div>
+      <div style="background:#111;color:#fff;padding:8px 12px;font-weight:bold;font-size:13px">TRABAJO REALIZADO — Bitácora del técnico</div>
       <div style="padding:12px">${bitacora}</div>
     </div>
     <style>
