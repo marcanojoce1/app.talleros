@@ -334,6 +334,8 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover{background:var(--surface-2)}
 .searchbar button{border:0;background:#eef0f3;border-radius:50%;width:20px;height:20px;cursor:pointer;color:var(--muted);font-size:12px;line-height:1}
 .sosdot{width:9px;height:9px;border-radius:50%;background:#16A34A;margin-left:auto;flex:none}
 .sosdot.on{background:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,.25)}
+.dano-card{background:var(--surface);border-radius:16px;padding:22px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.dano-card .wchips button{cursor:pointer}
 </style>
 </head>
 <body>
@@ -385,7 +387,7 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover{background:var(--surface-2)}
 
   <div class="web-wrap"><div class="web">
     <div class="wside">
-      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v72</span></div>
+      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v76</span></div>
       <div class="wlbl op-item">Operación</div>
       <a class="on op-item" data-w="dash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
       <a class="op-item" data-w="recep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-6 0v4"/><rect x="2" y="9" width="20" height="11" rx="2"/></svg>Recepción digital</a>
@@ -1056,10 +1058,8 @@ function renderWebRecep(){
     <div>
       <div class="wviews" id="wViews">${[['sup','Superior'],['front','Frontal'],['izq','Lat. Izq.'],['der','Lat. Der.'],['post','Posterior']].map(([k,l],i)=>`<button class="${i===0?'on':''}" onclick="wView('${k}',this)">${l}</button>`).join('')}</div>
       <div class="wstage" id="wStage" onclick="wMark(event)"><svg class="car" id="wCar" viewBox="0 0 400 275" preserveAspectRatio="xMidYMid meet"></svg></div>
-      <div style="font-size:11.5px;color:var(--muted);text-align:center;margin-top:8px">Haz clic en el diagrama para marcar daños · rota entre vistas para inspección 360°</div>
-      <div class="fld" style="margin-top:14px"><label>Tipo de daño <span style="color:var(--muted);font-weight:400">· puedes elegir varios</span></label><div class="wchips" id="wrTypes">${WTYPES.map(t=>`<button class="${wrec.types.includes(t)?'on':''}" onclick="wType(this,'${t}')">${t}</button>`).join('')}</div></div>
-      <div class="fld"><label>Severidad</label><div class="wsev" id="wrSev"><button data-s="leve" class="on" onclick="wSev(this,'leve')">Leve</button><button data-s="mod" onclick="wSev(this,'mod')">Moderado</button><button data-s="grave" onclick="wSev(this,'grave')">Grave</button></div></div>
-      <div class="fld"><label>Daños registrados</label><div class="wdlist" id="wrList"><div class="empty">Aún no hay daños marcados.</div></div></div>
+      <div style="font-size:12px;color:var(--text-accent);text-align:center;margin-top:8px;font-weight:600">👆 Haz clic en el vehículo donde está el daño — se abrirá para elegir el tipo y la severidad</div>
+      <div class="fld" style="margin-top:14px"><label>Daños registrados</label><div class="wdlist" id="wrList"><div class="empty">Aún no hay daños marcados.</div></div></div>
     </div>
     <div>
       <div class="fld"><label>Cliente</label><select id="wrCli" onchange="wrClient(this.value)">${store.clients.filter(c=>c.activo!==false).map(c=>`<option>${c.n}</option>`).join('')}</select></div>
@@ -1087,21 +1087,35 @@ function wView(k,b){document.querySelectorAll('#wViews button').forEach(x=>x.cla
 function wType(b,t){const i=wrec.types.indexOf(t);if(i>=0){wrec.types.splice(i,1);b.classList.remove('on');}else{wrec.types.push(t);b.classList.add('on');}}
 function wSev(b,s){document.querySelectorAll('#wrSev button').forEach(x=>x.classList.remove('on'));b.classList.add('on');wrec.sev=s;}
 function wDrawCar(){const el=document.getElementById('wCar');if(!el)return;const v=wrec.view;el.setAttribute('viewBox',WCARVB[v]||'0 0 400 275');el.innerHTML=(v==='der')?`<g transform="translate(884,0) scale(-1,1)">${WCARS.izq}</g>`:WCARS[v];wPins();}
-function zonaVehWeb(lado,x,y){
-  if(lado==='sup'){if(y<20)return'Capó';if(y<38)return'Parabrisas';if(y<60)return'Techo';if(y<78)return'Luneta trasera';return'Maletero';}
-  if(lado==='front'){if(y>78){if(x<30)return'Caucho delantero izquierdo';if(x>70)return'Caucho delantero derecho';return'Parachoques delantero';}if(y<28)return x<50?'Faro izquierdo':'Faro derecho';if(y<52)return'Capó';if(y<72)return'Parrilla';return'Parachoques delantero';}
-  if(lado==='post'){if(y>78){if(x<30)return'Caucho trasero izquierdo';if(x>70)return'Caucho trasero derecho';return'Parachoques trasero';}if(y<28)return x<50?'Stop izquierdo':'Stop derecho';if(y<52)return'Maletero';if(y<72)return'Placa trasera';return'Parachoques trasero';}
-  if(lado==='izq'||lado==='der'){const c=lado==='izq'?'izquierdo':'derecho';
-    if(y>70){if(x<28)return'Caucho delantero '+c;if(x>68)return'Caucho trasero '+c;return'Estribo / faldón '+c;}
-    if(y<35){if(x<22)return'Espejo '+c;if(x<55)return'Ventana delantera '+c;return'Ventana trasera '+c;}
-    if(x<18)return'Guardafango delantero '+c;if(x<42)return'Puerta delantera '+c;if(x<64)return'Puerta trasera '+c;if(x<82)return'Guardafango trasero '+c;return'Costado trasero '+c;}
-  return'';}
-function wMark(e){if(e.target.closest('.wpin'))return;if(!wrec.types.length){toast('Selecciona al menos un tipo de daño');return;}const st=document.getElementById('wStage');const r=st.getBoundingClientRect();const x=((e.clientX-r.left)/r.width)*100,y=((e.clientY-r.top)/r.height)*100;wrec.seq++;const zona=zonaVehWeb(wrec.view,x,y);wrec.dmg[wrec.view].push({id:wrec.seq,x,y,type:wrec.types.slice(),sev:wrec.sev,zona});wPins();wDList();pulseSync();if(zona)toast('📍 '+zona);}
+function wMark(e){if(e.target.closest('.wpin'))return;const st=document.getElementById('wStage');const r=st.getBoundingClientRect();const x=((e.clientX-r.left)/r.width)*100,y=((e.clientY-r.top)/r.height)*100;abrirPopupDano(x,y);}
+let _pinPend=null;
+function abrirPopupDano(x,y){_pinPend={x,y,view:wrec.view,tipo:WTYPES[0],sev:'leve',nuevo:''};pintarPopupDano();document.getElementById('danoPopup').style.display='flex';}
+function pintarPopupDano(){const box=document.getElementById('danoPopup');if(!box)return;
+  box.innerHTML=`<div class="dano-card">
+    <h3 style="margin:0 0 2px;font-size:17px">Detalle del daño</h3>
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:14px">Elige el tipo y la severidad, o escribe un daño nuevo.</div>
+    <label style="font-size:12px;font-weight:700">Tipo de daño</label>
+    <div class="wchips" style="margin:6px 0">${WTYPES.map(t=>`<button class="${_pinPend.tipo===t&&!_pinPend.nuevo?'on':''}" onclick="_pinPend.tipo='${t}';_pinPend.nuevo='';pintarPopupDano()">${t}</button>`).join('')}</div>
+    <input id="danoNuevo" placeholder="✏️ ¿Otro? Escríbelo (ej. Mancha en pintura)" value="${_pinPend.nuevo||''}" oninput="_pinPend.nuevo=this.value" style="width:100%;margin-bottom:10px">
+    <label style="font-size:12px;font-weight:700">Severidad</label>
+    <div class="wchips" id="popSev" style="margin:6px 0">
+      ${[['leve','Leve','#2563EB'],['mod','Moderado','#D97706'],['grave','Grave','#dc2626']].map(([k,l,c])=>`<button class="${_pinPend.sev===k?'on':''}" style="${_pinPend.sev===k?`background:${c};border-color:${c};color:#fff`:''}" onclick="_pinPend.sev='${k}';pintarPopupDano()">${l}</button>`).join('')}
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="wbtn wbtn-d" style="flex:1;justify-content:center" onclick="confirmarDano()">Marcar daño</button>
+      <button class="wbtn wbtn-g" style="justify-content:center" onclick="document.getElementById('danoPopup').style.display='none'">Cancelar</button>
+    </div>
+  </div>`;
+}
+function confirmarDano(){if(!_pinPend)return;let t=_pinPend.tipo;
+  if(_pinPend.nuevo&&_pinPend.nuevo.trim()){t=_pinPend.nuevo.trim();if(!WTYPES.includes(t))WTYPES.push(t);}
+  wrec.seq++;wrec.dmg[_pinPend.view].push({id:wrec.seq,x:_pinPend.x,y:_pinPend.y,type:[t],sev:_pinPend.sev});
+  document.getElementById('danoPopup').style.display='none';_pinPend=null;wPins();wDList();pulseSync();}
 function wPins(){const st=document.getElementById('wStage');[...st.querySelectorAll('.wpin')].forEach(p=>p.remove());wrec.dmg[wrec.view].forEach(d=>{const el=document.createElement('div');el.className='wpin';el.style.left=d.x+'%';el.style.top=d.y+'%';el.innerHTML=`<div class="b sev-${d.sev}"><span>${d.id}</span></div>`;el.title=Array.isArray(d.type)?d.type.join(', '):d.type;st.appendChild(el);});}
 function wAll(){return [].concat(...Object.values(wrec.dmg)).sort((a,b)=>a.id-b.id);}
-function wDList(){const all=wAll();const box=document.getElementById('wrList');if(!box)return;if(!all.length){box.innerHTML='<div class="empty">Aún no hay daños marcados.</div>';return;}const sn={leve:'Leve',mod:'Moderado',grave:'Grave'};box.innerHTML=all.map(d=>`<div class="di"><span class="num sev-${d.sev}">${d.id}</span><div><b>${d.type.join(', ')}</b> · ${sn[d.sev]}${d.zona?`<br><span style="font-size:11px;color:var(--muted)">📍 ${d.zona}</span>`:''}</div><button class="x" onclick="wDel(${d.id})">×</button></div>`).join('');}
+function wDList(){const all=wAll();const box=document.getElementById('wrList');if(!box)return;if(!all.length){box.innerHTML='<div class="empty">Aún no hay daños marcados.</div>';return;}const sn={leve:'Leve',mod:'Moderado',grave:'Grave'};box.innerHTML=all.map(d=>`<div class="di"><span class="num sev-${d.sev}">${d.id}</span><div><b>${d.type.join(', ')}</b> · ${sn[d.sev]}</div><button class="x" onclick="wDel(${d.id})">×</button></div>`).join('');}
 function wDel(id){for(const k in wrec.dmg)wrec.dmg[k]=wrec.dmg[k].filter(d=>d.id!==id);wPins();wDList();}
-async function wConfirm(){if(!wrec.vehId){toast('Selecciona un vehículo');return;}const v=veh(wrec.vehId);const LADOS={sup:'Superior',front:'Frontal',izq:'Lat. Izq.',der:'Lat. Der.',post:'Posterior'};let n=0;const dmgs=[];['sup','front','izq','der','post'].forEach(k=>{(wrec.dmg[k]||[]).forEach(d=>{n++;dmgs.push({n,tipo:(Array.isArray(d.type)?d.type.join(', '):d.type),sev:d.sev,lado:LADOS[k],zona:d.zona||'',x:d.x,y:d.y});});});
+async function wConfirm(){if(!wrec.vehId){toast('Selecciona un vehículo');return;}const v=veh(wrec.vehId);const LADOS={sup:'Superior',front:'Frontal',izq:'Lat. Izq.',der:'Lat. Der.',post:'Posterior'};let n=0;const dmgs=[];['sup','front','izq','der','post'].forEach(k=>{(wrec.dmg[k]||[]).forEach(d=>{n++;dmgs.push({n,tipo:(Array.isArray(d.type)?d.type.join(', '):d.type),sev:d.sev,lado:LADOS[k],x:d.x,y:d.y});});});
   v.motivo=wrec.trabajo;v.color=wrec.color||v.color;v.tipoVeh=wrec.tipoVeh;v.ingreso=new Date().toISOString().slice(0,10);v.recepDamages=dmgs;v.recepLados=['sup','front','izq','der','post'].filter(k=>(wrec.dmg[k]||[]).length).map(k=>LADOS[k]);v.status='espera';v.progress=0;v.cerrada=false;v.cost=0;v.pending=null;v.advances=[];v.entregado=false;v.fechaEntrega='';
   v.recepcion=mkRecep({motivo:wrec.motivo,trabajo:wrec.trabajo,tipoVeh:wrec.tipoVeh,color:wrec.color,prioridad:wrec.prioridad,combustible:FUELLBL[wrec.combustible],km:wrec.km,accesorios:wrec.accesorios,documentos:wrec.documentos,obs:wrec.obs,via:'Web 2D',firmaCli:!!(document.getElementById('wSigCli')||{})._inked,firmaRec:!!(document.getElementById('wSigRec')||{})._inked,firmaCliImg:(document.getElementById('wSigCli')||{})._data||'',firmaRecImg:(document.getElementById('wSigRec')||{})._data||''});
   v.status='espera';v.progress=v.progress||0;
@@ -1917,5 +1931,6 @@ loginView();
   }catch(e){ borrarSesion(); TOKEN='';ME=null;TALLERES=[]; }
 })();
 </script>
+<div id="danoPopup" style="display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.5);align-items:center;justify-content:center;padding:24px"></div>
 </body>
 </html>

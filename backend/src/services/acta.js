@@ -215,8 +215,7 @@ function generarActaHTML(o = {}) {
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;font-size:10.5px;margin-top:5px">${damages.map((d) => {
           const c = COLOR_SEV[d.sev] || COLOR_SEV.leve;
-          const zona = d.zona ? esc(d.zona) : esc(d.lado || '');
-          return `<div><span style="color:${c}">●</span> <b>#${d.n}</b> ${esc(d.tipo || 'Daño')} — ${zona} <span style="color:${c};font-weight:bold">(${esc(d.sev === 'grave' ? 'Grave' : d.sev === 'mod' ? 'Moderado' : 'Leve')})</span></div>`;
+          return `<div><span style="color:${c}">●</span> <b>#${d.n}</b> ${esc(d.tipo || 'Daño')} — ${esc(d.lado || '')} <span style="color:${c};font-weight:bold">(${esc(d.sev === 'grave' ? 'Grave' : d.sev === 'mod' ? 'Moderado' : 'Leve')})</span></div>`;
         }).join('')}</div></div>` : ''}
       </div>` : ''}
 
