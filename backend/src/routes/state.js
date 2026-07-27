@@ -187,6 +187,111 @@ router.post('/mi-autorizacion', async (req, res) => {
   res.json({ ok: true });
 });
 
+// ============ CITAS ============
+// POST /api/state/cita?taller=ID — el cliente solicita una cita (fecha, hora, servicio)
+router.post('/cita', async (req, res) => {
+  const tallerId = Number(req.query.taller);
+  if (!tallerId) return res.status(400).json({ error: 'Falta el taller' });
+  if (!(await puedeAcceder(req.user, tallerId, false))) return res.status(403).json({ error: 'Sin acceso' });
+  const { fecha, hora, servicio, observaciones, vehId, vehiculo, placa } = req.body || {};
+  if (!fecha || !hora) return res.status(400).json({ error: 'Indica la fecha y la hora' });
+  if (!servicio) return res.status(400).json({ error: 'Indica el tipo de servicio' });
+
+  const st = (await query('SELECT data FROM app_state WHERE taller_id=$1', [tallerId])).rows[0];
+  let d = st ? st.data : {}; if (typeof d === 'string') { try { d = JSON.parse(d); } catch { d = {}; } }
+  if (!st) await query('INSERT INTO app_state (taller_id, data) VALUES ($1,$2)', [tallerId, JSON.stringify({})]);
+
+  // Verificar que ese día/hora no esté ya ocupado por una cita viva (no rechazada/cancelada)
+  const ocupado = (d.citas || []).some((c) => c.fecha === fecha && c.hora === hora && c.estado !== 'rechazada' && c.estado !== 'cancelada');
+  if (ocupado) return res.status(409).json({ error: 'Ese horario ya está reservado. Elige otro.' });
+
+  const ahora = new Date();
+  const cita = {
+    id: Date.now(),
+    cliente: req.user.nombre || '',
+    vehId: vehId || null,
+    vehiculo: vehiculo || '',
+    placa: placa || '',
+    fecha, hora,
+    servicio,
+    observaciones: observaciones || '',
+    repuestos: [],
+    monto: 0,
+    estado: 'solicitada', // solicitada | cotizada | aceptada | rechazada | cancelada
+    creado: ahora.toISOString(),
+  };
+  d.citas = [...(d.citas || []), cita];
+  d.notifs = [...(d.notifs || []), {
+    owner: '__taller__', veh: cita.vehiculo,
+    text: '📅 NUEVA CITA: ' + cita.cliente + ' pidió ' + cita.servicio + ' el ' + fecha + ' a las ' + hora,
+    time: 'ahora', read: false, cita: true,
+  }];
+  await query('UPDATE app_state SET data=$2, updated_at=CURRENT_TIMESTAMP WHERE taller_id=$1', [tallerId, JSON.stringify(d)]);
+  res.json({ ok: true, cita });
+});
+
+// POST /api/state/cita-cotizar?taller=ID — el admin arma la cotización y la confirma
+router.post('/cita-cotizar', async (req, res) => {
+  const tallerId = Number(req.query.taller);
+  if (!tallerId) return res.status(400).json({ error: 'Falta el taller' });
+  if (req.user.rol !== 'superadmin' && req.user.rol !== 'administrador') return res.status(403).json({ error: 'Sin permiso' });
+  if (!(await puedeAcceder(req.user, tallerId, true))) return res.status(403).json({ error: 'Sin permiso' });
+  const { id, repuestos, monto } = req.body || {};
+  const st = (await query('SELECT data FROM app_state WHERE taller_id=$1', [tallerId])).rows[0];
+  if (!st) return res.json({ ok: true });
+  let d = st.data; if (typeof d === 'string') { try { d = JSON.parse(d); } catch { d = {}; } }
+  const cita = (d.citas || []).find((x) => x.id === id);
+  if (!cita) return res.status(404).json({ error: 'Cita no encontrada' });
+  d.citas = (d.citas || []).map((x) => (x.id === id ? { ...x, repuestos: repuestos || [], monto: monto || 0, estado: 'cotizada', cotizadoPor: req.user.nombre || '', cotizadoEn: new Date().toISOString() } : x));
+  // Notificar al cliente
+  d.notifs = [...(d.notifs || []), {
+    owner: cita.cliente, veh: cita.vehiculo || '',
+    text: '💰 Tu cita del ' + cita.fecha + ' está lista: cotización por ' + (monto || 0) + '. Revísala y confírmala.',
+    time: 'ahora', read: false, citaCotizada: true,
+  }];
+  await query('UPDATE app_state SET data=$2, updated_at=CURRENT_TIMESTAMP WHERE taller_id=$1', [tallerId, JSON.stringify(d)]);
+  res.json({ ok: true });
+});
+
+// POST /api/state/cita-responder?taller=ID — el cliente acepta o rechaza la cotización
+router.post('/cita-responder', async (req, res) => {
+  const tallerId = Number(req.query.taller);
+  if (!tallerId) return res.status(400).json({ error: 'Falta el taller' });
+  if (!(await puedeAcceder(req.user, tallerId, false))) return res.status(403).json({ error: 'Sin acceso' });
+  const { id, aceptada } = req.body || {};
+  const st = (await query('SELECT data FROM app_state WHERE taller_id=$1', [tallerId])).rows[0];
+  if (!st) return res.json({ ok: true });
+  let d = st.data; if (typeof d === 'string') { try { d = JSON.parse(d); } catch { d = {}; } }
+  const nombre = req.user.nombre || '';
+  const cita = (d.citas || []).find((x) => x.id === id && x.cliente === nombre);
+  if (!cita) return res.status(404).json({ error: 'Cita no encontrada' });
+  d.citas = (d.citas || []).map((x) => (x.id === id && x.cliente === nombre ? { ...x, estado: aceptada ? 'aceptada' : 'rechazada', respondidoEn: new Date().toISOString() } : x));
+
+  // Si acepta, crear un mantenimiento programado para esa fecha
+  if (aceptada) {
+    d.mantenimientos = [...(d.mantenimientos || []), {
+      id: Date.now(),
+      cliente: cita.cliente,
+      vehId: cita.vehId,
+      vehiculo: cita.vehiculo,
+      placa: cita.placa,
+      fecha: cita.fecha,
+      hora: cita.hora,
+      servicio: cita.servicio,
+      observaciones: cita.observaciones,
+      monto: cita.monto,
+      origen: 'cita',
+    }];
+  }
+  d.notifs = [...(d.notifs || []), {
+    owner: '__taller__', veh: cita.vehiculo || '',
+    text: (aceptada ? '✓ ' + nombre + ' ACEPTÓ la cita del ' + cita.fecha + ' (' + cita.hora + ')' : '✕ ' + nombre + ' RECHAZÓ la cita del ' + cita.fecha),
+    time: 'ahora', read: false,
+  }];
+  await query('UPDATE app_state SET data=$2, updated_at=CURRENT_TIMESTAMP WHERE taller_id=$1', [tallerId, JSON.stringify(d)]);
+  res.json({ ok: true });
+});
+
 // DELETE /api/state?taller=ID  (reiniciar ese taller)
 router.delete('/', async (req, res) => {
   const tallerId = Number(req.query.taller);

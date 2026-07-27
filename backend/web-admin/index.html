@@ -387,7 +387,7 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover{background:var(--surface-2)}
 
   <div class="web-wrap"><div class="web">
     <div class="wside">
-      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v78</span></div>
+      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v81</span></div>
       <div class="wlbl op-item">Operación</div>
       <a class="on op-item" data-w="dash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
       <a class="op-item" data-w="recep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-6 0v4"/><rect x="2" y="9" width="20" height="11" rx="2"/></svg>Recepción digital</a>
@@ -878,7 +878,35 @@ function openNotifs(){const ns=store.notifs.filter(n=>n.owner==='Carlos Mendoza'
 }
 
 /* CITAS admin */
-function setCita(id,status){const c=store.citas.find(x=>x.id===id);c.status=status;renderWeb();renderPhone();store.emit(`Cita ${status}`);}
+let _cotCita=null,_cotReps=[];
+function abrirCotizarWeb(id){const c=store.citas.find(x=>x.id===id);if(!c)return;_cotCita=c;_cotReps=(c.repuestos&&c.repuestos.length)?c.repuestos.map(r=>({...r})):[];pintarCotizar();document.getElementById('cotizarModal').style.display='flex';}
+function pintarCotizar(){const c=_cotCita;if(!c)return;const tot=_cotReps.reduce((a,r)=>a+(+r.p||0),0);
+  document.getElementById('cotizarBody').innerHTML=`
+    <div style="background:var(--surface-2);border-radius:10px;padding:12px;margin-bottom:14px">
+      <b>${c.cliente}</b><div style="font-size:12.5px;color:var(--muted)">${c.vehiculo||''}${c.placa?' · '+c.placa:''}</div>
+      <div style="margin-top:4px;font-weight:600">${c.servicio} · ${fmtDate(c.fecha)} ${c.hora}</div>
+      ${c.observaciones?`<div style="font-size:12px;color:var(--muted);margin-top:2px">📝 ${c.observaciones}</div>`:''}
+    </div>
+    <div style="font-weight:700;font-size:13px;margin-bottom:8px">Repuestos y trabajos</div>
+    <div id="cotReps">${_cotReps.map((r,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)"><span style="flex:1">${r.n}</span><b>${curSym()} ${(+r.p||0).toLocaleString('es-VE')}</b><button class="wbtn wbtn-gr" style="padding:3px 9px" onclick="quitarRepWeb(${i})">✕</button></div>`).join('')||'<div style="font-size:12px;color:var(--muted)">Sin repuestos aún.</div>'}</div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <input id="cotN" placeholder="Repuesto o trabajo" style="flex:1">
+      <input id="cotP" type="number" placeholder="Precio" style="width:90px">
+      <button class="wbtn wbtn-g" onclick="agregarRepWeb()">＋</button>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:12px;border-top:2px solid var(--line)">
+      <b style="font-size:15px">TOTAL</b><b style="font-size:17px;color:#0F6E56">${curSym()} ${tot.toLocaleString('es-VE')}</b>
+    </div>
+    <button class="wbtn wbtn-d" style="width:100%;justify-content:center;margin-top:16px" onclick="confirmarCotizarWeb()">Confirmar cotización</button>
+    <div style="font-size:11.5px;color:var(--muted);text-align:center;margin-top:8px">El cliente recibirá la cotización y podrá aceptarla o rechazarla desde su app.</div>`;}
+function agregarRepWeb(){const n=(document.getElementById('cotN').value||'').trim();const p=+document.getElementById('cotP').value||0;if(!n){toast('Indica el repuesto o trabajo');return;}_cotReps.push({n,p});pintarCotizar();}
+function quitarRepWeb(i){_cotReps.splice(i,1);pintarCotizar();}
+async function confirmarCotizarWeb(){if(!_cotReps.length){toast('Agrega al menos un repuesto o trabajo');return;}const tot=_cotReps.reduce((a,r)=>a+(+r.p||0),0);
+  try{await apiReq('/api/state/cita-cotizar?taller='+CURRENT_TALLER,{method:'POST',body:JSON.stringify({id:_cotCita.id,repuestos:_cotReps,monto:tot})});}
+  catch(e){toast(e.message||'No se pudo enviar la cotización');return;}
+  document.getElementById('cotizarModal').style.display='none';
+  const c=store.citas.find(x=>x.id===_cotCita.id);if(c){c.repuestos=_cotReps;c.monto=tot;c.estado='cotizada';}
+  renderWeb();store.emit('Cotización enviada al cliente ✓');}
 function newCitaWeb(){
   document.getElementById('modalH').innerHTML='<h2>Nueva cita</h2>';
   document.getElementById('modalB').innerHTML=`
@@ -969,10 +997,26 @@ function renderWeb(){
    </div>
    <table><thead><tr><th>Fecha</th><th>Cliente</th><th>Vehículo</th><th>Trabajo</th><th>Técnico</th><th>Total</th><th>Pagado</th><th>Saldo</th></tr></thead><tbody>${histFiltrado().map((h)=>{const i=store.history.indexOf(h);return `<tr class="clk" onclick="histDetail(${i})"><td class="mono" style="font-size:12px">${h.fecha}</td><td><div class="cell-u"><div class="av-sm">${(h.cliente.split(' ').map(x=>x[0]).slice(0,2).join(''))}</div><b>${h.cliente}</b></div></td><td>${h.veh}</td><td>${h.trabajo}</td><td style="color:var(--muted)">${h.mech}</td><td><b>${curSym()} ${(+h.total||h.costo||0).toLocaleString('es-VE')}</b></td><td style="color:var(--green)">${curSym()} ${(+h.pagado||0).toLocaleString('es-VE')}</td><td>${(+h.saldo>0)?`<span class="pill s-espera"><span class="pd"></span>${curSym()} ${(+h.saldo).toLocaleString('es-VE')}</span>`:'<span class="pill s-term"><span class="pd"></span>Pagado</span>'}</td></tr>`;}).join('')||'<tr><td colspan="8" style="color:var(--muted);padding:18px">Ningún trabajo coincide con la búsqueda.</td></tr>'}</tbody></table>`;
   // CITAS
-  const pend=store.citas.filter(c=>c.status==='pendiente').length;
-  document.getElementById('citasNb').textContent=pend||'';document.getElementById('citasNb').style.display=pend?'':'none';
-  document.getElementById('w-citas').innerHTML=`<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="wbtn wbtn-d" onclick="newCitaWeb()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Nueva cita</button></div>`+
-   (store.citas.length?store.citas.slice().sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(c=>{const[y,m,d]=c.fecha.split('-');const mo=["ENE","FEB","MAR","ABR","MAY","JUN","JUL","AGO","SET","OCT","NOV","DIC"];return `<div class="cita-card"><div class="cd"><div class="d">${+d}</div><div class="mo">${mo[+m-1]}</div></div><div style="flex:1"><div style="font-weight:600;font-size:13.5px">${c.tipo}</div><div style="font-size:12px;color:var(--muted)">${c.cliente} · ${c.veh} · ${c.hora}</div></div><span class="pill s-${c.status==='aprobada'?'aprob':c.status==='pendiente'?'pend':'rep'}"><span class="pd"></span>${c.status}</span>${c.status==='pendiente'?`<div style="display:flex;gap:6px;margin-left:10px"><button class="wbtn wbtn-p" onclick="setCita(${c.id},'aprobada')">Aprobar</button><button class="wbtn wbtn-gr" onclick="setCita(${c.id},'rechazada')">Rechazar</button></div>`:''}</div>`;}).join(''):'<div class="empty">No hay citas.</div>');
+  const porCotizar=store.citas.filter(c=>c.estado==='solicitada').length;
+  const cn=document.getElementById('citasNb');if(cn){cn.textContent=porCotizar||'';cn.style.display=porCotizar?'':'none';}
+  const ESTC={solicitada:['Por cotizar','s-pend'],cotizada:['Esperando cliente','s-rep'],aceptada:['Aceptada ✓','s-aprob'],rechazada:['Rechazada','s-espera'],cancelada:['Cancelada','s-espera']};
+  const ordC={solicitada:0,cotizada:1,aceptada:2,rechazada:3,cancelada:4};
+  const citasOrd=(store.citas||[]).slice().sort((a,b)=>(ordC[a.estado]??9)-(ordC[b.estado]??9));
+  document.getElementById('w-citas').innerHTML=(citasOrd.length?citasOrd.map(c=>{
+    const est=ESTC[c.estado]||ESTC.solicitada;
+    const reps=(c.repuestos||[]).map(r=>`<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12.5px"><span>${r.n}</span><b>${curSym()} ${(+r.p||0).toLocaleString('es-VE')}</b></div>`).join('');
+    return `<div class="wcard" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-weight:700;font-size:14px">📅 ${fmtDate(c.fecha)} · ${c.hora}</div>
+        <span class="pill ${est[1]}"><span class="pd"></span>${est[0]}</span>
+      </div>
+      <div style="font-size:12.5px;color:var(--muted);line-height:1.7">
+        👤 ${c.cliente}<br>🚗 ${c.vehiculo||'—'}${c.placa?' · '+c.placa:''}<br>🔧 <b style="color:var(--text)">${c.servicio}</b>${c.observaciones?'<br>📝 '+c.observaciones:''}
+      </div>
+      ${reps?`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)">${reps}<div style="display:flex;justify-content:space-between;padding-top:6px;margin-top:4px;border-top:2px solid var(--line)"><b>TOTAL</b><b style="color:#0F6E56">${curSym()} ${(+c.monto||0).toLocaleString('es-VE')}</b></div></div>`:''}
+      ${c.estado==='solicitada'?`<button class="wbtn wbtn-d" style="width:100%;justify-content:center;margin-top:10px" onclick="abrirCotizarWeb(${c.id})">Armar cotización →</button>`:c.estado==='cotizada'?`<button class="wbtn wbtn-g" style="width:100%;justify-content:center;margin-top:10px" onclick="abrirCotizarWeb(${c.id})">Editar cotización</button>`:''}
+    </div>`;
+  }).join(''):'<div class="empty">Aún no hay citas solicitadas por los clientes.</div>');
   document.getElementById('w-veh').innerHTML=`<div class="searchbar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="qVeh" value="${(BUSCA.veh||'').replace(/"/g,'&quot;')}" placeholder="Buscar por vehículo, placa, propietario, color…" oninput="BUSCA.veh=this.value;renderVehOnly()">${BUSCA.veh?`<button onclick="BUSCA.veh='';renderVehOnly()">✕</button>`:''}</div><div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="wbtn wbtn-d" onclick="openVehForm(0)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Nuevo vehículo</button></div><table><thead><tr><th>Vehículo</th><th>Placa</th><th>Propietario</th><th>Seguro</th><th>Estado op.</th><th>Avance</th><th>Activo</th><th></th></tr></thead><tbody>${store.vehicles.filter(v=>coincideVeh(v,BUSCA.veh)).map(v=>{const st=STATUS[v.status];const act=v.activo!==false;return `<tr style="${act?'':'opacity:.5'}"><td><div class="cell-u"><div class="av-sm">${v.ini}</div><b>${v.model}</b></div></td><td><span class="plate">${v.plate}</span></td><td>${v.owner}</td><td style="font-size:12px">${v.tipoSeguro||'RCV'}${v.nroSeguro?` · ${v.nroSeguro}`:''}</td><td><span class="pill s-${st.c}"><span class="pd"></span>${st.l}</span></td><td class="mono">${v.progress}%</td><td>${act?'<span class="pill s-term"><span class="pd"></span>Activo</span>':'<span class="pill s-espera"><span class="pd"></span>Inactivo</span>'}</td><td style="white-space:nowrap"><button class="wbtn wbtn-g" onclick="openVehForm(${v.id})">Editar</button> <button class="wbtn ${act?'wbtn-gr':'wbtn-g'}" onclick="toggleVeh(${v.id})">${act?'Inactivar':'Activar'}</button></td></tr>`;}).join('')}</tbody></table>`;
   document.getElementById('w-cli').innerHTML=`<div class="searchbar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="qCli" value="${(BUSCA.cli||'').replace(/"/g,'&quot;')}" placeholder="Buscar por nombre, cédula, teléfono, correo o placa…" oninput="BUSCA.cli=this.value;renderCliOnly()">${BUSCA.cli?`<button onclick="BUSCA.cli='';renderCliOnly()">✕</button>`:''}</div><div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="wbtn wbtn-d" onclick="openClientForm(0)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Nuevo cliente</button></div><table><thead><tr><th>Cliente</th><th>Documento</th><th>Teléfono</th><th>Vehículos</th><th>Gastado</th><th>Estado</th><th></th></tr></thead><tbody>${store.clients.filter(c=>coincideCli(c,BUSCA.cli)).map(c=>{const nv=store.vehicles.filter(v=>v.owner===c.n).length;const act=c.activo!==false;return `<tr style="${act?'':'opacity:.5'}"><td><div class="cell-u"><div class="av-sm">${c.ini}</div><b>${c.n}</b></div></td><td style="font-size:12px"><span style="color:var(--muted)">${c.tipoDoc||'Cédula V'}</span> ${c.doc||'—'}</td><td class="mono" style="font-size:12px">${c.tel}</td><td>${nv}</td><td><b>${curSym()} ${(+c.gas||0).toLocaleString('es-VE')}</b></td><td>${act?'<span class="pill s-term"><span class="pd"></span>Activo</span>':'<span class="pill s-espera"><span class="pd"></span>Inactivo</span>'}</td><td style="white-space:nowrap"><button class="wbtn wbtn-g" onclick="openClientForm(${c.id})">✏️ Editar</button>${c.usuario?` <button class="wbtn wbtn-g" onclick="compartirAccesoCli(${c.id})">💬 Compartir</button>`:''} <button class="wbtn ${act?'wbtn-gr':'wbtn-g'}" onclick="toggleClient(${c.id})">${act?'Inactivar':'Activar'}</button></td></tr>`;}).join('')}</tbody></table>`;
   persistData();document.getElementById('w-usuarios').innerHTML=`<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="wbtn wbtn-d" onclick="openUserForm(0)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Nuevo usuario</button></div><table><thead><tr><th>Nombre</th><th>Usuario</th><th>Correo</th><th>Rol</th><th>Estado</th><th></th></tr></thead><tbody>${(store.usuarios||[]).map(u=>{const act=u.activo!==false;const rc=u.rol==='Administrador'?'s-rep':u.rol==='Técnico'?'s-wait':'s-ent';return `<tr style="${act?'':'opacity:.5'}"><td><div class="cell-u"><div class="av-sm">${inits(u.n)}</div><b>${u.n}</b></div></td><td class="mono" style="font-size:12px">${u.usuario}</td><td style="font-size:12px">${u.correo}</td><td><span class="pill ${rc}"><span class="pd"></span>${u.rol}</span></td><td>${act?'<span class="pill s-term"><span class="pd"></span>Activo</span>':'<span class="pill s-espera"><span class="pd"></span>Inactivo</span>'}</td><td style="white-space:nowrap"><button class="wbtn wbtn-g" onclick="openUserForm(${u.id})">Editar</button> <button class="wbtn ${act?'wbtn-gr':'wbtn-g'}" onclick="toggleUser(${u.id})">${act?'Inactivar':'Activar'}</button></td></tr>`;}).join('')}</tbody></table><div style="font-size:12px;color:var(--muted);margin-top:12px;line-height:1.6">Aquí se registran las personas que acceden al sistema y su <b>rol</b>: <b>Administrador</b> (acceso total a la plataforma web), <b>Técnico</b> (app del técnico) y <b>Cliente</b> (app del cliente). En el producto real, cada cuenta tiene su <b>login</b> con contraseña, verificación por correo/SMS y <b>doble autenticación (2FA)</b>, gestionados por el backend de autenticación.</div>`;
@@ -1406,7 +1450,8 @@ async function saveClient(id){const n=val('clN').trim();if(!n){toast('Ingresa el
   try{await apiReq('/api/talleres/'+CURRENT_TALLER+'/cuenta',{method:'POST',body:JSON.stringify({nombre:n,usuario,correo,password:pass,rol:'cliente',telefono:data.tel})});}
   catch(e){toast(e.message||'No se pudo crear la cuenta de acceso');return;}
   store.clients.push(Object.assign({id:Date.now(),gas:0,usuario},data));
-  closeModal();renderWeb();renderWebRecep();store.emit('Cliente registrado con acceso a la app');}
+  closeModal();renderWeb();renderWebRecep();store.emit('Cliente registrado con acceso a la app');
+  setTimeout(()=>{if(confirm('✅ Cliente registrado.\n\nUsuario: '+usuario+'\nContraseña: '+pass+'\n\n¿Compartir estos datos por WhatsApp?'))compartirCredenciales({n,usuario,clave:pass,rol:'cliente',tel:data.tel});},300);}
 function toggleClient(id){const c=store.clients.find(x=>x.id===id);c.activo=c.activo===false;renderWeb();renderWebRecep();store.emit(c.activo?'Cliente activado':'Cliente inactivado');}
 // Técnicos
 function openMechForm(id){const m=id?store.mecanicos.find(x=>x.id===id):null;const act=m?m.activo!==false:true;
@@ -1452,7 +1497,8 @@ async function saveMech(id){const n=val('meN').trim();if(!n){toast('Ingresa el n
   try{await apiReq('/api/talleres/'+CURRENT_TALLER+'/cuenta',{method:'POST',body:JSON.stringify({nombre:n,usuario,correo,password:pass,rol:'mecanico',telefono:data.tel})});}
   catch(e){toast(e.message||'No se pudo crear la cuenta de acceso');return;}
   store.mecanicos.push(Object.assign({id:Date.now(),c:AVCOLORS[store.mecanicos.length%AVCOLORS.length],rat:5,base:0,usuario},data));
-  closeModal();renderWeb();renderWebRecep();store.emit('Técnico registrado con acceso a la app');}
+  closeModal();renderWeb();renderWebRecep();store.emit('Técnico registrado con acceso a la app');
+  setTimeout(()=>{if(confirm('✅ Técnico registrado.\n\nUsuario: '+usuario+'\nContraseña: '+pass+'\n\n¿Compartir estos datos por WhatsApp?'))compartirCredenciales({n,usuario,clave:pass,rol:'técnico',tel:data.tel});},300);}
 function toggleMech(id){const m=store.mecanicos.find(x=>x.id===id);m.activo=m.activo===false;renderWeb();renderWebRecep();store.emit(m.activo?'Técnico activado':'Técnico inactivado');}
 function addEspecialidad(){const w=document.getElementById('meNewWrap');if(!w)return;w.style.display='block';const i=document.getElementById('meNewSp');if(i)i.focus();}
 function addEspecialidadGuardar(){const i=document.getElementById('meNewSp');if(!i)return;const v=i.value.trim();if(!v){toast('Escribe la especialidad');return;}if(!store.config.especialidades)store.config.especialidades=[];if(!store.config.especialidades.includes(v))store.config.especialidades.push(v);const sel=document.getElementById('meS');const o=document.createElement('option');o.textContent=v;sel.appendChild(o);sel.value=v;i.value='';document.getElementById('meNewWrap').style.display='none';persistData();toast('Especialidad agregada: '+v);}
@@ -1489,7 +1535,7 @@ function saveUser(id){const n=val('usN').trim();if(!n){toast('Ingresa el nombre'
   closeModal();renderWeb();store.emit(id?'Usuario actualizado':data.rol+' registrado');
   // PUNTO 8: ofrecer compartir credenciales por WhatsApp
   if(!id && clave){ setTimeout(()=>compartirCredenciales({n,usuario,clave,rol:data.rol,tel}),400); }}
-function compartirCredenciales(u){
+function textoCreds(u){
   let txt='👋 ¡Bienvenido a '+(CURRENT_TALLER_NAME||'TallerOS')+'!\n\n'
     +'Hola '+u.n+', se creó tu acceso como '+(u.rol||'usuario')+'.\n\n'
     +'👤 Usuario: '+u.usuario+'\n';
@@ -1497,9 +1543,19 @@ function compartirCredenciales(u){
   txt+='\nIngresa desde la app o en '+(location.origin);
   if(u.clave) txt+='\nPor seguridad, cambia tu contraseña al entrar.';
   else txt+='\n(Si no recuerdas tu contraseña, pide al taller que la restablezca.)';
-  const tel=(u.tel||'').replace(/[^0-9]/g,'');
-  const url='https://wa.me/'+(tel||'')+'?text='+encodeURIComponent(txt);
-  window.open(url,'_blank');}
+  return txt;}
+function compartirCredenciales(u){
+  const txt=textoCreds(u);const tel=(u.tel||'').replace(/[^0-9]/g,'');
+  const persona=(u.rol==='técnico'?'al técnico':'al cliente');
+  if(tel){
+    if(confirm('¿Cómo quieres compartir los datos de '+u.n+'?\n\n• Aceptar: enviar directo '+persona+' ('+u.tel+')\n• Cancelar: elegir a quién enviar')){
+      window.open('https://wa.me/'+tel+'?text='+encodeURIComponent(txt),'_blank');
+    } else {
+      window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank');
+    }
+  } else {
+    window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank');
+  }}
 // Compartir acceso desde la ficha (sin la contraseña, que no se guarda en texto)
 function compartirAccesoCli(id){const c=store.clients.find(x=>x.id===id);if(!c)return;if(!c.usuario){toast('Este cliente no tiene usuario de acceso');return;}compartirCredenciales({n:c.n,usuario:c.usuario,rol:'cliente',tel:c.tel,clave:''});}
 function compartirAccesoMec(id){const m=store.mecanicos.find(x=>x.id===id);if(!m)return;if(!m.usuario){toast('Este técnico no tiene usuario de acceso');return;}compartirCredenciales({n:m.n,usuario:m.usuario,rol:'técnico',tel:m.tel,clave:''});}
@@ -1958,5 +2014,14 @@ loginView();
 })();
 </script>
 <div id="danoPopup" style="display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.5);align-items:center;justify-content:center;padding:24px"></div>
+<div id="cotizarModal" style="display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.5);align-items:center;justify-content:center;padding:24px">
+  <div style="background:var(--surface);border-radius:16px;padding:22px;max-width:460px;width:100%;max-height:85vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h2 style="margin:0;font-size:18px">🧾 Cotización</h2>
+      <button class="wbtn wbtn-g" onclick="document.getElementById('cotizarModal').style.display='none'">✕</button>
+    </div>
+    <div id="cotizarBody"></div>
+  </div>
+</div>
 </body>
 </html>
