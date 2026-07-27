@@ -40,6 +40,7 @@ async function init() {
   if (existe) {
     try { db.exec('ALTER TABLE usuarios ADD COLUMN taller_id INTEGER'); } catch (e) {}
     try { db.exec('ALTER TABLE usuarios ADD COLUMN permisos TEXT'); } catch (e) {}
+    try { db.exec('ALTER TABLE usuarios ADD COLUMN must_change INTEGER DEFAULT 0'); } catch (e) {}
     try { db.exec('ALTER TABLE talleres ADD COLUMN rubro TEXT'); } catch (e) {}
     try { db.exec('ALTER TABLE talleres ADD COLUMN condiciones TEXT'); } catch (e) {}
     try { db.exec('ALTER TABLE talleres ADD COLUMN pie TEXT'); } catch (e) {}

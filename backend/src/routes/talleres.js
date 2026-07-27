@@ -215,7 +215,7 @@ router.put('/users/:uid', requireRole('superadmin'), async (req, res) => {
   await query(
     'UPDATE usuarios SET nombre=COALESCE($2,nombre), correo=COALESCE($3,correo), rol=COALESCE($4,rol) WHERE id=$1',
     [req.params.uid, nombre || null, correo || null, rol || null]);
-  if (password) await query('UPDATE usuarios SET password=$2 WHERE id=$1', [req.params.uid, await hashPassword(password)]);
+  if (password) await query('UPDATE usuarios SET password=$2, must_change=1 WHERE id=$1', [req.params.uid, await hashPassword(password)]);
   res.json({ ok: true });
 });
 // Editar datos de un admin de un taller (superadmin o admin dueño)
@@ -230,7 +230,7 @@ router.put('/:id/admins/:uid', async (req, res) => {
     if (dup) return res.status(409).json({ error: 'Ya existe otro usuario con ese correo' });
   }
   await query('UPDATE usuarios SET nombre=COALESCE($2,nombre), correo=COALESCE($3,correo) WHERE id=$1', [req.params.uid, nombre || null, correo || null]);
-  if (password) await query('UPDATE usuarios SET password=$2 WHERE id=$1', [req.params.uid, await hashPassword(password)]);
+  if (password) await query('UPDATE usuarios SET password=$2, must_change=1 WHERE id=$1', [req.params.uid, await hashPassword(password)]);
   res.json({ ok: true });
 });
 
@@ -277,7 +277,7 @@ router.post('/:id/cuenta', async (req, res) => {
   }
   const hash = await hashPassword(password);
   const ins = await query(
-    'INSERT INTO usuarios (nombre,usuario,correo,password,rol,telefono,taller_id) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id',
+    'INSERT INTO usuarios (nombre,usuario,correo,password,rol,telefono,taller_id,must_change) VALUES ($1,$2,$3,$4,$5,$6,$7,1) RETURNING id',
     [nombre, usuario, correo, hash, rol, telefono || null, tallerId]);
   registrar({ req, accion: 'Creó cuenta ' + rol, modulo: 'usuarios', detalle: usuario, taller_id: tallerId });
   res.json({ ok: true, id: ins.rows[0].id });
@@ -308,7 +308,7 @@ router.put('/:id/cuenta', async (req, res) => {
     if (String(password).length < 6) return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
     if (!correo) return res.status(400).json({ error: 'Indica el correo' });
     const hash = await hashPassword(password);
-    const ins = await query('INSERT INTO usuarios (nombre,usuario,correo,password,rol,telefono,taller_id) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id',
+    const ins = await query('INSERT INTO usuarios (nombre,usuario,correo,password,rol,telefono,taller_id,must_change) VALUES ($1,$2,$3,$4,$5,$6,$7,1) RETURNING id',
       [nombre, usuario, correo, hash, rol, telefono || null, tallerId]);
     registrar({ req, accion: 'Creó cuenta ' + rol, modulo: 'usuarios', detalle: usuario, taller_id: tallerId });
     return res.json({ ok: true, id: ins.rows[0].id, creado: true });
@@ -318,7 +318,7 @@ router.put('/:id/cuenta', async (req, res) => {
   if (password) {
     if (String(password).length < 6) return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
     const hash = await hashPassword(password);
-    await query('UPDATE usuarios SET nombre=$2, usuario=$3, correo=COALESCE($4,correo), telefono=$5, password=$6 WHERE id=$1',
+    await query('UPDATE usuarios SET nombre=$2, usuario=$3, correo=COALESCE($4,correo), telefono=$5, password=$6, must_change=1 WHERE id=$1',
       [existente.id, nombre, usuario, correo || null, telefono || null, hash]);
   } else {
     await query('UPDATE usuarios SET nombre=$2, usuario=$3, correo=COALESCE($4,correo), telefono=$5 WHERE id=$1',

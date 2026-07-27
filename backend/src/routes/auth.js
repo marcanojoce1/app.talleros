@@ -51,7 +51,7 @@ router.post('/mi-clave', auth, async (req, res) => {
     return res.status(403).json({ error: 'Tu contraseña actual no es correcta' });
   }
   const hash = await hashPassword(nueva);
-  await query('UPDATE usuarios SET password=$2 WHERE id=$1', [u.id, hash]);
+  await query('UPDATE usuarios SET password=$2, must_change=0 WHERE id=$1', [u.id, hash]);
   registrar({ req, accion: 'Cambió su contraseña', modulo: 'auth' });
   res.json({ ok: true, mensaje: 'Contraseña actualizada' });
 });
@@ -83,7 +83,7 @@ router.post('/login', async (req, res) => {
   registrar({ req, user: { id: u.id, nombre: u.nombre, rol: u.rol }, accion: 'Inicio de sesión', modulo: 'auth', taller_id: (talleres[0] && talleres[0].id) || null });
   res.json({
     token: signToken(u),
-    user: { id: u.id, nombre: u.nombre, rol: u.rol, usuario: u.usuario, permisos: resolverPerms(u.rol, u.permisos) },
+    user: { id: u.id, nombre: u.nombre, rol: u.rol, usuario: u.usuario, permisos: resolverPerms(u.rol, u.permisos), mustChange: !!u.must_change },
     talleres,
   });
 });

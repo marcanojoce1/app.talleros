@@ -83,9 +83,10 @@ u.post('/', auth, requireRole('administrador'), async (req, res) => {
   if (!nombre || !usuario || !correo || !rol)
     return res.status(400).json({ error: 'Faltan datos obligatorios' });
   const hash = await hashPassword(password || 'cambiar123');
+  // La contraseña con la que se crea es TEMPORAL: el usuario deberá cambiarla al primer ingreso
   const { rows } = await query(
-    `INSERT INTO usuarios (nombre,usuario,correo,rol,telefono,password)
-     VALUES ($1,$2,$3,$4,$5,$6)
+    `INSERT INTO usuarios (nombre,usuario,correo,rol,telefono,password,must_change)
+     VALUES ($1,$2,$3,$4,$5,$6,1)
      RETURNING id,nombre,usuario,correo,rol,telefono,activo`,
     [nombre, usuario, correo, rol, telefono || null, hash]
   );
@@ -101,7 +102,7 @@ u.put('/:id', auth, requireRole('administrador'), async (req, res) => {
   if (rol !== undefined) add('rol', rol);
   if (telefono !== undefined) add('telefono', telefono);
   if (activo !== undefined) add('activo', activo);
-  if (password) add('password', await hashPassword(password));
+  if (password) { add('password', await hashPassword(password)); add('must_change', 1); }
   if (!sets.length) return res.status(400).json({ error: 'Nada que actualizar' });
   vals.push(req.params.id);
   const { rows } = await query(

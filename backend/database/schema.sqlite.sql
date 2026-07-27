@@ -26,6 +26,7 @@ CREATE TABLE usuarios (
   twofa     INTEGER NOT NULL DEFAULT 0,
   taller_id INTEGER,
   permisos  TEXT,
+  must_change INTEGER NOT NULL DEFAULT 0,
   creado_en TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

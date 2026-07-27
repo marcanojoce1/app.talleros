@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
   twofa     INTEGER NOT NULL DEFAULT 0,
   taller_id INTEGER,
   permisos  TEXT,
+  must_change INTEGER NOT NULL DEFAULT 0,
   creado_en TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
