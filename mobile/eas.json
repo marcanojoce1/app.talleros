@@ -18,6 +18,12 @@
       "android": {
         "buildType": "app-bundle"
       }
+    },
+    "produccion": {
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "autoIncrement": true
     }
   },
   "submit": {

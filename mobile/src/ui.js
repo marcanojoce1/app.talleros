@@ -227,7 +227,7 @@ const CAR_IMGS = {
 export function CarroSVG({ lado, width = 300, height = 210 }) {
   const src = CAR_IMGS[lado] || CAR_IMGS.sup;
   return (
-    <Image source={src} style={{ width, height }} resizeMode="contain" />
+    <Image source={src} style={{ width, height }} resizeMode="stretch" />
   );
 }
 
@@ -262,4 +262,231 @@ const d = StyleSheet.create({
   btnGrisT: { fontWeight: '800', color: '#16191d' },
   btnOk: { flex: 2, backgroundColor: '#F5B700', borderRadius: 12, paddingVertical: 13, alignItems: 'center' },
   btnOkT: { fontWeight: '800', color: '#16191d' },
+});
+
+/* ============ DISTINTIVO DE MARCA (sin logos registrados) ============ */
+const COLOR_MARCA = {
+  toyota: '#EB0A1E', kia: '#05141F', hyundai: '#002C5F', ford: '#003478', chevrolet: '#D1A650',
+  nissan: '#C3002F', honda: '#CC0000', mazda: '#101010', volkswagen: '#001E50', renault: '#FFCC33',
+  peugeot: '#00615F', fiat: '#941E32', jeep: '#0B4C34', mitsubishi: '#E60012', suzuki: '#E30613',
+  bmw: '#0066B1', mercedes: '#00ADEF', audi: '#BB0A30', dodge: '#B5121B', chery: '#C8102E',
+  byd: '#003E7E', jac: '#0072BC', great: '#C8102E', changan: '#004B87', geely: '#0B2C5F',
+  encava: '#0057A6', iveco: '#003B7E', mack: '#B4975A', volvo: '#003057', scania: '#041E42',
+};
+export function marcaDe(veh) {
+  const t = String((veh && (veh.marca || veh.model)) || '').trim();
+  return t.split(/[\s/·-]+/)[0] || '';
+}
+export function colorMarca(nombre) {
+  const k = String(nombre || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  for (const m in COLOR_MARCA) if (k.startsWith(m)) return COLOR_MARCA[m];
+  let h = 0; for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) % 360;
+  return 'hsl(' + h + ',55%,32%)';
+}
+
+/* ============ CALENDARIO VISUAL (sin librerías, funciona siempre) ============ */
+export function Calendario({ visible, valor, onSelect, onClose, titulo }) {
+  const hoy = new Date();
+  const parseVal = () => {
+    if (!valor) return new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+    const t = String(valor).trim();
+    let a, m, d;
+    if (t.includes('-')) { const p = t.split('-'); if (p[0].length === 4) { a = +p[0]; m = +p[1]; d = +p[2]; } }
+    else if (t.includes('/')) { const p = t.split('/'); d = +p[0]; m = +p[1]; a = +p[2]; }
+    if (a && m) return new Date(a, m - 1, d || 1);
+    return new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  };
+  const [ver, setVer] = React.useState(parseVal());
+  React.useEffect(() => { if (visible) setVer(parseVal()); }, [visible]);
+
+  const anio = ver.getFullYear(), mes = ver.getMonth();
+  const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const DIAS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+  const primerDia = new Date(anio, mes, 1).getDay();
+  const totalDias = new Date(anio, mes + 1, 0).getDate();
+  const celdas = [];
+  for (let i = 0; i < primerDia; i++) celdas.push(null);
+  for (let d = 1; d <= totalDias; d++) celdas.push(d);
+  const esHoy = (d) => d && anio === hoy.getFullYear() && mes === hoy.getMonth() && d === hoy.getDate();
+  const cambiarMes = (delta) => setVer(new Date(anio, mes + delta, 1));
+  const elegir = (d) => { onSelect(d + '/' + (mes + 1) + '/' + anio); onClose(); };
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={cal.wrap}>
+        <View style={cal.card}>
+          <Text style={cal.tit}>{titulo || 'Selecciona la fecha'}</Text>
+          <View style={cal.nav}>
+            <TouchableOpacity onPress={() => cambiarMes(-1)} style={cal.navBtn}><Text style={cal.navT}>‹</Text></TouchableOpacity>
+            <Text style={cal.mesT}>{MESES[mes]} {anio}</Text>
+            <TouchableOpacity onPress={() => cambiarMes(1)} style={cal.navBtn}><Text style={cal.navT}>›</Text></TouchableOpacity>
+          </View>
+          <View style={cal.semana}>
+            {DIAS.map((d, i) => <Text key={i} style={cal.diaSem}>{d}</Text>)}
+          </View>
+          <View style={cal.grid}>
+            {celdas.map((d, i) => (
+              <TouchableOpacity key={i} disabled={!d} style={cal.celda} onPress={() => d && elegir(d)}>
+                {d ? <View style={[cal.diaBox, esHoy(d) && cal.diaHoy]}><Text style={[cal.diaT, esHoy(d) && cal.diaHoyT]}>{d}</Text></View> : null}
+              </TouchableOpacity>
+            ))}
+          </View>
+          <View style={cal.pie}>
+            <TouchableOpacity onPress={() => { const h = new Date(); onSelect(h.getDate() + '/' + (h.getMonth() + 1) + '/' + h.getFullYear()); onClose(); }}>
+              <Text style={cal.hoyBtn}>Hoy</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={onClose}><Text style={cal.cerrar}>Cerrar</Text></TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+const cal = StyleSheet.create({
+  wrap: { flex: 1, backgroundColor: 'rgba(0,0,0,.5)', justifyContent: 'center', padding: 26 },
+  card: { backgroundColor: '#fff', borderRadius: 18, padding: 18 },
+  tit: { fontSize: 15, fontWeight: '800', color: '#16191d', marginBottom: 12, textAlign: 'center' },
+  nav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  navBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#f0f2f5', alignItems: 'center', justifyContent: 'center' },
+  navT: { fontSize: 24, color: '#16191d', fontWeight: '700', lineHeight: 26 },
+  mesT: { fontSize: 15, fontWeight: '700', color: '#16191d' },
+  semana: { flexDirection: 'row', marginBottom: 4 },
+  diaSem: { flex: 1, textAlign: 'center', fontSize: 11, color: '#9aa3ad', fontWeight: '700' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap' },
+  celda: { width: `${100 / 7}%`, aspectRatio: 1, alignItems: 'center', justifyContent: 'center', padding: 2 },
+  diaBox: { width: '100%', height: '100%', borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  diaHoy: { backgroundColor: '#F5B700' },
+  diaT: { fontSize: 14, color: '#16191d' },
+  diaHoyT: { fontWeight: '800', color: '#16191d' },
+  pie: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderColor: '#eef0f2' },
+  hoyBtn: { color: '#2563EB', fontWeight: '800', fontSize: 14 },
+  cerrar: { color: '#6b7480', fontWeight: '700', fontSize: 14 },
+});
+
+/* =================== AJUSTES / VERSIÓN =================== */
+import { Linking, Platform, Alert } from 'react-native';
+import { APP_VERSION, APP_BUILD } from './version';
+import { getApiUrl } from './api';
+
+export function BotonAjustes({ color = '#fff', onPress }) {
+  return (
+    <TouchableOpacity onPress={onPress} style={aj.btn} accessibilityLabel="Ajustes">
+      <Svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke={color} strokeWidth={2}>
+        <Circle cx="12" cy="12" r="3" />
+        <Path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+      </Svg>
+    </TouchableOpacity>
+  );
+}
+
+export function AjustesModal({ visible, onClose }) {
+  const [buscando, setBuscando] = useState(false);
+  const [estado, setEstado] = useState(null); // {hay, msg, apk, version}
+  const [bajando, setBajando] = useState(false);
+  const [pct, setPct] = useState(0);
+  const buscarActualizacion = async () => {
+    setBuscando(true); setEstado(null);
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 12000);
+      const r = await fetch(getApiUrl() + '/api/version', { signal: ctrl.signal });
+      clearTimeout(t);
+      const d = await r.json();
+      const buildServidor = +d.appBuild || 0;
+      if (buildServidor > APP_BUILD) {
+        setEstado({ hay: true, msg: '¡Hay una versión nueva! (v' + (d.appVersion || '') + ')' + (d.notas ? '\n' + d.notas : ''), apk: d.apk, version: d.appVersion });
+      } else {
+        setEstado({ hay: false, msg: 'Ya tienes la última versión instalada. ✓' });
+      }
+    } catch (e) {
+      setEstado({ hay: false, msg: 'No se pudo verificar. Revisa tu conexión.' });
+    }
+    setBuscando(false);
+  };
+  const descargarEInstalar = async () => {
+    if (!estado || !estado.apk) return;
+    if (Platform.OS !== 'android') { Linking.openURL(estado.apk).catch(() => {}); return; }
+    let FS, IntentLauncher;
+    try { FS = require('expo-file-system'); IntentLauncher = require('expo-intent-launcher'); } catch (e) { FS = null; }
+    if (!FS) { Linking.openURL(estado.apk).catch(() => {}); return; } // sin librería: abrir en navegador
+    setBajando(true); setPct(0);
+    try {
+      const destino = FS.cacheDirectory + 'talleros-update.apk';
+      try { await FS.deleteAsync(destino, { idempotent: true }); } catch (e) {}
+      const dl = FS.createDownloadResumable(estado.apk, destino, {}, (p) => {
+        if (p.totalBytesExpectedToWrite > 0) setPct(Math.round((p.totalBytesWritten / p.totalBytesExpectedToWrite) * 100));
+      });
+      const res = await dl.downloadAsync();
+      setBajando(false);
+      if (!res || !res.uri) { Alert.alert('Error', 'No se pudo descargar la actualización.'); return; }
+      // Abrir el instalador de Android con el APK descargado
+      const contentUri = await FS.getContentUriAsync(res.uri);
+      await IntentLauncher.startActivityAsync('android.intent.action.INSTALL_PACKAGE', {
+        data: contentUri, flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
+      });
+    } catch (e) {
+      setBajando(false);
+      // Si algo falla, ofrecer el navegador como respaldo
+      Alert.alert('Descarga', 'No se pudo instalar automáticamente. Abriremos la descarga en el navegador.', [
+        { text: 'OK', onPress: () => Linking.openURL(estado.apk).catch(() => {}) },
+      ]);
+    }
+  };
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={aj.wrap}>
+        <View style={aj.card}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <Text style={aj.title}>⚙️ Ajustes</Text>
+            <TouchableOpacity onPress={onClose}><Text style={{ fontSize: 22, color: '#6b7480' }}>✕</Text></TouchableOpacity>
+          </View>
+
+          <View style={aj.fila}><Text style={aj.k}>Versión</Text><Text style={aj.v}>TallerOS v{APP_VERSION}</Text></View>
+          <View style={aj.fila}><Text style={aj.k}>Build</Text><Text style={aj.v}>{APP_BUILD}</Text></View>
+          <View style={aj.fila}><Text style={aj.k}>Sistema</Text><Text style={aj.v}>{Platform.OS === 'android' ? 'Android' : Platform.OS}</Text></View>
+
+          <TouchableOpacity style={[aj.actualizar, buscando && { opacity: 0.6 }]} disabled={buscando || bajando} onPress={buscarActualizacion}>
+            <Text style={aj.actualizarT}>{buscando ? 'Buscando…' : '🔄 Buscar actualización'}</Text>
+          </TouchableOpacity>
+
+          {estado ? (
+            <View style={[aj.aviso, estado.hay ? { backgroundColor: '#fdf1e1' } : { backgroundColor: '#e8f6ec' }]}>
+              <Text style={{ color: estado.hay ? '#9a6a12' : '#166534', fontSize: 13, textAlign: 'center' }}>{estado.msg}</Text>
+              {estado.hay ? (
+                bajando ? (
+                  <View style={{ marginTop: 10 }}>
+                    <Text style={{ textAlign: 'center', color: '#9a6a12', fontWeight: '700' }}>Descargando… {pct}%</Text>
+                    <View style={{ height: 8, backgroundColor: '#f0e2c8', borderRadius: 4, marginTop: 6, overflow: 'hidden' }}>
+                      <View style={{ height: 8, width: pct + '%', backgroundColor: '#D97706' }} />
+                    </View>
+                  </View>
+                ) : (
+                  <TouchableOpacity style={aj.descargar} onPress={descargarEInstalar}>
+                    <Text style={aj.descargarT}>⬇️ Actualizar ahora</Text>
+                  </TouchableOpacity>
+                )
+              ) : null}
+            </View>
+          ) : null}
+
+          <Text style={aj.pie}>TallerOS — gestión de taller</Text>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+const aj = StyleSheet.create({
+  btn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,.12)' },
+  wrap: { flex: 1, backgroundColor: 'rgba(0,0,0,.5)', justifyContent: 'center', padding: 24 },
+  card: { backgroundColor: '#fff', borderRadius: 18, padding: 20 },
+  title: { fontSize: 18, fontWeight: '800', color: '#16191d' },
+  fila: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 9, borderBottomWidth: 1, borderColor: '#f0f2f5' },
+  k: { color: '#6b7480', fontSize: 14 },
+  v: { color: '#16191d', fontSize: 14, fontWeight: '700' },
+  actualizar: { backgroundColor: '#2563EB', borderRadius: 12, paddingVertical: 13, alignItems: 'center', marginTop: 16 },
+  actualizarT: { color: '#fff', fontWeight: '800', fontSize: 15 },
+  aviso: { borderRadius: 12, padding: 12, marginTop: 12 },
+  descargar: { backgroundColor: '#D97706', borderRadius: 10, paddingVertical: 10, alignItems: 'center', marginTop: 10 },
+  descargarT: { color: '#fff', fontWeight: '800' },
+  pie: { textAlign: 'center', color: '#9aa3ad', fontSize: 11.5, marginTop: 14 },
 });

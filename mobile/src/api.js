@@ -11,6 +11,14 @@ const URL_VALIDA = URL_CONFIGURADA && !URL_CONFIGURADA.includes('PON-AQUI') ? UR
 // URL activa: la guardada por el usuario tiene prioridad sobre la compilada
 let _apiUrl = URL_VALIDA;
 export function getApiUrl() { return _apiUrl; }
+// Hace un ping para que el servidor "dormido" (plan gratuito) empiece a despertar
+// mientras el usuario escribe sus datos. No bloquea ni muestra errores.
+export function despertarServidor() {
+  if (!_apiUrl) return;
+  const ctrl = new AbortController();
+  setTimeout(() => ctrl.abort(), 40000);
+  fetch(_apiUrl + '/api/health', { signal: ctrl.signal }).catch(() => {});
+}
 export function apiUrlLista() { return !!_apiUrl; }
 export async function cargarApiUrl() {
   const guardada = await AsyncStorage.getItem('t_api_url');
@@ -46,17 +54,39 @@ export async function clearSession() {
 
 export async function api(path, options = {}) {
   if (!_apiUrl) throw new Error('SIN_SERVIDOR');
-  const res = await fetch(_apiUrl + path, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: 'Bearer ' + token } : {}),
-      ...(options.headers || {}),
-    },
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || 'Error ' + res.status);
-  return data;
+  // El servidor gratuito puede estar "dormido" y tardar en despertar.
+  // Hacemos hasta 2 intentos con un tiempo de espera generoso y mensajes claros.
+  const intentos = options._reintento === false ? 1 : 2;
+  let ultimoError;
+  for (let i = 0; i < intentos; i++) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 45000); // 45 s por intento
+    try {
+      const res = await fetch(_apiUrl + path, {
+        ...options,
+        signal: ctrl.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: 'Bearer ' + token } : {}),
+          ...(options.headers || {}),
+        },
+      });
+      clearTimeout(timer);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Error ' + res.status);
+      return data;
+    } catch (e) {
+      clearTimeout(timer);
+      ultimoError = e;
+      // Si fue por tiempo agotado y aún quedan intentos, reintenta (el servidor puede estar despertando)
+      const esTimeout = e.name === 'AbortError';
+      if (i < intentos - 1 && (esTimeout || (e.message || '').includes('Network'))) continue;
+      if (esTimeout) throw new Error('El servidor tardó demasiado en responder. Puede estar iniciando; intenta de nuevo en un momento.');
+      if ((e.message || '').includes('Network request failed')) throw new Error('Sin conexión con el servidor. Revisa tu internet o la dirección del servidor.');
+      throw e;
+    }
+  }
+  throw ultimoError || new Error('No se pudo conectar');
 }
 
 // ==== Estado por taller (mismo documento que usa la web para sincronizar) ====

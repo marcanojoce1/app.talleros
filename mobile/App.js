@@ -3,7 +3,7 @@ import { ActivityIndicator, View, Text, TouchableOpacity } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { loadSession } from './src/api';
+import { loadSession, despertarServidor } from './src/api';
 import LoginScreen from './src/screens/Login';
 import HomeScreen from './src/screens/Home';
 import AdminHomeScreen from './src/screens/AdminHome';
@@ -38,7 +38,7 @@ export default function App() {
   const [actualizando, setActualizando] = useState(false);
 
   useEffect(() => {
-    loadSession().then((s) => { setSession(s); setReady(true); });
+    loadSession().then((s) => { setSession(s); setReady(true); despertarServidor(); });
   }, []);
 
   if (actualizando) {

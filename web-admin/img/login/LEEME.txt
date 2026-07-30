@@ -1,0 +1,18 @@
+FOTOS DEL INICIO DE SESIÓN (panel derecho)
+============================================
+
+Puedes poner tus propias fotos de talleres, reparaciones, etc.
+Solo copia aquí archivos con estos nombres exactos:
+
+  slide1.jpg  -> "Tu taller, bajo control"
+  slide2.jpg  -> "Recepción con evidencia"
+  slide3.jpg  -> Consejo: aceite a tiempo
+  slide4.jpg  -> Consejo: revisa los frenos
+  slide5.jpg  -> Consejo: presión de cauchos
+
+- Formato: JPG o PNG (renómbralas a .jpg)
+- Tamaño recomendado: 1200 x 1600 px (vertical) o similar
+- Si no pones una foto, se muestra un degradado de color automático.
+
+Los textos de cada slide se editan en el archivo index.html,
+buscando "LOGIN_SLIDES".

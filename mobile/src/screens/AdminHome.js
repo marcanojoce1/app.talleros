@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Alert, ScrollView, TextInput, Image, Modal, Pressable, Linking } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Alert, ScrollView, TextInput, Image, Modal, Pressable, Linking, BackHandler } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { api, getState, putState, clearSession, getApiUrl } from '../api';
-import { compartirActaPDF, abrirEnNavegador } from '../acta';
-import { Dropdown, FirmaPad, FirmaVista, CarroSVG, etiqueta } from '../ui';
+import { compartirActaPDF, abrirEnNavegador, compartirCotizacionPDF } from '../acta';
+import { Dropdown, FirmaPad, FirmaVista, CarroSVG, etiqueta, colorMarca, marcaDe, Calendario, BotonAjustes, AjustesModal } from '../ui';
 
 const STATUS = {
   espera: { l: 'En espera', c: '#64748B' }, rep: { l: 'En reparación', c: '#D97706' },
@@ -11,14 +11,102 @@ const STATUS = {
   term: { l: 'Terminado', c: '#16A34A' }, dev: { l: 'Devolución', c: '#dc2626' }, ent: { l: 'Entregado', c: '#2563EB' },
 };
 const LADOS = [['sup', 'Superior'], ['front', 'Frontal'], ['izq', 'Lat. Izq.'], ['der', 'Lat. Der.'], ['post', 'Posterior']];
+function textoCredenciales({ nombreTaller, nombre, usuario, clave, rolTxt }) {
+  let txt = '👋 ¡Bienvenido a ' + (nombreTaller || 'TallerOS') + '!\n\n'
+    + 'Hola ' + nombre + ', se creó tu acceso como ' + (rolTxt || 'usuario') + '.\n\n'
+    + '👤 Usuario: ' + usuario + '\n';
+  if (clave) txt += '🔒 Contraseña: ' + clave + '\n';
+  txt += '\nIngresa desde la app TallerOS.';
+  if (clave) txt += '\nPor seguridad, cambia tu contraseña al entrar.';
+  else txt += '\n(Si no recuerdas tu contraseña, pide al taller que la restablezca.)';
+  return txt;
+}
+function compartirAcceso(datos) {
+  const txt = textoCredenciales(datos);
+  const num = (datos.tel || '').replace(/[^0-9]/g, '');
+  const persona = (datos.rolTxt === 'técnico' ? 'al técnico' : 'al cliente');
+  const opciones = [];
+  if (num) opciones.push({ text: '📲 WhatsApp ' + persona, onPress: () => Linking.openURL('https://wa.me/' + num + '?text=' + encodeURIComponent(txt)).catch(() => Alert.alert('WhatsApp', 'No se pudo abrir WhatsApp.')) });
+  opciones.push({ text: '📤 Compartir…', onPress: async () => {
+    try { const { Share } = require('react-native'); await Share.share({ message: txt, title: 'Acceso a TallerOS — ' + datos.nombre }); }
+    catch (e) { Linking.openURL('https://wa.me/?text=' + encodeURIComponent(txt)).catch(() => {}); }
+  } });
+  opciones.push({ text: 'Cancelar', style: 'cancel' });
+  Alert.alert('Compartir acceso de ' + datos.nombre, 'Elige cómo compartir usuario y contraseña:', opciones);
+}
+function CalendarioBloqueo({ bloqueados, onToggle }) {
+  const hoy = new Date();
+  const [ver, setVer] = React.useState(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
+  const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const DIAS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+  const a = ver.getFullYear(), m = ver.getMonth();
+  const primerDia = new Date(a, m, 1).getDay();
+  const diasMes = new Date(a, m + 1, 0).getDate();
+  const hoy0 = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+  const celdas = [];
+  for (let i = 0; i < primerDia; i++) celdas.push(null);
+  for (let d = 1; d <= diasMes; d++) celdas.push(d);
+  const fmt = (d) => a + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+  return (
+    <View style={{ backgroundColor: '#f7f8fa', borderRadius: 12, padding: 10 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <TouchableOpacity onPress={() => setVer(new Date(a, m - 1, 1))} style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 20, color: '#7c3aed', fontWeight: '800' }}>‹</Text></TouchableOpacity>
+        <Text style={{ fontSize: 15, fontWeight: '800', color: '#16191d' }}>{MESES[m]} {a}</Text>
+        <TouchableOpacity onPress={() => setVer(new Date(a, m + 1, 1))} style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 20, color: '#7c3aed', fontWeight: '800' }}>›</Text></TouchableOpacity>
+      </View>
+      <View style={{ flexDirection: 'row' }}>{DIAS.map((d, i) => <Text key={i} style={{ flex: 1, textAlign: 'center', fontSize: 11, color: '#9aa3ad', fontWeight: '700' }}>{d}</Text>)}</View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+        {celdas.map((d, i) => {
+          if (!d) return <View key={i} style={{ width: '14.28%', aspectRatio: 1 }} />;
+          const fechaStr = fmt(d);
+          const pasado = new Date(a, m, d) < hoy0;
+          const bloq = bloqueados.includes(fechaStr);
+          return (
+            <TouchableOpacity key={i} style={{ width: '14.28%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center', padding: 2 }} disabled={pasado} onPress={() => onToggle(fechaStr)}>
+              <View style={{ width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: bloq ? '#64748B' : 'transparent', opacity: pasado ? 0.3 : 1 }}>
+                <Text style={{ fontSize: 14, color: bloq ? '#fff' : '#3a4048', fontWeight: '600' }}>{d}</Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+function CampoClave({ value, onChangeText, placeholder }) {
+  const [ver, setVer] = React.useState(false);
+  return (
+    <View style={{ position: 'relative', justifyContent: 'center' }}>
+      <TextInput style={[s.input, { paddingRight: 46 }]} value={value} onChangeText={onChangeText} secureTextEntry={!ver} placeholder={placeholder} placeholderTextColor="#9aa3ad" autoCapitalize="none" />
+      <TouchableOpacity style={{ position: 'absolute', right: 12, padding: 6 }} onPress={() => setVer(!ver)}>
+        <Text style={{ fontSize: 17 }}>{ver ? '🙈' : '👁️'}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
 const LADO_NOMBRE = { sup: 'Superior', front: 'Frontal', izq: 'Lat. Izq.', der: 'Lat. Der.', post: 'Posterior' };
+// Proporción real (ancho/alto) de cada imagen del carro, para que el pin caiga exacto
+const CAR_RATIO = { sup: 2.60, front: 1.59, post: 1.42, izq: 3.04, der: 3.04 };
+
 const TIPOS = ['Rayón', 'Abolladura', 'Golpe', 'Vidrio', 'Óxido', 'Faltante'];
-const FUEL = ['E', '¼', '½', '¾', 'F'];
+const FUEL = ['E', '⅛', '¼', '½', '¾', '⅞', 'F'];
 const ACCS = ['Radio', 'Gato', 'Llave cruz', 'Extintor', 'Triángulo', 'Repuesto', 'Alfombras', 'Antena'];
-const DOCS_VEH = ['Cédula', 'Circulación', 'Título', 'Seguro'];
+const DOCS_VEH = ['Documento de identidad', 'Carné de circulación', 'Seguro'];
 const PRIOS = ['Baja', 'Media', 'Alta', 'Urgente'];
 const TIPO_VEH = ['Automóvil', 'Camioneta / SUV', 'Motocicleta', 'Moto taxi', 'Camión', 'Bus', 'Van'];
 const TIPO_DOC = ['Cédula V', 'Cédula E', 'RIF', 'Pasaporte'];
+const PAISES = [
+  { cod: '+58', nom: 'Venezuela', band: '🇻🇪', ej: '412 555 0134' },
+  { cod: '+51', nom: 'Perú', band: '🇵🇪', ej: '987 654 321' },
+  { cod: '+57', nom: 'Colombia', band: '🇨🇴', ej: '301 234 5678' },
+  { cod: '+56', nom: 'Chile', band: '🇨🇱', ej: '9 1234 5678' },
+  { cod: '+593', nom: 'Ecuador', band: '🇪🇨', ej: '99 123 4567' },
+  { cod: '+591', nom: 'Bolivia', band: '🇧🇴', ej: '712 34567' },
+  { cod: '+54', nom: 'Argentina', band: '🇦🇷', ej: '11 2345 6789' },
+  { cod: '+52', nom: 'México', band: '🇲🇽', ej: '55 1234 5678' },
+  { cod: '+1', nom: 'EE.UU./Panamá', band: '🇺🇸', ej: '305 123 4567' },
+  { cod: '+34', nom: 'España', band: '🇪🇸', ej: '612 34 56 78' },
+];
 const TIPOS_VEH = ['Automóvil', 'Camioneta', 'SUV', 'Motocicleta', 'Moto taxi', 'Camión', 'Bus', 'Van'];
 const COLORES = ['Blanco', 'Negro', 'Gris', 'Plata', 'Rojo', 'Azul', 'Verde', 'Amarillo', 'Naranja', 'Marrón', 'Beige', 'Dorado', 'Vino tinto', 'Celeste'];
 const MOTIVOS_BASE = ['Ruido extraño', 'Revisión general', 'Falla eléctrica', 'Recalentamiento', 'Mantenimiento preventivo', 'Choque / golpe', 'No enciende', 'Fuga de aceite'];
@@ -26,6 +114,8 @@ const TRABAJOS_BASE = ['Cambio de aceite', 'Frenos', 'Motor', 'Suspensión', 'Si
 const ESP_BASE = ['General', 'Motor', 'Frenos', 'Electricidad', 'Suspensión', 'Latonería y pintura', 'Aire acondicionado', 'Diagnóstico'];
 const MARCAS_BASE = ['Toyota', 'Chevrolet', 'Ford', 'Hyundai', 'Kia', 'Renault', 'Fiat', 'Jeep', 'Nissan', 'Mitsubishi'];
 const nid = (arr) => Math.max(0, ...(arr || []).map((x) => +x.id || 0)) + 1;
+// Selector de fecha: se carga una sola vez; si no está en el APK, queda null (no rompe)
+// Calendario visual propio (no depende de librerías nativas)
 const inits = (str) => (str || '').split(' ').map((x) => x[0]).slice(0, 2).join('').toUpperCase();
 
 export default function AdminHomeScreen({ navigation, route }) {
@@ -35,6 +125,14 @@ export default function AdminHomeScreen({ navigation, route }) {
   const [taller, setTaller] = useState(null);
   const [data, setData] = useState({});
   const [tab, setTab] = useState('inicio');
+  // El botón/gesto ATRÁS del teléfono: desde un menú vuelve al inicio; desde el inicio, comportamiento normal (salir)
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (tab !== 'inicio') { setTab('inicio'); return true; } // true = ya lo manejamos
+      return false; // en el inicio, dejar que el teléfono haga lo suyo
+    });
+    return () => sub.remove();
+  }, [tab]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [modal, setModal] = useState(null);
@@ -66,7 +164,31 @@ export default function AdminHomeScreen({ navigation, route }) {
     try { await putState(taller.id, nuevo); } catch (e) { Alert.alert('Error al sincronizar', e.message); }
   }, [taller]);
 
+  const toggleActivo = (tipo, item) => {
+    const activar = item.activo === false;
+    const arrKey = tipo === 'cliente' ? 'clients' : 'mecanicos';
+    const arr = (data[arrKey] || []).map((x) => (x.id === item.id ? { ...x, activo: activar } : x));
+    guardar({ ...data, [arrKey]: arr });
+  };
+
+  // La contraseña se guarda con hash en el servidor, así que no se puede "recuperar" la
+  // original: para poder compartir usuario + contraseña en cualquier momento, se genera
+  // una contraseña temporal nueva, se guarda, y se comparte esa (igual que al crear el acceso).
+  const regenerarYCompartir = async (item, rol, rolTxt) => {
+    const nuevaClave = Math.random().toString(36).slice(-4) + Math.floor(1000 + Math.random() * 9000);
+    try {
+      await api('/api/talleres/' + taller.id + '/cuenta', {
+        method: 'PUT',
+        body: JSON.stringify({ usuario: item.usuario, nombre: item.n, rol, telefono: item.tel, password: nuevaClave }),
+      });
+      compartirAcceso({ nombreTaller: taller && taller.nombre, nombre: item.n, usuario: item.usuario, clave: nuevaClave, rolTxt, tel: item.tel });
+    } catch (e) {
+      Alert.alert('Error', 'No se pudo generar la contraseña: ' + e.message);
+    }
+  };
+
   const salir = async () => { await clearSession(); navigation.reset({ index: 0, routes: [{ name: 'Login' }] }); };
+  const [ajustesOpen, setAjustesOpen] = useState(false);
 
   const cur = (data.config && data.config.currency && data.config.currency.sym) || 'Bs.';
   const clients = data.clients || [];
@@ -116,16 +238,19 @@ export default function AdminHomeScreen({ navigation, route }) {
     { k: 'mant', ic: '🔔', c: '#ca8a04', t: 'Mantenimientos', s: vehicles.filter((v) => v.proximoMant).length + ' programados' },
     { k: 'sos', ic: '🚨', c: (data.sos || []).some((x) => x.estado === 'abierto') ? '#dc2626' : '#16A34A', t: 'Auxilio vial',
       s: (data.sos || []).filter((x) => x.estado === 'abierto').length ? '⚠ ' + (data.sos || []).filter((x) => x.estado === 'abierto').length + ' solicitando' : 'Sin solicitudes' },
+    { k: 'citas', ic: '📅', c: (data.citas || []).some((x) => x.estado === 'solicitada') ? '#dc2626' : '#0891b2', t: 'Citas programadas',
+      s: (data.citas || []).filter((x) => x.estado === 'solicitada').length ? '⚠ ' + (data.citas || []).filter((x) => x.estado === 'solicitada').length + ' por cotizar' : ((data.citas || []).length + ' citas') },
+    { k: 'cotiza', ic: '🧾', c: '#0F6E56', t: 'Cotizaciones', s: (data.cotizaciones || []).filter((x) => x.estado !== 'inactiva').length + ' activas' },
     { k: 'cli', ic: '👥', c: '#7c3aed', t: 'Clientes', s: kpis.clientes + ' activos' },
     { k: 'veh', ic: '🚗', c: '#0f766e', t: 'Vehículos', s: vehicles.length + ' registrados' },
-    { k: 'mec', ic: '🛠️', c: '#be185d', t: 'Mecánicos', s: kpis.mecanicos + ' activos' },
+    { k: 'mec', ic: '🛠️', c: '#be185d', t: 'Técnicos', s: kpis.mecanicos + ' activos' },
     { k: 'fact', ic: '🧾', c: '#334155', t: 'Facturación', s: 'Pagos y facturas' },
     { k: 'usuarios', ic: '🔐', c: '#0f766e', t: 'Usuarios', s: 'Accesos' },
     { k: 'config', ic: '⚙️', c: '#64748b', t: 'Config', s: 'Parámetros' },
   ];
   if (esSuper) MODULOS.push({ k: 'talleres', ic: '🏭', c: '#16191d', t: 'Talleres', s: 'Administrar' });
 
-  const TITULOS = { dash: 'Dashboard', recep: 'Recepción digital', ordenes: 'Órdenes de taller', hist: 'Trabajos realizados', mant: 'Próximos mantenimientos', sos: 'Auxilio vial', cli: 'Clientes', veh: 'Vehículos', mec: 'Mecánicos', fact: 'Facturación', usuarios: 'Usuarios y accesos', config: 'Configuración', talleres: 'Talleres' };
+  const TITULOS = { dash: 'Dashboard', recep: 'Recepción digital', ordenes: 'Órdenes de taller', hist: 'Trabajos realizados', mant: 'Próximos mantenimientos', sos: 'Auxilio vial', citas: 'Citas programadas', cotiza: 'Cotizaciones', cli: 'Clientes', veh: 'Vehículos', mec: 'Técnicos', fact: 'Facturación', usuarios: 'Usuarios y accesos', config: 'Configuración', talleres: 'Talleres' };
 
   // Barra superior con botón Regresar en todos los módulos
   const Top = () => (
@@ -140,7 +265,11 @@ export default function AdminHomeScreen({ navigation, route }) {
           <Text style={s.role} numberOfLines={1}>{me.nombre} · {esSuper ? 'Super Admin' : 'Admin'}{tab !== 'inicio' && taller ? ' · ' + taller.nombre : ''}</Text>
         </View>
       </View>
-      <TouchableOpacity style={s.logout} onPress={salir}><Text style={{ color: '#fff', fontSize: 12 }}>Salir</Text></TouchableOpacity>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <BotonAjustes onPress={() => setAjustesOpen(true)} />
+        <TouchableOpacity style={s.logout} onPress={salir}><Text style={{ color: '#fff', fontSize: 12 }}>Salir</Text></TouchableOpacity>
+      </View>
+      <AjustesModal visible={ajustesOpen} onClose={() => setAjustesOpen(false)} />
     </View>
   );
 
@@ -158,7 +287,14 @@ export default function AdminHomeScreen({ navigation, route }) {
         </ScrollView>
       )}
 
-      {!!error && <Text style={s.err}>{error}</Text>}
+      {!!error && (
+        <View style={{ padding: 16, alignItems: 'center' }}>
+          <Text style={s.err}>{error}</Text>
+          <TouchableOpacity style={[s.btn, { marginTop: 12, paddingHorizontal: 28 }]} onPress={() => (taller ? recargar() : setError(''))}>
+            <Text style={s.btnT}>🔄 Reintentar</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       {!taller && !error && <Text style={s.muted2}>Selecciona un taller para comenzar.</Text>}
 
       {/* ---------- INICIO: tarjetas por módulo ---------- */}
@@ -176,7 +312,7 @@ export default function AdminHomeScreen({ navigation, route }) {
         return (
           <ScrollView contentContainerStyle={{ padding: 14 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={recargar} />}>
             <TextInput style={[s.input, { marginBottom: 14 }]} value={qOrd} onChangeText={setQOrd}
-              placeholder="Buscar por vehículo, placa, cliente o mecánico…" />
+              placeholder="Buscar por N° de orden, vehículo, placa, cliente o técnico…" />
             {!V.length && !loading ? <Text style={s.muted}>Sin vehículos recibidos. Registra una recepción para generar la orden.</Text> : null}
             {grupos.map((g) => {
               const items = V.filter(g.filtro).filter((v) => coincide(v, qOrd));
@@ -192,13 +328,14 @@ export default function AdminHomeScreen({ navigation, route }) {
                     const dias = item.ingreso ? Math.max(0, Math.floor((Date.now() - new Date(item.ingreso).getTime()) / 86400000)) : 0;
                     return (
                       <View key={item.id} style={s.ordCard}>
+                        {item.numOrden ? <Text style={{ fontSize: 11, fontWeight: '800', color: '#0891b2', marginBottom: 2 }}>OS{String(item.numOrden).padStart(4, '0')}</Text> : null}
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                           <Text style={s.ordModel}>{item.model || 'Vehículo'}</Text>
                           <View style={s.ordPlate}><Text style={s.ordPlateT}>{item.plate || ''}</Text></View>
                         </View>
                         <Text style={s.ordWork}>{item.motivo || '—'}</Text>
                         <View style={[s.pill, { backgroundColor: (st.c || '#64748B') + '22', alignSelf: 'flex-start', marginTop: 6 }]}><Text style={[s.pillT, { color: st.c }]}>● {st.l}</Text></View>
-                        <Text style={s.ordMeta}>👤 {item.owner || 'Cliente'}{cli && cli.tel ? '' : ''} · 🔧 {item.mech || 'sin mecánico'}</Text>
+                        <Text style={s.ordMeta}>👤 {item.owner || 'Cliente'}{cli && cli.tel ? '' : ''} · 🔧 {item.mech || 'sin técnico'}</Text>
                         <Text style={s.ordMeta}>📅 Ingresó {item.ingreso ? new Date(item.ingreso).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'} · {dias} día{dias !== 1 ? 's' : ''} en taller</Text>
                         {(item.status === 'rep' || item.status === 'wait') && (
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}>
@@ -233,11 +370,21 @@ export default function AdminHomeScreen({ navigation, route }) {
       {tab === 'hist' && taller && <Historial data={data} guardar={guardar} cur={cur} loading={loading} recargar={recargar} pickFoto={pickFoto} taller={taller} />}
       {tab === 'mant' && taller && <Mantenimientos data={data} guardar={guardar} cur={cur} loading={loading} recargar={recargar} taller={taller} />}
       {tab === 'sos' && taller && <AuxilioVial data={data} loading={loading} recargar={recargar} taller={taller} />}
+      {tab === 'citas' && taller && <CitasProgramadas data={data} guardar={guardar} cur={cur} loading={loading} recargar={recargar} taller={taller} />}
+      {tab === 'cotiza' && taller && <Cotizaciones data={data} guardar={guardar} cur={cur} loading={loading} recargar={recargar} taller={taller} onNav={setTab} />}
 
       {tab === 'cli' && taller && (
         <Listado titulo="＋ Nuevo cliente" onAdd={() => setModal({ tipo: 'cliente', item: null })} datos={clients} loading={loading} recargar={recargar} vacio="Sin clientes."
           render={(item) => (
-            <TouchableOpacity style={s.card} onPress={() => setModal({ tipo: 'cliente', item })}>
+            <TouchableOpacity style={s.card} onPress={() => {
+              const opciones = [
+                { text: 'Editar', onPress: () => setModal({ tipo: 'cliente', item }) },
+              ];
+              if (item.usuario) opciones.push({ text: '💬 Compartir acceso', onPress: () => Alert.alert('Compartir acceso', 'Se generará una nueva contraseña temporal para ' + item.n + ' y se compartirá junto al usuario.', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Continuar', onPress: () => regenerarYCompartir(item, 'cliente', 'cliente') }]) });
+              opciones.push({ text: item.activo === false ? 'Activar' : 'Inactivar', style: item.activo === false ? 'default' : 'destructive', onPress: () => toggleActivo('cliente', item) });
+              opciones.push({ text: 'Cancelar', style: 'cancel' });
+              Alert.alert(item.n, item.usuario ? 'Acceso: ' + item.usuario : 'Sin acceso a la app', opciones);
+            }}>
               <Text style={s.veh}>{item.n} {item.activo === false ? '· inactivo' : ''}</Text>
               <Text style={s.muted}>{item.tipoDoc || 'Cédula'} {item.doc || '—'} · {item.tel || ''}</Text>
               <Text style={s.muted}>{vehicles.filter((v) => v.owner === item.n).length} vehículo(s){item.usuario ? ' · acceso: ' + item.usuario : ' · sin acceso'}</Text>
@@ -256,9 +403,17 @@ export default function AdminHomeScreen({ navigation, route }) {
       )}
 
       {tab === 'mec' && taller && (
-        <Listado titulo="＋ Nuevo mecánico" onAdd={() => setModal({ tipo: 'mecanico', item: null })} datos={mecanicos} loading={loading} recargar={recargar} vacio="Sin mecánicos."
+        <Listado titulo="＋ Nuevo técnico" onAdd={() => setModal({ tipo: 'mecanico', item: null })} datos={mecanicos} loading={loading} recargar={recargar} vacio="Sin técnicos."
           render={(item) => (
-            <TouchableOpacity style={s.card} onPress={() => setModal({ tipo: 'mecanico', item })}>
+            <TouchableOpacity style={s.card} onPress={() => {
+              const opciones = [
+                { text: 'Editar', onPress: () => setModal({ tipo: 'mecanico', item }) },
+              ];
+              if (item.usuario) opciones.push({ text: '💬 Compartir acceso', onPress: () => Alert.alert('Compartir acceso', 'Se generará una nueva contraseña temporal para ' + item.n + ' y se compartirá junto al usuario.', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Continuar', onPress: () => regenerarYCompartir(item, 'mecanico', 'técnico') }]) });
+              opciones.push({ text: item.activo === false ? 'Activar' : 'Inactivar', style: item.activo === false ? 'default' : 'destructive', onPress: () => toggleActivo('mecanico', item) });
+              opciones.push({ text: 'Cancelar', style: 'cancel' });
+              Alert.alert(item.n, item.usuario ? 'Acceso: ' + item.usuario : 'Sin acceso a la app', opciones);
+            }}>
               <Text style={s.veh}>{item.n} {item.activo === false ? '· inactivo' : ''}</Text>
               <Text style={s.muted}>{item.sp || 'General'}{item.usuario ? ' · acceso: ' + item.usuario : ' · sin acceso'}</Text>
             </TouchableOpacity>
@@ -307,8 +462,9 @@ export default function AdminHomeScreen({ navigation, route }) {
 const norm = (t) => (t == null ? '' : String(t)).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 function coincide(x, q) {
   if (!q || !q.trim()) return true;
+  const osTxt = x.numOrden ? 'OS' + String(x.numOrden).padStart(4, '0') : '';
   const campos = [x.n, x.model, x.plate, x.owner, x.mech, x.motivo, x.marca, x.modelo, x.color,
-    x.anio, x.tipoVeh, x.doc, x.tel, x.mail, x.correo, x.usuario, x.nombre,
+    x.anio, x.tipoVeh, x.doc, x.tel, x.mail, x.correo, x.usuario, x.nombre, osTxt, x.numOrden,
     x.recepcion && x.recepcion.trabajo, x.recepcion && x.recepcion.motivo];
   const t = norm(campos.filter(Boolean).join(' '));
   return norm(q).split(/\s+/).filter(Boolean).every((w) => t.includes(w));
@@ -333,11 +489,7 @@ function Listado({ titulo, onAdd, datos, loading, recargar, vacio, render }) {
 
 /* =================== INICIO (tarjetas) =================== */
 function Inicio({ data, cur, kpis, taller, me, modulos, onNav, loading, recargar }) {
-  const [verMonto, setVerMonto] = useState(false);
   const now = new Date();
-  const mes = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
-  const pagos = []; (data.history || []).forEach((h) => { (h.pagos || []).forEach((p) => pagos.push(p)); });
-  const factMes = pagos.filter((p) => (p.fechaISO || '').slice(0, 7) === mes).reduce((a, p) => a + (+p.monto || 0), 0);
   const fechaTxt = now.toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long' }) + ' · ' + now.toTimeString().slice(0, 5);
   return (
     <ScrollView contentContainerStyle={{ padding: 14 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={recargar} />}>
@@ -346,13 +498,7 @@ function Inicio({ data, cur, kpis, taller, me, modulos, onNav, loading, recargar
         <Text style={s.dashAdmin}>{me.nombre}</Text>
         <Text style={s.dashFecha}>{fechaTxt}</Text>
       </View>
-      <View style={s.factMes}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.factMesL}>Facturación del mes</Text>
-          <Text style={s.factMesV}>{verMonto ? cur + ' ' + factMes.toLocaleString('es-VE') : '••••••'}</Text>
-        </View>
-        <TouchableOpacity onPress={() => setVerMonto(!verMonto)} style={s.ojo}><Text style={{ fontSize: 20 }}>{verMonto ? '🙈' : '👁️'}</Text></TouchableOpacity>
-      </View>
+
       <View style={s.cardsGrid}>
         {modulos.map((c) => (
           <TouchableOpacity key={c.k} style={s.modCard} onPress={() => onNav(c.k)}>
@@ -371,6 +517,12 @@ function Dashboard({ data, cur, kpis, V, loading, recargar }) {
   const now = new Date();
   const [from, setFrom] = useState(new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10));
   const [to, setTo] = useState(new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10));
+  const [dashCal, setDashCal] = useState(null); // 'from' | 'to' | null
+  const [verMonto, setVerMonto] = useState(true);
+  const [vista, setVista] = useState('general'); // general | cotizaciones | honorarios | neto
+  const fmtFecha = (iso) => { if (!iso) return 'elegir'; const p = String(iso).split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : iso; };
+  // El calendario devuelve d/m/aaaa; lo paso a aaaa-mm-dd para el filtro
+  const aISO = (txt) => { const p = String(txt).split('/'); return p.length === 3 ? p[2] + '-' + String(p[1]).padStart(2, '0') + '-' + String(p[0]).padStart(2, '0') : txt; };
   const hist = data.history || [];
   const pagos = []; hist.forEach((h) => { if (h.pagos && h.pagos.length) h.pagos.forEach((p) => pagos.push(p)); });
   const months = []; for (let i = 5; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); months.push({ k: d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'), lab: d.toLocaleDateString('es-VE', { month: 'short' }) }); }
@@ -385,12 +537,42 @@ function Dashboard({ data, cur, kpis, V, loading, recargar }) {
   const serv = Object.entries(cnt).map(([l, v], i) => ({ l, v, c: cols[i % cols.length] }));
   const totServ = serv.reduce((a, x) => a + x.v, 0) || 1;
   const K = ({ label, value }) => (<View style={s.kpi}><Text style={s.kpiV}>{value}</Text><Text style={s.kpiL}>{label}</Text></View>);
+
+  // Totales para el desplegable de ganancias (todos calculados sobre TODO el historial, de forma consistente)
+  const totalCobrado = hist.reduce((a, h) => a + (+h.pagado || 0), 0);
+  const totalHonorarios = hist.reduce((a, h) => a + (h.honorario ? (+h.honorario.monto || 0) : 0), 0);
+  const totalNeto = totalCobrado - totalHonorarios;
+  const cotActivas = [
+    ...(data.cotizaciones || []).filter((c) => c.estado !== 'inactiva'),
+    ...(data.citas || []).filter((c) => c.estado === 'cotizada').map((c) => ({ monto: c.monto, cliente: c.cliente, items: c.repuestos })),
+  ];
+  const totalCotiza = cotActivas.reduce((a, c) => a + (+c.monto || 0), 0);
+  const VISTAS = {
+    general: { l: 'Ganancia general', color: '#0F6E56', valor: totalCobrado, sub: 'Total cobrado a clientes' },
+    cotizaciones: { l: 'Cotización', color: '#0891b2', valor: totalCotiza, sub: cotActivas.length + ' cotización(es) por realizar' },
+    honorarios: { l: 'Pagos', color: '#D97706', valor: totalHonorarios, sub: 'Pagado a los técnicos' },
+    neto: { l: 'Ganancia sin honorarios', color: totalNeto < 0 ? '#dc2626' : '#16191d', valor: totalNeto, sub: totalNeto < 0 ? 'Se pagó más en honorarios de lo cobrado' : 'Lo que queda tras pagar técnicos' },
+  };
+  const vActual = VISTAS[vista];
+  const opcionesVista = Object.values(VISTAS).map((v) => v.l);
+  const claveDeLabel = (lab) => Object.keys(VISTAS).find((k) => VISTAS[k].l === lab) || 'general';
+
   return (
     <ScrollView contentContainerStyle={{ padding: 14 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={recargar} />}>
+      <Dropdown label="Ver ganancias" value={vActual.l} options={opcionesVista} onChange={(lab) => setVista(claveDeLabel(lab))} />
+      <View style={[s.factMes, { backgroundColor: vActual.color, marginTop: 4, marginBottom: 16 }]}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.factMesL}>{vActual.l}</Text>
+          <Text style={s.factMesV}>{verMonto ? cur + ' ' + (vActual.valor || 0).toLocaleString('es-VE') : '••••••'}</Text>
+          <Text style={{ color: 'rgba(255,255,255,.8)', fontSize: 11.5, marginTop: 4 }}>{vActual.sub}</Text>
+        </View>
+        <TouchableOpacity onPress={() => setVerMonto(!verMonto)} style={s.ojo}><Text style={{ fontSize: 20 }}>{verMonto ? '🙈' : '👁️'}</Text></TouchableOpacity>
+      </View>
+
       <View style={s.kpisWrap}>
         <K label="Trabajos del mes" value={trabMes} /><K label="Órdenes abiertas" value={V.length} /><K label="Órdenes finalizadas" value={kpis.entregados} />
         <K label="En reparación" value={kpis.rep} /><K label="Terminados" value={kpis.term} /><K label="En espera" value={kpis.espera} />
-        <K label="Clientes" value={kpis.clientes} /><K label="Mecánicos" value={kpis.mecanicos} /><K label="Facturado mes" value={cur + ' ' + (factMes >= 1000 ? (factMes / 1000).toFixed(1) + 'k' : factMes)} />
+        <K label="Clientes" value={kpis.clientes} /><K label="Técnicos" value={kpis.mecanicos} /><K label="Facturado mes" value={cur + ' ' + (factMes >= 1000 ? (factMes / 1000).toFixed(1) + 'k' : factMes)} />
       </View>
       <View style={s.income}><Text style={s.incomeL}>Ingresos acumulados</Text><Text style={s.incomeV}>{cur} {kpis.ingresos.toLocaleString('es-VE')}</Text></View>
       <View style={s.card}>
@@ -407,11 +589,19 @@ function Dashboard({ data, cur, kpis, V, loading, recargar }) {
       </View>
       <View style={s.card}>
         <Text style={s.h}>Servicios más realizados</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 }}>
-          <TextInput style={s.dateInp} value={from} onChangeText={setFrom} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
+          <TouchableOpacity style={[s.dateInp, { justifyContent: 'center' }]} onPress={() => setDashCal('from')}>
+            <Text style={{ fontSize: 12 }}>📅 {fmtFecha(from)}</Text>
+          </TouchableOpacity>
           <Text style={{ color: '#6b7480', fontSize: 11 }}>a</Text>
-          <TextInput style={s.dateInp} value={to} onChangeText={setTo} />
+          <TouchableOpacity style={[s.dateInp, { justifyContent: 'center' }]} onPress={() => setDashCal('to')}>
+            <Text style={{ fontSize: 12 }}>📅 {fmtFecha(to)}</Text>
+          </TouchableOpacity>
         </View>
+        <Calendario visible={dashCal !== null} valor={fmtFecha(dashCal === 'from' ? from : to)}
+          titulo={dashCal === 'from' ? 'Desde' : 'Hasta'}
+          onSelect={(txt) => { const iso = aISO(txt); if (dashCal === 'from') setFrom(iso); else setTo(iso); }}
+          onClose={() => setDashCal(null)} />
         <View style={{ flexDirection: 'row', height: 14, borderRadius: 7, overflow: 'hidden', marginTop: 12, backgroundColor: '#f0f2f5' }}>
           {serv.map((x) => (<View key={x.l} style={{ width: (x.v / totServ * 100) + '%', backgroundColor: x.c }} />))}
         </View>
@@ -437,6 +627,7 @@ function Recepcion({ data, guardar, onListo }) {
   const [trabajos, setTrabajos] = useState((cfg.trabajos && cfg.trabajos.length) ? cfg.trabajos : TRABAJOS_BASE);
 
   const [tipos, setTipos] = useState((cfg.tiposDano && cfg.tiposDano.length) ? cfg.tiposDano : TIPOS);
+  const [docsVeh, setDocsVeh] = useState(DOCS_VEH);
   const [accesorios, setAccesorios] = useState((cfg.accesorios && cfg.accesorios.length) ? cfg.accesorios : ACCS);
   const [cliente, setCliente] = useState('');
   const [vehId, setVehId] = useState(null);
@@ -467,7 +658,39 @@ function Recepcion({ data, guardar, onListo }) {
   const vSel = vehicles.find((v) => v.id === vehId);
   const cSel = clients.find((c) => c.n === cliente);
   const togArr = (arr, set, v) => set(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
-  const marcar = (e) => { const { locationX, locationY } = e.nativeEvent; const xp = Math.max(0, Math.min(100, (locationX / (carSize.w || 1)) * 100)); const yp = Math.max(0, Math.min(100, (locationY / (carSize.h || 1)) * 100)); setDmg((d) => ({ ...d, [lado]: [...d[lado], { x: xp, y: yp, tipo, sev }] })); };
+  const borrarPin = (i) => {
+    Alert.alert('Quitar daño', '¿Quitar el daño #' + (i + 1) + ' de esta vista?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Quitar', style: 'destructive', onPress: () => setDmg((d) => ({ ...d, [lado]: d[lado].filter((_, k) => k !== i) })) },
+    ]);
+  };
+  const [pinPend, setPinPend] = useState(null);   // punto tocado, esperando tipo+severidad
+  const [modalDano, setModalDano] = useState(false); // controla la aparición del modal (tras ver el punto)
+  const [tipoNuevo, setTipoNuevo] = useState('');  // texto para un daño que no está en la lista
+  const marcar = (e) => {
+    const { locationX, locationY } = e.nativeEvent;
+    let xp = Math.max(0, Math.min(100, (locationX / (carSize.w || 1)) * 100));
+    const yp = Math.max(0, Math.min(100, (locationY / (carSize.h || 1)) * 100));
+    // La vista derecha se dibuja volteada (scaleX:-1); invertimos la X para que el pin caiga donde tocaste
+    if (lado === 'der') xp = 100 - xp;
+    setPinPend({ x: xp, y: yp, lado, tipoSel: tipos[0] || 'Rayón', sevSel: 'leve' });
+    setTipoNuevo('');
+    // Primero se ve el punto marcado; luego (breve pausa) aparece el detalle
+    setModalDano(false);
+    setTimeout(() => setModalDano(true), 280);
+  };
+  const confirmarPin = () => {
+    if (!pinPend) return;
+    let t = pinPend.tipoSel;
+    // Si escribió un daño nuevo, se agrega a la lista y se guarda
+    if (tipoNuevo.trim()) {
+      t = tipoNuevo.trim();
+      if (!tipos.includes(t)) setTipos([...tipos, t]);
+    }
+    setDmg((d) => ({ ...d, [pinPend.lado]: [...d[pinPend.lado], { x: pinPend.x, y: pinPend.y, tipo: t, sev: pinPend.sevSel }] }));
+    setPinPend(null); setModalDano(false); setTipoNuevo('');
+  };
+  const cancelarPin = () => { setPinPend(null); setModalDano(false); setTipoNuevo(''); };
   const total = Object.values(dmg).reduce((a, arr) => a + arr.length, 0);
 
   const confirmar = () => {
@@ -477,15 +700,17 @@ function Recepcion({ data, guardar, onListo }) {
     let n = 0; const dmgs = []; const ladosCon = [];
     LADOS.forEach(([k]) => { (dmg[k] || []).forEach((dd) => { n++; dmgs.push({ n, tipo: dd.tipo, sev: dd.sev, lado: LADO_NOMBRE[k], x: dd.x, y: dd.y }); }); if ((dmg[k] || []).length) ladosCon.push(LADO_NOMBRE[k]); });
     const now = new Date();
+    // Número de orden de servicio correlativo (va aumentando)
+    const nOrden = ((data.config && data.config.ultimoNumOrden) || 0) + 1;
     const vs = vehicles.map((v) => v.id !== vehId ? v : {
       ...v, status: 'espera', progress: 0, cerrada: false, cost: 0, pending: null, entregado: false, motivo: trabajo, mech: mech || v.mech || null,
-      color: color || v.color, tipoVeh,
+      color: color || v.color, tipoVeh, numOrden: nOrden,
       ingreso: now.toISOString().slice(0, 10), recepDamages: dmgs, recepLados: ladosCon,
-      recepcion: { fecha: now.toLocaleDateString('es-VE'), hora: now.toTimeString().slice(0, 5), tipoVeh, color, motivo, trabajo, prioridad: prio, combustible: comb, km: km || '—', accesorios: acc, documentos: docs, obs, via: 'App', firmaCli, firmaRec },
+      recepcion: { fecha: now.toLocaleDateString('es-VE'), hora: now.toTimeString().slice(0, 5), tipoVeh, color, motivo, trabajo, prioridad: prio, combustible: comb, km: km || '—', accesorios: acc, documentos: docs, obs, via: 'App', firmaCli, firmaRec, numOrden: nOrden },
       advances: [{ t: 'Vehículo recibido — recepción digital (app)', m: (motivo || trabajo) + ' · ' + dmgs.length + ' daño(s)', type: 'recep', ago: 'ahora' }],
     });
     // guarda también los catálogos nuevos (motivos/trabajos/marcas) para que la web los vea
-    guardar({ ...data, vehicles: vs, config: { ...cfg, motivos, trabajos, tiposDano: tipos, accesorios } });
+    guardar({ ...data, vehicles: vs, config: { ...cfg, motivos, trabajos, tiposDano: tipos, accesorios, ultimoNumOrden: nOrden } });
     setDmg({ sup: [], front: [], izq: [], der: [], post: [] }); setMotivo(''); setTrabajo(''); setAcc([]); setDocs([]); setObs('');
     setFirmaCli(null); setFirmaRec(null); setKm(''); setMech(''); setColor(''); setTipoVeh('Automóvil');
     Alert.alert('Recepción registrada ✓', 'Se generó la Orden de Trabajo. El vehículo ya está en el módulo Órdenes.', [
@@ -511,11 +736,11 @@ function Recepcion({ data, guardar, onListo }) {
         onChange={(txt) => { const v = cvs.find((x) => (x.model + ' · ' + x.plate) === txt); setVehId(v ? v.id : null); if (v && v.color) setColor(v.color); if (v && v.tipoVeh) setTipoVeh(v.tipoVeh); }}
         textoVacio="Este cliente no tiene vehículos. Regístralos en el módulo Vehículos." />
 
-      <Dropdown label="Mecánico responsable" value={mech} placeholder="Selecciona el mecánico"
+      <Dropdown label="Técnico responsable" value={mech} placeholder="Selecciona el técnico"
         options={mecanicos.map((m) => m.n)}
         meta={Object.fromEntries(mecanicos.map((m) => [m.n, [m.esp, m.tel, m.doc].filter(Boolean).join(' · ')]))}
         onChange={setMech}
-        textoVacio="No hay mecánicos activos. Regístralos en el módulo Mecánicos." />
+        textoVacio="No hay técnicos activos. Regístralos en el módulo Técnicos." />
 
       <Dropdown label="Motivo de ingreso" value={motivo} placeholder="Selecciona el motivo"
         options={motivos} onChange={setMotivo} onAdd={(t) => setMotivos([...motivos, t])} />
@@ -535,26 +760,85 @@ function Recepcion({ data, guardar, onListo }) {
       </ScrollView>
 
       <Text style={{ fontSize: 11, color: '#6b7480', marginTop: 8 }}>Toca sobre el vehículo para marcar un daño en la vista seleccionada.</Text>
-      <Pressable style={s.diagram} onPress={marcar} onLayout={(e) => setCarSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
+      <View style={s.diagram}>
         <View style={s.diagramHead}><Text style={s.diagramHeadT}>{(LADO_NOMBRE[lado] || '').toUpperCase()}</Text></View>
-        <View style={[lado === 'der' && { transform: [{ scaleX: -1 }] }]} pointerEvents="none">
-          <CarroSVG lado={lado} />
-        </View>
-        {(dmg[lado] || []).map((dd, i) => (
-          <View key={i} style={[s.pin, { left: dd.x + '%', top: dd.y + '%', marginLeft: -11, marginTop: -11, backgroundColor: dd.sev === 'grave' ? '#dc2626' : dd.sev === 'mod' ? '#D97706' : '#2563EB' }]}><Text style={s.pinT}>{i + 1}</Text></View>
-        ))}
-      </Pressable>
+        <Pressable onPress={marcar} onLayout={(e) => setCarSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })} style={{ width: 300, height: 300 / (CAR_RATIO[lado] || 1.5), position: 'relative' }}>
+          <View style={[{ width: 300, height: 300 / (CAR_RATIO[lado] || 1.5) }, lado === 'der' && { transform: [{ scaleX: -1 }] }]} pointerEvents="none">
+            <CarroSVG lado={lado} width={300} height={300 / (CAR_RATIO[lado] || 1.5)} />
+          </View>
+          {(dmg[lado] || []).map((dd, i) => (
+            <TouchableOpacity key={i} style={[s.pin, { left: (lado === 'der' ? 100 - dd.x : dd.x) + '%', top: dd.y + '%', marginLeft: -11, marginTop: -11, backgroundColor: dd.sev === 'grave' ? '#dc2626' : dd.sev === 'mod' ? '#D97706' : '#2563EB' }]}
+              onPress={() => borrarPin(i)}><Text style={s.pinT}>{i + 1}</Text></TouchableOpacity>
+          ))}
+          {pinPend && pinPend.lado === lado ? (
+            <View style={[s.pin, { left: (lado === 'der' ? 100 - pinPend.x : pinPend.x) + '%', top: pinPend.y + '%', marginLeft: -11, marginTop: -11, backgroundColor: '#16191d', borderWidth: 2, borderColor: '#fff' }]} pointerEvents="none">
+              <Text style={s.pinT}>?</Text>
+            </View>
+          ) : null}
+        </Pressable>
+      </View>
 
-      <Dropdown label="Tipo de daño" value={tipo} options={tipos} onChange={setTipo} onAdd={(t) => setTipos([...tipos, t])} />
-      <Text style={s.label}>Severidad</Text>
-      <View style={{ flexDirection: 'row', gap: 8 }}>
-        {[['leve', 'Leve'], ['mod', 'Moderado'], ['grave', 'Grave']].map(([k, l]) => (<TouchableOpacity key={k} style={[s.pillBtn, sev === k && s.pillBtnOn]} onPress={() => setSev(k)}><Text style={[s.pillBtnT, sev === k && { color: '#16191d' }]}>{l}</Text></TouchableOpacity>))}
+      <Modal visible={modalDano} transparent animationType="fade" onRequestClose={cancelarPin}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,.5)', justifyContent: 'center', padding: 24 }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 18, padding: 20 }}>
+            <Text style={{ fontSize: 17, fontWeight: '800', color: '#16191d', marginBottom: 2 }}>Detalle del daño</Text>
+            <Text style={{ fontSize: 12.5, color: '#6b7480', marginBottom: 14 }}>Elige el tipo y la severidad, o escribe un daño nuevo.</Text>
+
+            <Text style={s.label}>Tipo de daño</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 6 }}>
+              {tipos.map((t) => (
+                <TouchableOpacity key={t} style={[s.pillBtn, pinPend && pinPend.tipoSel === t && !tipoNuevo && s.pillBtnOn]}
+                  onPress={() => { setPinPend({ ...pinPend, tipoSel: t }); setTipoNuevo(''); }}>
+                  <Text style={[s.pillBtnT, pinPend && pinPend.tipoSel === t && !tipoNuevo && { color: '#16191d' }]}>{t}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TextInput style={s.input} value={tipoNuevo} onChangeText={setTipoNuevo}
+              placeholder="✏️ ¿Otro? Escríbelo aquí (ej. Mancha en pintura)" placeholderTextColor="#9aa3ad" />
+
+            <Text style={[s.label, { marginTop: 12 }]}>Severidad</Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {[['leve', 'Leve', '#2563EB'], ['mod', 'Moderado', '#D97706'], ['grave', 'Grave', '#dc2626']].map(([k, l, col]) => (
+                <TouchableOpacity key={k} style={[s.pillBtn, { flex: 1, alignItems: 'center' }, pinPend && pinPend.sevSel === k && { backgroundColor: col, borderColor: col }]}
+                  onPress={() => setPinPend({ ...pinPend, sevSel: k })}>
+                  <Text style={[s.pillBtnT, pinPend && pinPend.sevSel === k && { color: '#fff' }]}>{l}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity style={[s.btn, { marginTop: 18 }]} onPress={confirmarPin}>
+              <Text style={s.btnT}>Marcar daño</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={cancelarPin}>
+              <Text style={{ textAlign: 'center', color: '#6b7480', marginTop: 12, fontWeight: '600' }}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      {(dmg[lado] || []).length ? (
+        <View style={{ marginTop: 8 }}>
+          <Text style={{ fontSize: 11, color: '#6b7480', marginBottom: 6 }}>Toca un número en el carro (o en la lista) para quitar ese daño:</Text>
+          {(dmg[lado] || []).map((dd, i) => (
+            <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 5, borderBottomWidth: 1, borderColor: '#eef0f2' }}>
+              <View style={[s.pin, { position: 'relative', left: 0, top: 0, margin: 0, backgroundColor: dd.sev === 'grave' ? '#dc2626' : dd.sev === 'mod' ? '#D97706' : '#2563EB' }]}><Text style={s.pinT}>{i + 1}</Text></View>
+              <Text style={{ flex: 1, fontSize: 12.5, color: '#3a4048' }}>{dd.tipo} · {dd.sev === 'grave' ? 'Grave' : dd.sev === 'mod' ? 'Moderado' : 'Leve'}</Text>
+              <TouchableOpacity onPress={() => borrarPin(i)} style={{ backgroundColor: '#fdecec', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 }}>
+                <Text style={{ color: '#dc2626', fontWeight: '800', fontSize: 12 }}>Quitar</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      <View style={{ backgroundColor: '#eef4ff', borderRadius: 10, padding: 10, marginBottom: 4 }}>
+        <Text style={{ fontSize: 12.5, color: '#2563EB', fontWeight: '700' }}>👆 Toca el vehículo donde está el daño</Text>
+        <Text style={{ fontSize: 11.5, color: '#6b7480', marginTop: 2 }}>Al tocar, eliges el tipo de daño y la severidad.</Text>
       </View>
 
       <Dropdown label="Combustible" value={comb} options={FUEL} onChange={setComb} />
       <Text style={s.label}>Kilometraje</Text><TextInput style={s.input} value={km} onChangeText={setKm} keyboardType="numeric" placeholder="Ej. 85000" />
 
-      <Text style={s.label}>Accesorios recibidos</Text>
+      <Text style={s.label}>Accesorios dentro del vehículo</Text>
       <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         {accesorios.map((a) => (<TouchableOpacity key={a} style={[s.pillBtn, acc.includes(a) && s.pillBtnOn]} onPress={() => togArr(acc, setAcc, a)}><Text style={[s.pillBtnT, acc.includes(a) && { color: '#16191d' }]}>{a}</Text></TouchableOpacity>))}
         <TouchableOpacity style={[s.pillBtn, { borderStyle: 'dashed', borderColor: '#2563EB' }]} onPress={() => { Alert.prompt ? Alert.prompt('Nuevo accesorio', 'Nombre del accesorio', (t) => { if (t && t.trim()) { setAccesorios([...accesorios, t.trim()]); setAcc([...acc, t.trim()]); } }) : setAgAcc(true); }}>
@@ -568,8 +852,11 @@ function Recepcion({ data, guardar, onListo }) {
         </View>
       )}
       <Text style={s.label}>Documentos entregados</Text>
-      <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-        {DOCS_VEH.map((dd) => (<TouchableOpacity key={dd} style={[s.pillBtn, docs.includes(dd) && s.pillBtnOn]} onPress={() => togArr(docs, setDocs, dd)}><Text style={[s.pillBtnT, docs.includes(dd) && { color: '#16191d' }]}>{dd}</Text></TouchableOpacity>))}
+      <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        {docsVeh.map((dd) => (<TouchableOpacity key={dd} style={[s.pillBtn, docs.includes(dd) && s.pillBtnOn]} onPress={() => togArr(docs, setDocs, dd)}><Text style={[s.pillBtnT, docs.includes(dd) && { color: '#16191d' }]}>{dd}</Text></TouchableOpacity>))}
+        <TouchableOpacity style={[s.pillBtn, { borderStyle: 'dashed', borderColor: '#2563EB' }]} onPress={() => { Alert.prompt ? Alert.prompt('Nuevo documento', 'Nombre del documento', (t) => { if (t && t.trim()) { setDocsVeh([...docsVeh, t.trim()]); setDocs([...docs, t.trim()]); } }) : (() => { const extra = 'Documento ' + (docsVeh.length + 1); setDocsVeh([...docsVeh, extra]); })(); }}>
+          <Text style={[s.pillBtnT, { color: '#2563EB' }]}>＋ Agregar</Text>
+        </TouchableOpacity>
       </View>
       <Text style={s.label}>Observaciones</Text>
       <TextInput style={[s.input, { minHeight: 80, textAlignVertical: 'top' }]} value={obs} onChangeText={setObs} multiline />
@@ -619,11 +906,56 @@ function AuxilioVial({ data, loading, recargar, taller }) {
       setSel(null); recargar();
     } catch (e) { Alert.alert('Error', (e && e.message) || 'No se pudo actualizar.'); }
   };
+  // Ofrece las apps de navegación disponibles
   const abrirMapa = (x) => {
-    const url = (x.lat && x.lng)
+    const tieneCoords = x.lat && x.lng;
+    const q = tieneCoords ? x.lat + ',' + x.lng : encodeURIComponent(x.ubicacionTexto || '');
+    const opciones = [];
+    if (tieneCoords) {
+      opciones.push({ text: '🗺️  Google Maps', onPress: () => ir('https://www.google.com/maps/dir/?api=1&destination=' + q, 'Google Maps') });
+      opciones.push({ text: '🚗  Waze', onPress: () => ir('https://waze.com/ul?ll=' + x.lat + ',' + x.lng + '&navigate=yes', 'Waze') });
+      opciones.push({ text: '📍  Otra app de mapas', onPress: () => ir('geo:' + x.lat + ',' + x.lng + '?q=' + q, 'mapas') });
+    } else {
+      opciones.push({ text: '🗺️  Google Maps', onPress: () => ir('https://www.google.com/maps/search/?api=1&query=' + q, 'Google Maps') });
+      opciones.push({ text: '🚗  Waze', onPress: () => ir('https://waze.com/ul?q=' + q + '&navigate=yes', 'Waze') });
+    }
+    opciones.push({ text: '📤  Compartir ubicación', onPress: () => compartirUbicacion(x) });
+    opciones.push({ text: 'Cancelar', style: 'cancel' });
+    Alert.alert('Abrir ubicación', 'Elige con qué aplicación quieres ver la ubicación de ' + x.cliente + '.', opciones);
+  };
+  const ir = async (url, nombre) => {
+    try {
+      const puede = await Linking.canOpenURL(url);
+      if (!puede && nombre === 'Waze') {
+        Alert.alert('Waze no instalado', '¿Deseas abrirlo en el navegador?', [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Abrir', onPress: () => Linking.openURL(url).catch(() => {}) },
+        ]);
+        return;
+      }
+      await Linking.openURL(url);
+    } catch (e) {
+      Alert.alert('No se pudo abrir', 'Intenta con otra aplicación de mapas.');
+    }
+  };
+  // Comparte la ubicación por WhatsApp, correo o cualquier app del teléfono
+  const compartirUbicacion = async (x) => {
+    const enlace = (x.lat && x.lng)
       ? 'https://www.google.com/maps/search/?api=1&query=' + x.lat + ',' + x.lng
       : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(x.ubicacionTexto || '');
-    Linking.openURL(url).catch(() => Alert.alert('Mapa', 'No se pudo abrir el mapa.'));
+    const texto = '🚨 AUXILIO VIAL\n'
+      + 'Cliente: ' + x.cliente + (x.telefono ? ' (' + x.telefono + ')' : '') + '\n'
+      + 'Vehículo: ' + (x.vehiculo || '—') + (x.placa ? ' · ' + x.placa : '') + '\n'
+      + 'Avería: ' + x.descripcion + '\n'
+      + 'Ubicación: ' + (x.ubicacionTexto || 'ver enlace') + '\n'
+      + (x.lat && x.lng ? 'Coordenadas: ' + Number(x.lat).toFixed(5) + ', ' + Number(x.lng).toFixed(5) + '\n' : '')
+      + '\n' + enlace;
+    try {
+      const { Share } = require('react-native');
+      await Share.share({ message: texto, title: 'Auxilio vial — ' + x.cliente });
+    } catch (e) {
+      Linking.openURL('https://wa.me/?text=' + encodeURIComponent(texto)).catch(() => Alert.alert('Compartir', 'No se pudo compartir.'));
+    }
   };
   const EST = {
     abierto: { t: 'SOLICITANDO', c: '#dc2626', bg: '#fdecec' },
@@ -686,9 +1018,14 @@ function AuxilioVial({ data, loading, recargar, taller }) {
                 {sel.lat && sel.lng ? <Text style={[s.muted, { marginTop: 2 }]}>📍 {Number(sel.lat).toFixed(5)}, {Number(sel.lng).toFixed(5)}</Text> : null}
 
                 {(sel.lat && sel.lng) || sel.ubicacionTexto ? (
-                  <TouchableOpacity style={[s.avBtn, { marginTop: 16, backgroundColor: '#0891b2' }]} onPress={() => abrirMapa(sel)}>
-                    <Text style={s.avBtnT}>🗺️ Ver en el mapa</Text>
-                  </TouchableOpacity>
+                  <>
+                    <TouchableOpacity style={[s.avBtn, { marginTop: 16, backgroundColor: '#0891b2' }]} onPress={() => abrirMapa(sel)}>
+                      <Text style={s.avBtnT}>🗺️ Abrir ubicación (Maps, Waze…)</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[s.avBtn, { marginTop: 8, backgroundColor: '#6d28d9' }]} onPress={() => compartirUbicacion(sel)}>
+                      <Text style={s.avBtnT}>📤 Compartir ubicación</Text>
+                    </TouchableOpacity>
+                  </>
                 ) : null}
                 {sel.telefono ? (
                   <>
@@ -719,6 +1056,368 @@ function AuxilioVial({ data, loading, recargar, taller }) {
         </View></View>
       </Modal>
     </View>
+  );
+}
+
+/* =================== COTIZACIONES =================== */
+function Cotizaciones({ data, guardar, cur, loading, recargar, taller, onNav }) {
+  const clientes = data.clients || [];
+  const vehiculos = data.vehicles || [];
+  const cotsCitas = (data.citas || []).filter((c) => c.estado === 'cotizada' || c.estado === 'aceptada').map((c) => ({
+    id: 'cita-' + c.id, num: null, cliente: c.cliente, vehiculo: c.vehiculo, placa: c.placa,
+    items: c.repuestos || [], monto: c.monto || 0, estado: c.estado === 'aceptada' ? 'aceptada' : 'enviada',
+    origen: 'cita', fecha: c.fecha,
+  }));
+  const cotsPropias = data.cotizaciones || [];
+  const todas = [...cotsPropias.filter((c) => c.estado !== 'inactiva'), ...cotsCitas];
+
+  const [crear, setCrear] = React.useState(false);
+  const [editar, setEditar] = React.useState(null);
+  const [q, setQ] = React.useState('');
+  const [buscar, setBuscar] = React.useState('');
+  const [cli, setCli] = React.useState(null);
+  const [veh, setVeh] = React.useState(null);
+  const [items, setItems] = React.useState([]);
+  const [itN, setItN] = React.useState('');
+  const [itP, setItP] = React.useState('');
+  const [itTipo, setItTipo] = React.useState('servicio');
+  const [itDetalle, setItDetalle] = React.useState('');
+  const [descuento, setDescuento] = React.useState('');
+  const [guardando, setGuardando] = React.useState(false);
+
+  const norm = (t) => (t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const clientesFiltrados = q.trim()
+    ? clientes.filter((c) => norm(c.n + ' ' + (c.doc || '') + ' ' + (c.tel || '')).includes(norm(q)))
+    : clientes;
+
+  const todasFiltradas = buscar.trim()
+    ? todas.filter((c) => norm((c.num ? 'P-' + String(c.num).padStart(6, '0') : '') + ' ' + (c.cliente || '') + ' ' + (c.doc || '')).includes(norm(buscar)))
+    : todas;
+
+  const abrirCrear = () => { setCli(null); setVeh(null); setItems([]); setItN(''); setItP(''); setItTipo('servicio'); setItDetalle(''); setDescuento(''); setQ(''); setEditar(null); setCrear(true); };
+  const abrirEditar = (c) => {
+    setEditar(c); setCli(clientes.find((x) => x.n === c.cliente) || { n: c.cliente });
+    setVeh(vehiculos.find((v) => v.model === c.vehiculo) || null);
+    setItems(c.items || []); setItN(''); setItP(''); setItTipo('servicio'); setItDetalle(''); setDescuento(c.descuento ? String(c.descuento) : ''); setCrear(true);
+  };
+  const vehiculosCli = cli ? vehiculos.filter((v) => v.owner === cli.n) : [];
+  const total = items.reduce((a, r) => a + (+r.p || 0) * (+r.cant || 1), 0) - (+descuento || 0);
+  const agregarItem = () => { if (!itN.trim()) { Alert.alert('Falta', 'Nombre del servicio o repuesto.'); return; } setItems([...items, { n: itN.trim(), p: +itP || 0, cant: 1, tipo: itTipo, detalle: itDetalle.trim() }]); setItN(''); setItP(''); setItDetalle(''); };
+  const quitarItem = (i) => setItems(items.filter((_, k) => k !== i));
+
+  const guardarCotiza = async () => {
+    if (!cli) { Alert.alert('Falta', 'Elige el cliente.'); return; }
+    if (!items.length) { Alert.alert('Falta', 'Agrega al menos un servicio o repuesto.'); return; }
+    setGuardando(true);
+    const num = editar && editar.num ? editar.num : ((data.config && data.config.ultimoNumCotiza) || 0) + 1;
+    const cot = {
+      id: editar ? editar.id : Date.now(),
+      num,
+      cliente: cli.n, doc: cli.doc || '', tel: cli.tel || '',
+      vehiculo: veh ? veh.model : '', placa: veh ? veh.plate : '', anio: veh ? (veh.anio || veh.year || '') : '',
+      items, monto: total, descuento: +descuento || 0, estado: 'activa', origen: 'manual',
+      fecha: new Date().toLocaleDateString('es-VE'),
+    };
+    let arr = data.cotizaciones || [];
+    if (editar) arr = arr.map((x) => (x.id === editar.id ? cot : x));
+    else arr = [cot, ...arr];
+    const cfg = { ...(data.config || {}) };
+    if (!editar) cfg.ultimoNumCotiza = num;
+    await guardar({ ...data, cotizaciones: arr, config: cfg });
+    setGuardando(false); setCrear(false);
+  };
+
+  const inactivar = (c) => {
+    Alert.alert('Inactivar cotización', '¿Inactivar la cotización N° ' + (c.num ? String(c.num).padStart(4, '0') : '') + '?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Inactivar', style: 'destructive', onPress: () => guardar({ ...data, cotizaciones: (data.cotizaciones || []).map((x) => (x.id === c.id ? { ...x, estado: 'inactiva' } : x)) }) },
+    ]);
+  };
+
+  const compartirCotiza = (c) => {
+    const nombreTaller = taller ? taller.nombre : 'TallerOS';
+    let txt = '🧾 COTIZACIÓN' + (c.num ? ' P-' + String(c.num).padStart(6, '0') : '') + '\n' + nombreTaller + '\n\n';
+    txt += '👤 ' + c.cliente + '\n';
+    if (c.vehiculo) txt += '🚗 ' + c.vehiculo + (c.placa ? ' · ' + c.placa : '') + '\n';
+    txt += '\nSERVICIOS / REPUESTOS:\n';
+    (c.items || []).forEach((r) => { txt += '• ' + r.n + ' — ' + cur + ' ' + (+r.p || 0).toLocaleString('es-VE') + '\n'; });
+    if (c.descuento) txt += '\nDescuento: ' + cur + ' ' + (+c.descuento).toLocaleString('es-VE');
+    txt += '\nTOTAL: ' + cur + ' ' + (+c.monto || 0).toLocaleString('es-VE');
+    try { const { Share } = require('react-native'); Share.share({ message: txt, title: 'Cotización — ' + c.cliente }); }
+    catch (e) { const num2 = (c.tel || '').replace(/[^0-9]/g, ''); Linking.openURL('https://wa.me/' + num2 + '?text=' + encodeURIComponent(txt)); }
+  };
+
+  return (
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={recargar} />}>
+      <Text style={s.label}>Buscar (N° de cotización, cliente o documento)</Text>
+      <TextInput style={[s.input, { marginBottom: 12 }]} value={buscar} onChangeText={setBuscar} placeholder="Ej. P-000125, Juan Pérez, V-12345678" placeholderTextColor="#9aa3ad" />
+
+      <TouchableOpacity style={[s.btn, { marginBottom: 16 }]} onPress={abrirCrear}>
+        <Text style={s.btnT}>＋ Nueva cotización</Text>
+      </TouchableOpacity>
+
+      {!todasFiltradas.length ? <Text style={s.muted}>{buscar.trim() ? 'No se encontraron cotizaciones.' : 'Aún no hay cotizaciones. Crea una nueva o llegan desde las citas.'}</Text> : null}
+      {todasFiltradas.map((c) => (
+        <View key={c.id} style={s.card}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={{ fontSize: 15, fontWeight: '800', color: '#0F6E56' }}>🧾 {c.num ? 'P-' + String(c.num).padStart(6, '0') : (c.origen === 'cita' ? 'Desde cita' : '')}</Text>
+            <Text style={{ fontWeight: '800', color: '#16191d' }}>{cur} {(+c.monto || 0).toLocaleString('es-VE')}</Text>
+          </View>
+          <Text style={s.muted}>👤 {c.cliente}</Text>
+          {c.vehiculo ? <Text style={s.muted}>🚗 {c.vehiculo}{c.placa ? ' · ' + c.placa : ''}</Text> : null}
+          <Text style={s.muted}>{(c.items || []).length} ítem(s){c.origen === 'cita' ? ' · desde cita' : ''}{c.estado === 'aceptada' ? ' · aceptada ✓' : ''}</Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+            <TouchableOpacity style={[s.act, { flex: 1, backgroundColor: '#e8f6ec' }]} onPress={() => compartirCotiza(c)}><Text style={[s.actT, { color: '#0F6E56' }]}>💬 Compartir</Text></TouchableOpacity>
+            {c.origen !== 'cita' ? <TouchableOpacity style={[s.act, { flex: 1, backgroundColor: '#fdf3e0' }]} onPress={() => taller && compartirCotizacionPDF(taller.id, c)}><Text style={[s.actT, { color: '#b45309' }]}>📄 PDF</Text></TouchableOpacity> : null}
+            {c.origen !== 'cita' ? <TouchableOpacity style={[s.act, { flex: 1 }]} onPress={() => abrirEditar(c)}><Text style={s.actT}>✏️ Editar</Text></TouchableOpacity> : null}
+            {c.origen !== 'cita' ? <TouchableOpacity style={[s.act, { backgroundColor: '#fdecec', paddingHorizontal: 14 }]} onPress={() => inactivar(c)}><Text style={[s.actT, { color: '#dc2626' }]}>Inactivar</Text></TouchableOpacity> : null}
+          </View>
+        </View>
+      ))}
+
+      <Modal visible={crear} transparent animationType="slide" onRequestClose={() => setCrear(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,.5)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 18, paddingBottom: 34, maxHeight: '92%' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={{ fontSize: 17, fontWeight: '800', color: '#16191d' }}>{editar ? 'Editar cotización' : 'Nueva cotización'}</Text>
+              <TouchableOpacity onPress={() => setCrear(false)}><Text style={{ fontSize: 22, color: '#6b7480' }}>✕</Text></TouchableOpacity>
+            </View>
+            <ScrollView>
+              {!cli ? (
+                <>
+                  <Text style={s.label}>Buscar cliente (nombre, cédula o teléfono)</Text>
+                  <TextInput style={s.input} value={q} onChangeText={setQ} placeholder="Escribe para buscar…" placeholderTextColor="#9aa3ad" autoFocus />
+                  <View style={{ marginTop: 8 }}>
+                    {clientesFiltrados.slice(0, 8).map((c) => (
+                      <TouchableOpacity key={c.id || c.n} style={{ paddingVertical: 11, borderBottomWidth: 1, borderColor: '#eef0f2' }} onPress={() => { setCli(c); const vs = vehiculos.filter((v) => v.owner === c.n); setVeh(vs.length === 1 ? vs[0] : null); }}>
+                        <Text style={{ fontWeight: '700', color: '#16191d' }}>{c.n}</Text>
+                        <Text style={s.muted}>{c.doc || 'sin doc'} · {c.tel || 'sin tel'}</Text>
+                      </TouchableOpacity>
+                    ))}
+                    {!clientesFiltrados.length ? (
+                      <View style={{ alignItems: 'center', padding: 16 }}>
+                        <Text style={s.muted}>No se encontró ese cliente.</Text>
+                        <TouchableOpacity style={[s.act, { marginTop: 10 }]} onPress={() => { setCrear(false); onNav && onNav('cli'); }}>
+                          <Text style={s.actT}>＋ Registrar cliente nuevo</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : null}
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={{ backgroundColor: '#f7f8fa', borderRadius: 12, padding: 12, marginBottom: 6 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                      <Text style={{ fontWeight: '800', color: '#16191d' }}>{cli.n}</Text>
+                      <TouchableOpacity onPress={() => { setCli(null); setVeh(null); }}><Text style={{ color: '#2563EB', fontWeight: '700', fontSize: 12 }}>Cambiar</Text></TouchableOpacity>
+                    </View>
+                    <Text style={s.muted}>{cli.doc || 'sin doc'} · {cli.tel || 'sin tel'}</Text>
+                  </View>
+
+                  <Text style={s.label}>Vehículo</Text>
+                  {vehiculosCli.length ? (
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                      {vehiculosCli.map((v) => (
+                        <TouchableOpacity key={v.id} onPress={() => setVeh(v)} style={[s.pillBtn, veh && veh.id === v.id && s.pillBtnOn]}>
+                          <Text style={[s.pillBtnT, veh && veh.id === v.id && { color: '#16191d' }]}>{v.model} · {v.plate}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  ) : <Text style={s.muted}>Este cliente no tiene vehículos registrados (opcional).</Text>}
+
+                  <Text style={[s.label, { marginTop: 14 }]}>Servicios y repuestos</Text>
+                  {items.map((r, i) => (
+                    <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6, borderBottomWidth: 1, borderColor: '#f0f2f5' }}>
+                      <Text style={{ flex: 1, color: '#3a4048' }}>{r.tipo === 'repuesto' ? '🔩' : '🔧'} {r.n}{r.detalle ? ' — ' + r.detalle : ''}</Text>
+                      <Text style={{ fontWeight: '700', color: '#16191d' }}>{cur} {(+r.p || 0).toLocaleString('es-VE')}</Text>
+                      <TouchableOpacity onPress={() => quitarItem(i)} style={{ backgroundColor: '#fdecec', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}><Text style={{ color: '#dc2626', fontWeight: '800' }}>✕</Text></TouchableOpacity>
+                    </View>
+                  ))}
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+                    <TouchableOpacity onPress={() => setItTipo('servicio')} style={[s.pillBtn, itTipo === 'servicio' && s.pillBtnOn]}><Text style={[s.pillBtnT, itTipo === 'servicio' && { color: '#16191d' }]}>🔧 Servicio</Text></TouchableOpacity>
+                    <TouchableOpacity onPress={() => setItTipo('repuesto')} style={[s.pillBtn, itTipo === 'repuesto' && s.pillBtnOn]}><Text style={[s.pillBtnT, itTipo === 'repuesto' && { color: '#16191d' }]}>🔩 Repuesto</Text></TouchableOpacity>
+                  </View>
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                    <TextInput style={[s.input, { flex: 1 }]} value={itN} onChangeText={setItN} placeholder="Nombre" placeholderTextColor="#9aa3ad" />
+                    <TextInput style={[s.input, { width: 90 }]} value={itP} onChangeText={setItP} keyboardType="numeric" placeholder="Precio" placeholderTextColor="#9aa3ad" />
+                  </View>
+                  <TextInput style={[s.input, { marginTop: 8 }]} value={itDetalle} onChangeText={setItDetalle} placeholder="Detalle (opcional)" placeholderTextColor="#9aa3ad" />
+                  <TouchableOpacity style={[s.act, { marginTop: 8, backgroundColor: '#e9f0fe' }]} onPress={agregarItem}><Text style={[s.actT, { color: '#2563EB' }]}>＋ Agregar</Text></TouchableOpacity>
+
+                  <Text style={[s.label, { marginTop: 14 }]}>Descuento (opcional)</Text>
+                  <TextInput style={s.input} value={descuento} onChangeText={setDescuento} keyboardType="numeric" placeholder="0" placeholderTextColor="#9aa3ad" />
+
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, paddingTop: 12, borderTopWidth: 2, borderColor: '#e3e7ec' }}>
+                    <Text style={{ fontSize: 16, fontWeight: '800', color: '#16191d' }}>TOTAL</Text>
+                    <Text style={{ fontSize: 18, fontWeight: '800', color: '#0F6E56' }}>{cur} {total.toLocaleString('es-VE')}</Text>
+                  </View>
+                  <TouchableOpacity style={[s.btn, { marginTop: 18 }, guardando && { opacity: 0.6 }]} disabled={guardando} onPress={guardarCotiza}>
+                    <Text style={s.btnT}>{guardando ? 'Guardando…' : (editar ? 'Guardar cambios' : 'Crear cotización')}</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </ScrollView>
+  );
+}
+
+/* =================== CITAS PROGRAMADAS =================== */
+function CitasProgramadas({ data, guardar, cur, loading, recargar, taller }) {
+  const citas = data.citas || [];
+  const [cotizar, setCotizar] = React.useState(null); // cita que se está cotizando
+  const [reps, setReps] = React.useState([]);
+  const [repN, setRepN] = React.useState('');
+  const [repP, setRepP] = React.useState('');
+  const [guardando, setGuardando] = React.useState(false);
+  const [verBloqueo, setVerBloqueo] = React.useState(false);
+  const diasBloqueados = data.diasBloqueados || [];
+  const toggleDiaBloqueado = (fecha) => {
+    const ya = diasBloqueados.includes(fecha);
+    const nuevos = ya ? diasBloqueados.filter((f) => f !== fecha) : [...diasBloqueados, fecha];
+    guardar({ ...data, diasBloqueados: nuevos });
+  };
+
+  const ESTADOS = {
+    solicitada: { l: 'Por cotizar', c: '#dc2626', bg: '#fdecec' },
+    cotizada: { l: 'Esperando cliente', c: '#D97706', bg: '#fdf1e1' },
+    aceptada: { l: 'Aceptada ✓', c: '#16A34A', bg: '#e8f6ec' },
+    rechazada: { l: 'Rechazada', c: '#64748B', bg: '#eef0f2' },
+  };
+
+  const abrirCotizar = (c) => {
+    setCotizar(c);
+    setReps(c.repuestos && c.repuestos.length ? [...c.repuestos] : []);
+    setRepN(''); setRepP('');
+  };
+  const agregarRep = () => {
+    if (!repN.trim()) { Alert.alert('Falta', 'Nombre del repuesto o trabajo.'); return; }
+    setReps([...reps, { n: repN.trim(), p: +repP || 0 }]);
+    setRepN(''); setRepP('');
+  };
+  const quitarRep = (i) => setReps(reps.filter((_, k) => k !== i));
+  const totalCotiza = reps.reduce((a, r) => a + (+r.p || 0), 0);
+
+  const confirmarCotizacion = async () => {
+    if (!reps.length) { Alert.alert('Falta', 'Agrega al menos un repuesto o trabajo a la cotización.'); return; }
+    setGuardando(true);
+    try {
+      await api('/api/state/cita-cotizar?taller=' + taller.id, { method: 'POST', body: JSON.stringify({ id: cotizar.id, repuestos: reps, monto: totalCotiza }) });
+      setCotizar(null); setGuardando(false);
+      Alert.alert('Cotización enviada ✓', 'El cliente recibió la cotización por ' + cur + ' ' + totalCotiza.toLocaleString('es-VE') + ' y podrá aceptarla o rechazarla.');
+      recargar();
+    } catch (e) { setGuardando(false); Alert.alert('Error', (e && e.message) || 'No se pudo enviar.'); }
+  };
+
+  const orden = { solicitada: 0, cotizada: 1, aceptada: 2, rechazada: 3 };
+  const citasOrd = [...citas].sort((a, b) => (orden[a.estado] ?? 9) - (orden[b.estado] ?? 9));
+
+  return (
+    <FlatList
+      style={{ flex: 1 }}
+      contentContainerStyle={{ padding: 14 }}
+      data={citasOrd}
+      keyExtractor={(c) => String(c.id)}
+      refreshControl={<RefreshControl refreshing={loading} onRefresh={recargar} />}
+      ListHeaderComponent={
+        <View style={{ marginBottom: 14 }}>
+          <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#f2ecfd', borderRadius: 12, paddingVertical: 12 }} onPress={() => setVerBloqueo(true)}>
+            <Text style={{ fontSize: 16 }}>🚫</Text>
+            <Text style={{ color: '#7c3aed', fontWeight: '800' }}>Bloquear días no laborables{diasBloqueados.length ? ' (' + diasBloqueados.length + ')' : ''}</Text>
+          </TouchableOpacity>
+          <Modal visible={verBloqueo} transparent animationType="slide" onRequestClose={() => setVerBloqueo(false)}>
+            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,.5)', justifyContent: 'flex-end' }}>
+              <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 18, paddingBottom: 34 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <Text style={{ fontSize: 17, fontWeight: '800', color: '#16191d' }}>🚫 Días no laborables</Text>
+                  <TouchableOpacity onPress={() => setVerBloqueo(false)}><Text style={{ fontSize: 22, color: '#6b7480' }}>✕</Text></TouchableOpacity>
+                </View>
+                <Text style={{ fontSize: 12.5, color: '#6b7480', marginBottom: 8 }}>Toca un día para bloquearlo o desbloquearlo. Los clientes no podrán agendar citas en los días bloqueados (en plomo).</Text>
+                <CalendarioBloqueo bloqueados={diasBloqueados} onToggle={toggleDiaBloqueado} />
+                <TouchableOpacity style={[s.btn, { marginTop: 14 }]} onPress={() => setVerBloqueo(false)}><Text style={s.btnT}>Listo</Text></TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+        </View>
+      }
+      ListEmptyComponent={!loading && <Text style={s.muted}>Aún no hay citas solicitadas por los clientes.</Text>}
+      renderItem={({ item: c }) => {
+        const e = ESTADOS[c.estado] || ESTADOS.solicitada;
+        return (
+          <View style={s.card}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <Text style={s.veh}>📅 {c.fecha} · {c.hora}</Text>
+              <View style={{ backgroundColor: e.bg, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
+                <Text style={{ color: e.c, fontWeight: '800', fontSize: 11 }}>{e.l}</Text>
+              </View>
+            </View>
+            <Text style={s.muted}>👤 {c.cliente}</Text>
+            <Text style={s.muted}>🚗 {c.vehiculo || '—'}{c.placa ? ' · ' + c.placa : ''}</Text>
+            <Text style={{ color: '#16191d', fontWeight: '700', marginTop: 4 }}>🔧 {c.servicio}</Text>
+            {c.observaciones ? <Text style={s.muted}>📝 {c.observaciones}</Text> : null}
+            {c.monto ? <Text style={{ color: '#0F6E56', fontWeight: '800', marginTop: 4 }}>💰 Cotizado: {cur} {(+c.monto).toLocaleString('es-VE')}</Text> : null}
+            {c.estado === 'solicitada' ? (
+              <TouchableOpacity style={[s.act, { marginTop: 10 }]} onPress={() => abrirCotizar(c)}>
+                <Text style={s.actT}>Armar cotización →</Text>
+              </TouchableOpacity>
+            ) : c.estado === 'cotizada' ? (
+              <TouchableOpacity style={[s.act, { marginTop: 10, backgroundColor: '#fdf1e1' }]} onPress={() => abrirCotizar(c)}>
+                <Text style={[s.actT, { color: '#D97706' }]}>Editar cotización</Text>
+              </TouchableOpacity>
+            ) : null}
+
+            <Modal visible={cotizar && cotizar.id === c.id} transparent animationType="slide" onRequestClose={() => setCotizar(null)}>
+              <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,.5)', justifyContent: 'flex-end' }}>
+                <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 18, paddingBottom: 34 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <Text style={{ fontSize: 17, fontWeight: '800', color: '#16191d' }}>🧾 Cotización</Text>
+                    <TouchableOpacity onPress={() => setCotizar(null)}><Text style={{ fontSize: 22, color: '#6b7480' }}>✕</Text></TouchableOpacity>
+                  </View>
+                  <ScrollView style={{ maxHeight: 440 }}>
+                    <View style={{ backgroundColor: '#f7f8fa', borderRadius: 12, padding: 12, marginBottom: 14 }}>
+                      <Text style={{ fontWeight: '800', color: '#16191d' }}>{c.cliente}</Text>
+                      <Text style={s.muted}>{c.vehiculo}{c.placa ? ' · ' + c.placa : ''}</Text>
+                      <Text style={{ color: '#16191d', fontWeight: '700', marginTop: 4 }}>{c.servicio} · {c.fecha} {c.hora}</Text>
+                      {c.observaciones ? <Text style={s.muted}>📝 {c.observaciones}</Text> : null}
+                    </View>
+
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#16191d', marginBottom: 8 }}>Repuestos y trabajos</Text>
+                    {reps.map((r, i) => (
+                      <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6, borderBottomWidth: 1, borderColor: '#f0f2f5' }}>
+                        <Text style={{ flex: 1, color: '#3a4048' }}>{r.n}</Text>
+                        <Text style={{ fontWeight: '700', color: '#16191d' }}>{cur} {(+r.p || 0).toLocaleString('es-VE')}</Text>
+                        <TouchableOpacity onPress={() => quitarRep(i)} style={{ backgroundColor: '#fdecec', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
+                          <Text style={{ color: '#dc2626', fontWeight: '800' }}>✕</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                    <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+                      <TextInput style={[s.input, { flex: 1 }]} value={repN} onChangeText={setRepN} placeholder="Repuesto o trabajo" placeholderTextColor="#9aa3ad" />
+                      <TextInput style={[s.input, { width: 90 }]} value={repP} onChangeText={setRepP} keyboardType="numeric" placeholder="Precio" placeholderTextColor="#9aa3ad" />
+                    </View>
+                    <TouchableOpacity style={[s.act, { marginTop: 8, backgroundColor: '#e9f0fe' }]} onPress={agregarRep}>
+                      <Text style={[s.actT, { color: '#2563EB' }]}>＋ Agregar a la cotización</Text>
+                    </TouchableOpacity>
+
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, paddingTop: 12, borderTopWidth: 2, borderColor: '#e3e7ec' }}>
+                      <Text style={{ fontSize: 16, fontWeight: '800', color: '#16191d' }}>TOTAL</Text>
+                      <Text style={{ fontSize: 18, fontWeight: '800', color: '#0F6E56' }}>{cur} {totalCotiza.toLocaleString('es-VE')}</Text>
+                    </View>
+
+                    <TouchableOpacity style={[s.btn, { marginTop: 18 }, guardando && { opacity: 0.6 }]} disabled={guardando} onPress={confirmarCotizacion}>
+                      <Text style={s.btnT}>{guardando ? 'Enviando…' : 'Confirmar cotización'}</Text>
+                    </TouchableOpacity>
+                    <Text style={{ fontSize: 11.5, color: '#9aa3ad', textAlign: 'center', marginTop: 8 }}>El cliente recibirá la cotización y podrá aceptarla o rechazarla.</Text>
+                  </ScrollView>
+                </View>
+              </View>
+            </Modal>
+          </View>
+        );
+      }}
+    />
   );
 }
 
@@ -775,7 +1474,7 @@ function Mantenimientos({ data, guardar, cur, loading, recargar, taller }) {
           <TextInput style={[s.input, { marginBottom: 12 }]} value={q} onChangeText={setQ}
             placeholder="Buscar por vehículo, placa, cliente o tipo…" />
         }
-        ListEmptyComponent={!loading && <Text style={s.muted}>No hay mantenimientos programados. Se crean cuando el mecánico marca un trabajo como terminado.</Text>}
+        ListEmptyComponent={!loading && <Text style={s.muted}>No hay mantenimientos programados. Se crean cuando el técnico marca un trabajo como terminado.</Text>}
         renderItem={({ item }) => {
           const p = item.proximoMant || {};
           const e = estadoDe(p.fecha);
@@ -852,6 +1551,9 @@ function Historial({ data, guardar, cur, loading, recargar, pickFoto, taller }) 
   const [qHist, setQHist] = useState('');
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
+  const [calCual, setCalCual] = useState(null); // 'desde' | 'hasta' | null
+  // El selector nativo se carga solo si está disponible
+  const abrirCal = (cual) => setCalCual(cual);
   // Convierte "20/7/2026" o "2026-07-20" a número comparable AAAAMMDD
   const aNum = (f) => {
     if (!f) return 0;
@@ -874,7 +1576,22 @@ function Historial({ data, guardar, cur, loading, recargar, pickFoto, taller }) 
     return pasaTexto && pasaDesde && pasaHasta;
   });
   const [selIdx, setSelIdx] = useState(null);
+  React.useEffect(() => { setSelIdx(null); }, [qHist, desde, hasta]);
   const [ab, setAb] = useState({ monto: '', codigo: '', prox: '', foto: null });
+  const [honorarioDe, setHonorarioDe] = useState(null); // trabajo al que se le paga honorario
+  const [honMonto, setHonMonto] = useState('');
+  const pagarHonorario = () => {
+    const monto = +honMonto; if (!monto) { Alert.alert('Falta', 'Indica el monto a pagar al técnico.'); return; }
+    const cobrado = +honorarioDe.total || +honorarioDe.costo || 0;
+    const pct = cobrado > 0 ? Math.round((monto / cobrado) * 1000) / 10 : 0;
+    const now = new Date();
+    const nh = (data.history || []).map((x) => (x.id === honorarioDe.id ? {
+      ...x, honorario: { monto, pct, fecha: now.toISOString().slice(0, 10), tecnico: x.mech },
+    } : x));
+    guardar({ ...data, history: nh });
+    setHonorarioDe(null); setHonMonto('');
+    Alert.alert('Honorario registrado ✓', 'Se pagó ' + cur + ' ' + monto.toLocaleString('es-VE') + ' a ' + (honorarioDe.mech || 'el técnico') + ' (' + pct + '% de lo cobrado). El técnico lo verá en su app.');
+  };
   const h = selIdx != null ? hist[selIdx] : null;
   const registrarCuota = () => {
     const monto = +ab.monto; if (!monto) { Alert.alert('Falta', 'Monto de la cuota.'); return; }
@@ -901,11 +1618,19 @@ function Historial({ data, guardar, cur, loading, recargar, pickFoto, taller }) 
         ListHeaderComponent={
           <View style={{ marginBottom: 12 }}>
             <TextInput style={s.input} value={qHist} onChangeText={setQHist}
-              placeholder="Buscar por placa, cliente, mecánico, trabajo…" />
+              placeholder="Buscar por placa, cliente, técnico, trabajo…" />
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-              <TextInput style={[s.input, { flex: 1 }]} value={desde} onChangeText={setDesde} placeholder="Desde d/m/aaaa" />
-              <TextInput style={[s.input, { flex: 1 }]} value={hasta} onChangeText={setHasta} placeholder="Hasta d/m/aaaa" />
+              <TouchableOpacity style={[s.input, { flex: 1, justifyContent: 'center' }]} onPress={() => abrirCal('desde')}>
+                <Text style={{ color: desde ? '#16191d' : '#9aa3ad', fontSize: 14 }}>{desde ? '📅 ' + desde : '📅 Desde'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.input, { flex: 1, justifyContent: 'center' }]} onPress={() => abrirCal('hasta')}>
+                <Text style={{ color: hasta ? '#16191d' : '#9aa3ad', fontSize: 14 }}>{hasta ? '📅 ' + hasta : '📅 Hasta'}</Text>
+              </TouchableOpacity>
             </View>
+            <Calendario visible={calCual !== null} valor={calCual === 'desde' ? desde : hasta}
+              titulo={calCual === 'desde' ? 'Fecha desde' : 'Fecha hasta'}
+              onSelect={(txt) => { if (calCual === 'desde') setDesde(txt); else setHasta(txt); }}
+              onClose={() => setCalCual(null)} />
             {(qHist || desde || hasta) ? (
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
                 <Text style={s.muted}>{hist.length} de {histTodo.length} trabajo(s)</Text>
@@ -934,6 +1659,9 @@ function Historial({ data, guardar, cur, loading, recargar, pickFoto, taller }) 
               <TouchableOpacity onPress={() => compartir(item)}>
                 <Text style={[s.link, { marginTop: 0 }]}>📄 Compartir (PDF) →</Text>
               </TouchableOpacity>
+              <TouchableOpacity onPress={() => setHonorarioDe(item)}>
+                <Text style={[s.link, { marginTop: 0, color: '#0F6E56' }]}>💵 Honorarios{item.honorario ? ' ✓' : ''} →</Text>
+              </TouchableOpacity>
             </View>
           </View>
         )} />
@@ -944,7 +1672,7 @@ function Historial({ data, guardar, cur, loading, recargar, pickFoto, taller }) 
           </View>
           {h && (<ScrollView style={{ maxHeight: 470 }}>
             <Text style={s.muted}>{h.fecha} · {h.cliente} · {h.placa}</Text>
-            <Row k="Trabajo" v={h.trabajo} /><Row k="Mecánico" v={h.mech} />
+            <Row k="Trabajo" v={h.trabajo} /><Row k="Técnico" v={h.mech} />
             <Row k="Total" v={cur + ' ' + (+h.total || 0).toLocaleString('es-VE')} />
             <Row k="Pagado" v={cur + ' ' + (+h.pagado || 0).toLocaleString('es-VE')} />
             <Row k="Saldo" v={cur + ' ' + (+h.saldo || 0).toLocaleString('es-VE')} />
@@ -960,12 +1688,48 @@ function Historial({ data, guardar, cur, loading, recargar, pickFoto, taller }) 
           </ScrollView>)}
         </View></View>
       </Modal>
+
+      <Modal visible={!!honorarioDe} transparent animationType="slide" onRequestClose={() => setHonorarioDe(null)}>
+        <View style={s.modalWrap}><View style={s.modalCard}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <Text style={s.h}>💵 Honorarios del técnico</Text>
+            <TouchableOpacity onPress={() => setHonorarioDe(null)}><Text style={{ fontSize: 20, color: '#6b7480' }}>✕</Text></TouchableOpacity>
+          </View>
+          {honorarioDe && (() => {
+            const cobrado = +honorarioDe.total || +honorarioDe.costo || 0;
+            const m = +honMonto || 0;
+            const pct = cobrado > 0 ? Math.round((m / cobrado) * 1000) / 10 : 0;
+            return (
+              <View>
+                <Text style={s.muted}>{honorarioDe.veh} · {honorarioDe.trabajo}</Text>
+                <Text style={s.muted}>Técnico: {honorarioDe.mech || 'sin asignar'}</Text>
+                {(honorarioDe.servicios || []).length ? (
+                  <View style={{ marginTop: 8 }}>
+                    <Text style={[s.label, { marginBottom: 4 }]}>Servicios realizados</Text>
+                    {honorarioDe.servicios.map((sv, i) => (
+                      <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3, borderBottomWidth: 1, borderColor: '#eef0f2' }}>
+                        <Text style={{ fontSize: 12.5, color: '#3a4048', flex: 1 }}>{sv.desc || sv.n || ''}</Text>
+                        {sv.precio ? <Text style={{ fontSize: 12.5, fontWeight: '700' }}>{cur} {(+sv.precio).toLocaleString('es-VE')}</Text> : null}
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+                <Row k="Cobrado al cliente" v={cur + ' ' + cobrado.toLocaleString('es-VE')} />
+                {honorarioDe.honorario ? <Text style={{ color: '#0F6E56', fontWeight: '700', marginTop: 6 }}>Ya pagado: {cur} {(+honorarioDe.honorario.monto).toLocaleString('es-VE')} ({honorarioDe.honorario.pct}%)</Text> : null}
+                <Text style={[s.label, { marginTop: 12 }]}>Monto a pagar al técnico</Text>
+                <TextInput style={s.input} value={honMonto} onChangeText={setHonMonto} keyboardType="numeric" placeholder="0" placeholderTextColor="#9aa3ad" />
+                {m > 0 ? <Text style={{ color: '#0F6E56', fontWeight: '800', marginTop: 8, fontSize: 15 }}>Equivale al {pct}% de lo cobrado</Text> : null}
+                <TouchableOpacity style={[s.btn, { marginTop: 16 }]} onPress={pagarHonorario}><Text style={s.btnT}>Registrar pago al técnico</Text></TouchableOpacity>
+                <Text style={{ fontSize: 11.5, color: '#9aa3ad', textAlign: 'center', marginTop: 8 }}>El técnico verá este pago en su app, con el detalle del trabajo.</Text>
+              </View>
+            );
+          })()}
+        </View></View>
+      </Modal>
     </View>
   );
 }
-
-/* =================== ACTA =================== */
-/* =================== AVANCES DEL MECÁNICO =================== */
+/* =================== AVANCES DEL TÉCNICO =================== */
 function AvancesModal({ item, close, taller }) {
   const [foto, setFoto] = useState(null);
   const avs = [...(item.advances || [])].reverse();
@@ -974,10 +1738,10 @@ function AvancesModal({ item, close, taller }) {
     <Modal visible transparent animationType="slide" onRequestClose={close}>
       <View style={s.modalWrap}><View style={s.modalCard}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-            <Text style={s.h}>Avances del mecánico</Text>
+            <Text style={s.h}>Avances del técnico</Text>
             <TouchableOpacity onPress={close}><Text style={{ fontSize: 20, color: '#6b7480' }}>✕</Text></TouchableOpacity>
           </View>
-          <Text style={s.muted}>{item.model} · {item.plate} · {item.mech || 'sin mecánico'}</Text>
+          <Text style={s.muted}>{item.model} · {item.plate} · {item.mech || 'sin técnico'}</Text>
           <ScrollView style={{ maxHeight: 430, marginTop: 8 }}>
             {avs.length ? avs.map((a, i) => (
               <View key={i} style={s.avItem}>
@@ -998,7 +1762,7 @@ function AvancesModal({ item, close, taller }) {
                   ) : null}
                 </View>
               </View>
-            )) : <Text style={{ color: '#6b7480', paddingVertical: 20 }}>El mecánico aún no ha registrado avances.</Text>}
+            )) : <Text style={{ color: '#6b7480', paddingVertical: 20 }}>El técnico aún no ha registrado avances.</Text>}
             <View style={{ height: 10 }} />
           </ScrollView>
           <TouchableOpacity style={s.avBtn} onPress={() => compartirActaPDF(taller.id, item, 'trabajo')}>
@@ -1030,7 +1794,7 @@ function Acta({ item, close }) {
         <ScrollView style={{ maxHeight: 480 }}>
           <Text style={s.muted}>{item.plate} · {item.owner}</Text>
           <Row k="Fecha" v={(r.fecha || '') + ' ' + (r.hora || '')} /><Row k="Motivo" v={r.motivo || '—'} /><Row k="Trabajo" v={r.trabajo || '—'} />
-          <Row k="Mecánico" v={item.mech || 'Por asignar'} />
+          <Row k="Técnico" v={item.mech || 'Por asignar'} />
           <Row k="Prioridad" v={r.prioridad || '—'} /><Row k="Combustible" v={r.combustible || '—'} /><Row k="Kilometraje" v={r.km || '—'} />
           <Row k="Accesorios" v={(r.accesorios || []).join(', ') || '—'} /><Row k="Documentos" v={(r.documentos || []).join(', ') || '—'} />
           {(item.recepLados || []).length ? <Row k="Lados con daño" v={(item.recepLados || []).join(', ')} /> : null}
@@ -1101,8 +1865,8 @@ function Usuarios({ esSuper, taller }) {
       setEdit(null); cargar(); Alert.alert('Listo', 'Usuario actualizado.');
     } catch (e) { Alert.alert('Error', e.message); }
   };
-  const RB = { superadmin: 'Super Admin', administrador: 'Administrador', mecanico: 'Mecánico', cliente: 'Cliente' };
-  const roles = [['administrador', 'Administrador'], ['superadmin', 'Super Admin'], ['mecanico', 'Mecánico'], ['cliente', 'Cliente']];
+  const RB = { superadmin: 'Super Admin', administrador: 'Administrador', mecanico: 'Técnico', cliente: 'Cliente' };
+  const roles = [['administrador', 'Administrador'], ['superadmin', 'Super Admin'], ['mecanico', 'Técnico'], ['cliente', 'Cliente']];
   return (
     <ScrollView contentContainerStyle={{ padding: 14 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={cargar} />}>
       <View style={s.card}>
@@ -1185,9 +1949,9 @@ function FormModal({ modal, close, data, guardar, cur, pickFoto, taller }) {
   const [espOpts, setEspOpts] = useState(cfg.especialidades || ESP_BASE);
   const [marOpts, setMarOpts] = useState(cfg.marcas || MARCAS_BASE);
   const [f, setF] = useState(() => {
-    if (tipo === 'cliente') return item ? { ...item, password: '', password2: '' } : { n: '', tipoDoc: 'Cédula V', doc: '', tel: '', correo: '', dir: '', usuario: '', password: '', password2: '', activo: true };
+    if (tipo === 'cliente') return item ? { ...item, telNum: item.telNum || '', paisCod: item.paisCod || '+58', paisEt: item.paisEt || '🇻🇪 Venezuela +58', password: '', password2: '' } : { n: '', tipoDoc: 'Cédula V', doc: '', tel: '', telNum: '', paisCod: '+58', paisEt: '🇻🇪 Venezuela +58', correo: '', dir: '', usuario: '', password: '', password2: '', activo: true };
     if (tipo === 'vehiculo') return item ? { ...item } : { marca: '', modelo: '', anio: '', plate: '', owner: '', color: '', activo: true };
-    if (tipo === 'mecanico') return item ? { ...item, password: '', password2: '' } : { n: '', sp: 'General', doc: '', tel: '', correo: '', usuario: '', password: '', password2: '', activo: true };
+    if (tipo === 'mecanico') return item ? { ...item, telNum: item.telNum || '', paisCod: item.paisCod || '+58', paisEt: item.paisEt || '🇻🇪 Venezuela +58', password: '', password2: '' } : { n: '', sp: 'General', doc: '', tel: '', telNum: '', paisCod: '+58', paisEt: '🇻🇪 Venezuela +58', correo: '', usuario: '', password: '', password2: '', activo: true };
     if (tipo === 'pago') return { modo: 'completo', codigo: '', monto: '', total: '', ahora: '', partes: '3', prox: '', foto: null };
     return {};
   });
@@ -1209,15 +1973,29 @@ function FormModal({ modal, close, data, guardar, cur, pickFoto, taller }) {
     }
   };
 
+  const ofrecerCompartir = (nombre, usuario, clave, rolTxt, tel) => {
+    if (!clave) return;
+    Alert.alert('✅ Acceso creado', 'Se creó el acceso de ' + nombre + '.\n\nUsuario: ' + usuario + '\nContraseña: ' + clave + '\n\n¿Quieres compartir estos datos?', [
+      { text: 'Ahora no', style: 'cancel' },
+      { text: 'Compartir', onPress: () => compartirAcceso({ nombreTaller: taller ? taller.nombre : 'TallerOS', nombre, usuario, clave, rolTxt, tel }) },
+    ]);
+  };
   const guardarEntidad = async () => {
+    // Componer teléfono con prefijo de país
+    if (f.telNum != null || f.paisCod) {
+      const cod = f.paisCod || '+58';
+      f.tel = f.telNum ? cod + ' ' + String(f.telNum).trim() : '';
+    }
     if (tipo === 'cliente') {
       if (!f.n) { Alert.alert('Falta', 'Nombre del cliente.'); return; }
       const ok = await crearCuenta('cliente'); if (!ok) return;
+      const claveCliNueva = f.password;
       const limpio = { ...f }; delete limpio.password; delete limpio.password2;
       let arr = data.clients || [];
       if (item) arr = arr.map((c) => (c.id === item.id ? { ...c, ...limpio } : c));
       else arr = [...arr, { ...limpio, id: nid(arr), ini: inits(f.n), gas: 0 }];
       guardar({ ...data, clients: arr }); close();
+      if (!item && claveCliNueva) setTimeout(() => ofrecerCompartir(f.n, f.usuario, claveCliNueva, 'cliente', f.tel), 350);
     } else if (tipo === 'vehiculo') {
       if (!f.marca || !f.plate) { Alert.alert('Falta', 'Marca y placa.'); return; }
       if (!f.owner) { Alert.alert('Falta', 'Selecciona el propietario.'); return; }
@@ -1227,13 +2005,15 @@ function FormModal({ modal, close, data, guardar, cur, pickFoto, taller }) {
       else arr = [...arr, { ...f, id: nid(arr), model, ini: inits(f.marca + ' ' + f.modelo), status: 'espera', progress: 0, mech: null, motivo: 'Por definir', cost: 0, recepcion: null, cerrada: false, recepDamages: [], advances: [] }];
       guardar({ ...data, vehicles: arr, config: cfgMerge }); close();
     } else if (tipo === 'mecanico') {
-      if (!f.n) { Alert.alert('Falta', 'Nombre del mecánico.'); return; }
+      if (!f.n) { Alert.alert('Falta', 'Nombre del técnico.'); return; }
       const ok = await crearCuenta('mecanico'); if (!ok) return;
+      const limpioMecClave = f.password;
       const limpio = { ...f }; delete limpio.password; delete limpio.password2;
       let arr = data.mecanicos || [];
       if (item) arr = arr.map((m) => (m.id === item.id ? { ...m, ...limpio } : m));
       else arr = [...arr, { ...limpio, id: nid(arr), ini: inits(f.n), c: '#2563EB', rat: 5, base: 0 }];
       guardar({ ...data, mecanicos: arr, config: cfgMerge }); close();
+      if (!item && limpioMecClave) setTimeout(() => ofrecerCompartir(f.n, f.usuario, limpioMecClave, 'técnico', f.tel), 350);
     }
   };
 
@@ -1255,7 +2035,7 @@ function FormModal({ modal, close, data, guardar, cur, pickFoto, taller }) {
     close(); Alert.alert('Listo', 'Pago registrado. La orden pasó a Trabajos realizados.');
   };
 
-  const titulos = { cliente: item ? 'Editar cliente' : 'Nuevo cliente', vehiculo: item ? 'Editar vehículo' : 'Nuevo vehículo', mecanico: item ? 'Editar mecánico' : 'Nuevo mecánico', pago: 'Pago del servicio' };
+  const titulos = { cliente: item ? 'Editar cliente' : 'Nuevo cliente', vehiculo: item ? 'Editar vehículo' : 'Nuevo vehículo', mecanico: item ? 'Editar técnico' : 'Nuevo técnico', pago: 'Pago del servicio' };
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={close}>
@@ -1269,13 +2049,19 @@ function FormModal({ modal, close, data, guardar, cur, pickFoto, taller }) {
               <Text style={s.label}>Nombre completo *</Text><TextInput style={s.input} value={f.n} onChangeText={(v) => set('n', v)} />
               <Dropdown label="Tipo de documento" value={f.tipoDoc} onChange={(v) => set('tipoDoc', v)} options={TIPO_DOC} placeholder="Selecciona" />
               <Text style={s.label}>Número de documento</Text><TextInput style={s.input} value={f.doc} onChangeText={(v) => set('doc', v)} />
-              <Text style={s.label}>Teléfono / WhatsApp</Text><TextInput style={s.input} value={f.tel} onChangeText={(v) => set('tel', v)} keyboardType="phone-pad" />
+              <Text style={s.label}>Teléfono / WhatsApp</Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={{ width: 120 }}>
+                  <Dropdown value={f.paisEt || '🇻🇪 Venezuela +58'} onChange={(v) => { set('paisEt', v); const pp = PAISES.find((x) => (x.band + ' ' + x.nom + ' ' + x.cod) === v); set('paisCod', pp ? pp.cod : v.split(' ').pop()); }} options={PAISES.map((x) => x.band + ' ' + x.nom + ' ' + x.cod)} placeholder="País" />
+                </View>
+                <TextInput style={[s.input, { flex: 1 }]} value={f.telNum} onChangeText={(v) => set('telNum', v)} keyboardType="phone-pad" placeholder={(PAISES.find((x) => x.cod === (f.paisCod || '+58')) || {}).ej || 'número'} />
+              </View>
               <Text style={s.label}>Correo electrónico</Text><TextInput style={s.input} value={f.correo} onChangeText={(v) => set('correo', v)} autoCapitalize="none" keyboardType="email-address" />
               <Text style={s.label}>Dirección</Text><TextInput style={s.input} value={f.dir} onChangeText={(v) => set('dir', v)} />
               <View style={s.sep}><Text style={s.sepT}>Acceso del cliente a la app</Text></View>
               <Text style={s.label}>Usuario de acceso</Text><TextInput style={s.input} value={f.usuario} onChangeText={(v) => set('usuario', v)} autoCapitalize="none" />
-              <Text style={s.label}>Contraseña</Text><TextInput style={s.input} value={f.password} onChangeText={(v) => set('password', v)} secureTextEntry placeholder={item ? 'Dejar vacío para no cambiar' : 'mínimo 6 caracteres'} />
-              <Text style={s.label}>Confirmar contraseña</Text><TextInput style={s.input} value={f.password2} onChangeText={(v) => set('password2', v)} secureTextEntry />
+              <Text style={s.label}>Contraseña</Text><CampoClave value={f.password} onChangeText={(v) => set('password', v)} placeholder={item ? 'Dejar vacío para no cambiar' : 'mínimo 6 caracteres'} />
+              <Text style={s.label}>Confirmar contraseña</Text><CampoClave value={f.password2} onChangeText={(v) => set('password2', v)} />
               <Text style={s.label}>Estado</Text>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 {[[true, 'Activo'], [false, 'Inactivo']].map(([k, l]) => (<TouchableOpacity key={String(k)} style={[s.pillBtn, f.activo === k && s.pillBtnOn]} onPress={() => set('activo', k)}><Text style={[s.pillBtnT, f.activo === k && { color: '#16191d' }]}>{l}</Text></TouchableOpacity>))}
@@ -1303,12 +2089,18 @@ function FormModal({ modal, close, data, guardar, cur, pickFoto, taller }) {
               <Text style={s.label}>Nombre completo *</Text><TextInput style={s.input} value={f.n} onChangeText={(v) => set('n', v)} />
               <Dropdown label="Especialidad" value={f.sp} onChange={(v) => set('sp', v)} options={espOpts} placeholder="Selecciona la especialidad" onAdd={(t) => setEspOpts([...espOpts, t])} />
               <Text style={s.label}>Documento</Text><TextInput style={s.input} value={f.doc} onChangeText={(v) => set('doc', v)} />
-              <Text style={s.label}>Teléfono</Text><TextInput style={s.input} value={f.tel} onChangeText={(v) => set('tel', v)} keyboardType="phone-pad" />
+              <Text style={s.label}>Teléfono</Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={{ width: 120 }}>
+                  <Dropdown value={f.paisEt || '🇻🇪 Venezuela +58'} onChange={(v) => { set('paisEt', v); const pp = PAISES.find((x) => (x.band + ' ' + x.nom + ' ' + x.cod) === v); set('paisCod', pp ? pp.cod : v.split(' ').pop()); }} options={PAISES.map((x) => x.band + ' ' + x.nom + ' ' + x.cod)} placeholder="País" />
+                </View>
+                <TextInput style={[s.input, { flex: 1 }]} value={f.telNum} onChangeText={(v) => set('telNum', v)} keyboardType="phone-pad" placeholder={(PAISES.find((x) => x.cod === (f.paisCod || '+58')) || {}).ej || 'número'} />
+              </View>
               <Text style={s.label}>Correo electrónico</Text><TextInput style={s.input} value={f.correo} onChangeText={(v) => set('correo', v)} autoCapitalize="none" keyboardType="email-address" />
-              <View style={s.sep}><Text style={s.sepT}>Acceso del mecánico a la app</Text></View>
+              <View style={s.sep}><Text style={s.sepT}>Acceso del técnico a la app</Text></View>
               <Text style={s.label}>Usuario de acceso</Text><TextInput style={s.input} value={f.usuario} onChangeText={(v) => set('usuario', v)} autoCapitalize="none" />
-              <Text style={s.label}>Contraseña</Text><TextInput style={s.input} value={f.password} onChangeText={(v) => set('password', v)} secureTextEntry placeholder={item ? 'Dejar vacío para no cambiar' : 'mínimo 6 caracteres'} />
-              <Text style={s.label}>Confirmar contraseña</Text><TextInput style={s.input} value={f.password2} onChangeText={(v) => set('password2', v)} secureTextEntry />
+              <Text style={s.label}>Contraseña</Text><CampoClave value={f.password} onChangeText={(v) => set('password', v)} placeholder={item ? 'Dejar vacío para no cambiar' : 'mínimo 6 caracteres'} />
+              <Text style={s.label}>Confirmar contraseña</Text><CampoClave value={f.password2} onChangeText={(v) => set('password2', v)} />
               <Text style={s.label}>Estado</Text>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 {[[true, 'Activo'], [false, 'Inactivo']].map(([k, l]) => (<TouchableOpacity key={String(k)} style={[s.pillBtn, f.activo === k && s.pillBtnOn]} onPress={() => set('activo', k)}><Text style={[s.pillBtnT, f.activo === k && { color: '#16191d' }]}>{l}</Text></TouchableOpacity>))}
@@ -1415,6 +2207,8 @@ const s = StyleSheet.create({
   pillBtnOn: { backgroundColor: '#F5B700', borderColor: '#F5B700' },
   pillBtnOn2: { backgroundColor: '#F5B700', borderRadius: 20, paddingVertical: 8, paddingHorizontal: 13 },
   pillBtnT: { fontWeight: '700', color: '#6b7480', fontSize: 13 },
+  compartirBtn: { marginTop: 10, backgroundColor: '#25D366', borderRadius: 10, paddingVertical: 9, alignItems: 'center' },
+  compartirBtnT: { color: '#fff', fontWeight: '800', fontSize: 12.5 },
   diagram: { backgroundColor: '#eef2f6', borderRadius: 14, height: 230, marginTop: 8, position: 'relative', overflow: 'hidden', borderWidth: 1, borderColor: '#dfe4ea', justifyContent: 'center', alignItems: 'center' },
   diagramHead: { position: 'absolute', top: 8, left: 0, right: 0, alignItems: 'center' },
   sosBanner: { paddingVertical: 12, paddingHorizontal: 16 },

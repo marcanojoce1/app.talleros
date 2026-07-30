@@ -2,7 +2,7 @@
   "expo": {
     "name": "TallerOS",
     "slug": "talleros",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "splash": {
@@ -25,8 +25,10 @@
       },
       "permissions": [
         "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION"
-      ]
+        "ACCESS_FINE_LOCATION",
+        "REQUEST_INSTALL_PACKAGES"
+      ],
+      "versionCode": 1
     },
     "extra": {
       "apiUrl": "https://app-talleros.onrender.com",
