@@ -18,9 +18,31 @@ app.set('io', io);
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
 app.use(express.json({ limit: '5mb' }));
 app.use('/uploads', express.static(path.join(__dirname, '..', process.env.UPLOAD_DIR || 'uploads')));
+// Carpeta con el APK para actualización OTA (descarga directa)
+const APK_DIR = path.join(__dirname, '..', 'apk');
+try { if (!fs.existsSync(APK_DIR)) fs.mkdirSync(APK_DIR, { recursive: true }); } catch (e) {}
+app.use('/apk', express.static(APK_DIR));
+
+// Versión más reciente publicada. Se lee de apk/version.json para poder
+// actualizar SIN tocar el código: solo subes el APK y editas ese JSON.
+function versionActual() {
+  const def = { appVersion: '1.0.1', appBuild: 84, apk: '', notas: '' };
+  try {
+    const p = path.join(APK_DIR, 'version.json');
+    if (fs.existsSync(p)) return { ...def, ...JSON.parse(fs.readFileSync(p, 'utf8')) };
+  } catch (e) {}
+  return def;
+}
+app.get('/api/version', (req, res) => {
+  const v = versionActual();
+  // Si el JSON no trae URL de APK, se asume /apk/talleros.apk
+  const host = req.protocol + '://' + req.get('host');
+  const apkUrl = v.apk ? (v.apk.startsWith('http') ? v.apk : host + v.apk) : (host + '/apk/talleros.apk');
+  res.json({ appVersion: v.appVersion, appBuild: v.appBuild, apk: apkUrl, notas: v.notas || '' });
+});
 
 // API
-app.get('/api/health', (req, res) => res.json({ ok: true, servicio: 'TallerOS API', hora: new Date() }));
+app.get('/api/health', (req, res) => { const v = versionActual(); res.json({ ok: true, servicio: 'TallerOS API', hora: new Date(), appVersion: v.appVersion, appBuild: v.appBuild }); });
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/talleres', require('./routes/talleres'));
 app.use('/api/state', require('./routes/state'));

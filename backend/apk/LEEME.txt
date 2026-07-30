@@ -1,0 +1,21 @@
+CÓMO PUBLICAR UNA ACTUALIZACIÓN DE LA APP (OTA)
+================================================
+
+1) Compila el APK nuevo (assembleRelease).
+2) Copia el APK a esta carpeta con el nombre:  talleros.apk
+3) Edita version.json y sube el número de "appBuild" (y "appVersion" si quieres).
+   Ejemplo: si publicas el build 84:
+   {
+     "appVersion": "1.0.1",
+     "appBuild": 84,
+     "apk": "/apk/talleros.apk",
+     "notas": "Arreglos y mejoras."
+   }
+4) git add . ; git commit ; git push  (Render lo despliega)
+
+Cuando el usuario toque ⚙ > Buscar actualización, la app compara su
+build con el "appBuild" de aquí. Si el del servidor es mayor, aparece
+"Actualizar ahora": descarga talleros.apk e inicia la instalación.
+
+IMPORTANTE: el APP_BUILD de la app instalada está en mobile/src/version.js
+Ese número debe coincidir con el build que compilaste. Súbelo antes de compilar.

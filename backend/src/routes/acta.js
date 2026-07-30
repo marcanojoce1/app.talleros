@@ -35,7 +35,7 @@ router.get('/acta/:tallerId/:vehId', async (req, res) => {
       recepcion: veh.recepcion || {},
       damages: veh.recepDamages || [],
       lados: veh.recepLados || [],
-      orden: veh.id,
+      orden: veh.numOrden ? "OS" + String(veh.numOrden).padStart(4, "0") : veh.id,
       precio,
       servicios: hist && hist.servicios ? hist.servicios : [{ desc: (veh.recepcion && veh.recepcion.trabajo) || veh.motivo || '', precio }],
       pago,
@@ -72,7 +72,7 @@ router.get('/trabajo/:tallerId/:vehId', async (req, res) => {
     const baseUrl = `${proto}://${req.get('host')}`;
     let html = generarTrabajoHTML({
       taller, cliente: cli, vehiculo: veh, recepcion: veh.recepcion || {},
-      damages: veh.recepDamages || [], lados: veh.recepLados || [], orden: veh.id,
+      damages: veh.recepDamages || [], lados: veh.recepLados || [], orden: veh.numOrden ? "OS" + String(veh.numOrden).padStart(4, "0") : veh.id,
       precio: hist ? hist.total : (veh.cost || ''),
       servicios: hist && hist.servicios ? hist.servicios : [{ desc: (veh.recepcion && veh.recepcion.trabajo) || veh.motivo || '', precio: hist ? hist.total : (veh.cost || '') }],
       pago, moneda, avances: veh.advances || [], baseUrl,

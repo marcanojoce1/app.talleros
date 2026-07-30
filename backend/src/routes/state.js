@@ -204,6 +204,8 @@ router.post('/cita', async (req, res) => {
   // Verificar que ese día/hora no esté ya ocupado por una cita viva (no rechazada/cancelada)
   const ocupado = (d.citas || []).some((c) => c.fecha === fecha && c.hora === hora && c.estado !== 'rechazada' && c.estado !== 'cancelada');
   if (ocupado) return res.status(409).json({ error: 'Ese horario ya está reservado. Elige otro.' });
+  // Rechazar si el día está bloqueado por el taller (no laborable)
+  if ((d.diasBloqueados || []).includes(fecha)) return res.status(409).json({ error: 'El taller no atiende ese día. Elige otra fecha.' });
 
   const ahora = new Date();
   const cita = {
