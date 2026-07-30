@@ -316,4 +316,145 @@ function generarTrabajoHTML(o = {}) {
   return acta.replace('</body>', extra + '</body>');
 }
 
-module.exports = { generarActaHTML, generarTrabajoHTML };
+// ===================== COTIZACIÓN =====================
+// Genera el PDF de cotización con formato tipo "presupuesto": datos cliente/vehículo,
+// tabla de SERVICIOS y REPUESTOS con código/descripción/detalle/cant/precio/subtotal,
+// observaciones, resumen (subtotales + descuento + total) y firmas.
+function generarCotizacionHTML(o = {}) {
+  const taller = o.taller || {};
+  const cli = o.cliente || {};
+  const veh = o.vehiculo || {};
+  const cot = o.cot || {};
+  const mon = o.moneda || 'Bs.';
+  const items = cot.items || [];
+  const servicios = items.filter((it) => (it.tipo || 'servicio') !== 'repuesto');
+  const repuestos = items.filter((it) => it.tipo === 'repuesto');
+  const subServ = servicios.reduce((a, it) => a + (+it.p || 0) * (+it.cant || 1), 0);
+  const subRep = repuestos.reduce((a, it) => a + (+it.p || 0) * (+it.cant || 1), 0);
+  const descuento = +cot.descuento || 0;
+  const total = Math.max(0, subServ + subRep - descuento);
+  const numTxt = cot.num ? 'P-' + String(cot.num).padStart(6, '0') : String(cot.id || '');
+
+  const filaItem = (it, i, pref) => `<tr>
+    <td>${esc(pref)}${String(i + 1).padStart(3, '0')}</td>
+    <td>${esc(it.n || '')}</td>
+    <td>${esc(it.detalle || '')}</td>
+    <td style="text-align:center">${esc(it.cant || 1)}</td>
+    <td style="text-align:right">${esc(mon)} ${Number(it.p || 0).toLocaleString('es-VE')}</td>
+    <td style="text-align:right">${esc(mon)} ${Number((it.p || 0) * (it.cant || 1)).toLocaleString('es-VE')}</td>
+  </tr>`;
+
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Cotización ${esc(numTxt)}</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; margin: 0; padding: 14px; font-size: 12px; background: #fff; }
+  .sheet { max-width: 780px; margin: 0 auto; border: 2px solid #16406b; border-radius: 6px; overflow: hidden; }
+  .head { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #16406b; padding: 14px 16px; }
+  .brand h1 { margin: 0; font-size: 20px; color: #16406b; }
+  .brand .sub { font-size: 9px; color: #666; letter-spacing: 1px; }
+  .titlebox { text-align: right; }
+  .titlebox .t { font-weight: bold; font-size: 17px; color: #16406b; }
+  .titlebox .st { font-size: 9.5px; color: #666; }
+  .metabox { border: 1px solid #d7dee6; border-radius: 6px; margin-top: 6px; font-size: 10px; }
+  .metabox div { padding: 3px 10px; }
+  .metabox b { color: #16406b; margin-right: 6px; }
+  .row2 { display: flex; gap: 10px; padding: 12px 16px 0; }
+  .box { flex: 1; border: 1px solid #d7dee6; border-radius: 8px; overflow: hidden; }
+  .box h3 { margin: 0; background: #16406b; color: #fff; font-size: 11px; padding: 6px 10px; }
+  .box .fld { font-size: 10.5px; padding: 4px 10px; border-bottom: 1px dotted #e2e6ea; }
+  .box .fld:last-child { border-bottom: 0; }
+  .box .fld span { color: #667; display: inline-block; min-width: 90px; }
+  table.items { width: 100%; border-collapse: collapse; font-size: 10.5px; margin-top: 4px; }
+  table.items th { background: #16406b; color: #fff; padding: 5px 6px; text-align: left; }
+  table.items td { border-bottom: 1px solid #e2e6ea; padding: 5px 6px; }
+  table.items .grp td { background: #eef3f8; font-weight: bold; color: #16406b; }
+  .wrap { padding: 12px 16px; }
+  .row3 { display: flex; gap: 10px; padding: 0 16px 12px; }
+  .obs { flex: 1.3; border: 1px solid #d7dee6; border-radius: 8px; padding: 10px; font-size: 10.5px; color: #444; min-height: 70px; }
+  .resumen { flex: 1; border: 1px solid #d7dee6; border-radius: 8px; padding: 10px; font-size: 11px; }
+  .resumen div { display: flex; justify-content: space-between; padding: 3px 0; }
+  .resumen .tot { border-top: 2px solid #16406b; margin-top: 4px; padding-top: 6px; font-size: 13px; font-weight: bold; color: #16406b; }
+  .cond { font-size: 8.5px; color: #444; padding: 10px 16px; line-height: 1.5; border-top: 1.5px solid #16406b; }
+  .firmas { display: flex; gap: 30px; padding: 20px 16px 6px; }
+  .firmas div { flex: 1; border-top: 1px solid #333; text-align: center; font-size: 9.5px; padding-top: 4px; }
+  @media print { .noprint { display: none; } body { padding: 0; } }
+  .toolbar { max-width: 780px; margin: 0 auto 10px; display: flex; gap: 8px; }
+  .toolbar button { flex: 1; padding: 12px; border: 0; border-radius: 10px; font-weight: bold; font-size: 14px; cursor: pointer; }
+  .btnPrint { background: #F5B700; color: #16191d; }
+</style></head>
+<body>
+  <!--TOOLBAR_START--><div class="toolbar noprint">
+    <button class="btnPrint" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+  </div><!--TOOLBAR_END-->
+  <div class="sheet">
+    <div class="head">
+      <div class="brand">
+        ${taller.logo ? `<img src="${esc(taller.logo)}" style="max-height:40px;max-width:170px;margin-bottom:4px"/>` : ''}
+        <h1>${esc(taller.nombre || 'TallerOS')}</h1>
+        <div class="sub">${esc(taller.rubro || 'TALLER AUTOMOTRIZ')}</div>
+      </div>
+      <div class="titlebox">
+        <div class="t">COTIZACIÓN</div>
+        <div class="st">DETALLE DE SERVICIOS Y REPUESTOS</div>
+        <div class="metabox">
+          <div><b>N° COTIZACIÓN</b>${esc(numTxt)}</div>
+          <div><b>FECHA</b>${esc(cot.fecha || '')}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="box">
+        <h3>DATOS DEL CLIENTE</h3>
+        <div class="fld"><span>Nombre:</span>${esc(cli.n || cli.nombre || cot.cliente || '')}</div>
+        <div class="fld"><span>${esc(cli.tipoDoc || 'Documento')}:</span>${esc(cli.doc || cot.doc || '')}</div>
+        <div class="fld"><span>Teléfono / WhatsApp:</span>${esc(cli.tel || cot.tel || '')}</div>
+        <div class="fld"><span>Correo:</span>${esc(cli.correo || '')}</div>
+        ${cli.dir ? `<div class="fld"><span>Dirección:</span>${esc(cli.dir)}</div>` : ''}
+      </div>
+      <div class="box">
+        <h3>DATOS DEL VEHÍCULO</h3>
+        <div class="fld"><span>Vehículo:</span>${esc(veh.model || cot.vehiculo || '—')}</div>
+        <div class="fld"><span>Placa:</span>${esc(veh.plate || cot.placa || '—')}</div>
+        <div class="fld"><span>Año:</span>${esc(veh.anio || cot.anio || '—')}</div>
+        <div class="fld"><span>Color:</span>${esc(veh.color || '—')}</div>
+      </div>
+    </div>
+
+    <div class="wrap">
+      <table class="items">
+        <tr><th>Código</th><th>Descripción</th><th>Detalle</th><th style="width:36px">Cant.</th><th style="width:80px">Precio Unit.</th><th style="width:90px">Subtotal</th></tr>
+        ${servicios.length ? `<tr class="grp"><td colspan="6">SERVICIOS</td></tr>${servicios.map((it, i) => filaItem(it, i, 'S')).join('')}` : ''}
+        ${repuestos.length ? `<tr class="grp"><td colspan="6">REPUESTOS</td></tr>${repuestos.map((it, i) => filaItem(it, i, 'R')).join('')}` : ''}
+        ${!items.length ? '<tr><td colspan="6" style="text-align:center;color:#888;padding:14px">Sin ítems.</td></tr>' : ''}
+      </table>
+    </div>
+
+    <div class="row3">
+      <div class="obs"><b style="color:#16406b">OBSERVACIONES</b><br/>${cot.obs ? esc(cot.obs).replace(/\n/g, '<br/>') : 'Cotización sujeta a revisión previa del vehículo.'}</div>
+      <div class="resumen">
+        <div><span>Subtotal servicios</span><b>${esc(mon)} ${subServ.toLocaleString('es-VE')}</b></div>
+        <div><span>Subtotal repuestos</span><b>${esc(mon)} ${subRep.toLocaleString('es-VE')}</b></div>
+        <div><span>Descuento</span><b>${esc(mon)} ${descuento.toLocaleString('es-VE')}</b></div>
+        <div class="tot"><span>TOTAL</span><span>${esc(mon)} ${total.toLocaleString('es-VE')}</span></div>
+      </div>
+    </div>
+
+    <div class="cond">
+      <b>Condiciones:</b><br/>
+      • Este presupuesto tiene una validez de 7 días.<br/>
+      • Los precios pueden variar sin previo aviso.<br/>
+      • Cualquier servicio adicional será cotizado previamente.
+    </div>
+    <div class="firmas">
+      <div>Firma del Cliente</div>
+      <div>Firma del Taller</div>
+    </div>
+    <div style="text-align:center;font-size:9px;color:#666;padding:8px;border-top:1px solid #e2e6ea">¡Gracias por confiar en ${esc(taller.nombre || 'nosotros')}!</div>
+  </div>
+</body></html>`;
+}
+
+module.exports = { generarActaHTML, generarTrabajoHTML, generarCotizacionHTML };

@@ -1,9 +1,32 @@
 // GET /api/acta/:tallerId/:vehId  → devuelve el ACTA en HTML (imprimible / PDF)
 const express = require('express');
 const { query } = require('../db');
-const { generarActaHTML, generarTrabajoHTML } = require('../services/acta');
+const { generarActaHTML, generarTrabajoHTML, generarCotizacionHTML } = require('../services/acta');
 
 const router = express.Router();
+
+// GET /api/cotizacion/:tallerId/:cotId → devuelve la COTIZACIÓN en HTML (imprimible / PDF)
+router.get('/cotizacion/:tallerId/:cotId', async (req, res) => {
+  const tallerId = Number(req.params.tallerId);
+  const cotId = req.params.cotId;
+  try {
+    const taller = (await query('SELECT * FROM talleres WHERE id=$1', [tallerId])).rows[0] || { nombre: 'TallerOS' };
+    const st = (await query('SELECT data FROM app_state WHERE taller_id=$1', [tallerId])).rows[0];
+    let d = st ? st.data : {}; if (typeof d === 'string') { try { d = JSON.parse(d); } catch { d = {}; } }
+
+    const cot = (d.cotizaciones || []).find((c) => String(c.id) === String(cotId));
+    if (!cot) return res.status(404).send('<h3>Cotización no encontrada</h3>');
+    const cli = (d.clients || []).find((c) => c.n === cot.cliente) || { n: cot.cliente };
+    const veh = (d.vehicles || []).find((v) => v.model === cot.vehiculo && v.plate === cot.placa) || null;
+    const moneda = (d.config && d.config.currency && d.config.currency.sym) || 'Bs.';
+
+    let html = generarCotizacionHTML({ taller, cliente: cli, vehiculo: veh, cot, moneda });
+    if (req.query.raw) html = html.replace(/<!--TOOLBAR_START-->[\s\S]*?<!--TOOLBAR_END-->/, '');
+    res.set('Content-Type', 'text/html; charset=utf-8').send(html);
+  } catch (e) {
+    res.status(500).send('<h3>Error al generar la cotización: ' + e.message + '</h3>');
+  }
+});
 
 router.get('/acta/:tallerId/:vehId', async (req, res) => {
   const tallerId = Number(req.params.tallerId);

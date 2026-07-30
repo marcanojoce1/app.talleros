@@ -919,16 +919,20 @@ function renderCotizaWeb(){
   const el=document.getElementById('w-cotiza');if(!el)return;const cur=curSym();
   const propias=(store.cotizaciones||[]).filter(c=>c.estado!=='inactiva');
   const deCitas=(store.citas||[]).filter(c=>c.estado==='cotizada'||c.estado==='aceptada').map(c=>({id:'cita-'+c.id,num:null,cliente:c.cliente,vehiculo:c.vehiculo,placa:c.placa,items:c.repuestos||[],monto:c.monto||0,estado:c.estado==='aceptada'?'aceptada':'enviada',origen:'cita'}));
-  const todas=[...propias,...deCitas];
-  el.innerHTML=`<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="wbtn wbtn-d" onclick="abrirNuevaCotiza()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Nueva cotización</button></div>`+
+  const todasSinFiltro=[...propias,...deCitas];
+  const norm=t=>(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const bq=BUSCA.cotiza||'';
+  const todas=bq.trim()?todasSinFiltro.filter(c=>norm((c.num?'P-'+String(c.num).padStart(6,'0'):'')+' '+(c.cliente||'')+' '+(c.doc||'')).includes(norm(bq))):todasSinFiltro;
+  el.innerHTML=`<div class="searchbar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="qCotiza" value="${bq.replace(/"/g,'&quot;')}" placeholder="Buscar por N° de cotización, cliente o documento…" oninput="BUSCA.cotiza=this.value;renderCotizaWeb()">${bq?`<button onclick="BUSCA.cotiza='';renderCotizaWeb()">✕</button>`:''}</div>`+
+  `<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="wbtn wbtn-d" onclick="abrirNuevaCotiza()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Nueva cotización</button></div>`+
   (todas.length?`<div class="mech-grid">`+todas.map(c=>`<div class="wcard">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b style="color:#0F6E56">🧾 ${c.num?'N° '+String(c.num).padStart(4,'0'):(c.origen==='cita'?'Desde cita':'')}</b><b>${cur} ${(+c.monto||0).toLocaleString('es-VE')}</b></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b style="color:#0F6E56">🧾 ${c.num?'P-'+String(c.num).padStart(6,'0'):(c.origen==='cita'?'Desde cita':'')}</b><b>${cur} ${(+c.monto||0).toLocaleString('es-VE')}</b></div>
     <div style="font-size:12.5px;color:var(--muted);line-height:1.7">👤 ${c.cliente}${c.vehiculo?'<br>🚗 '+c.vehiculo+(c.placa?' · '+c.placa:''):''}<br>${(c.items||[]).length} ítem(s)${c.origen==='cita'?' · desde cita':''}${c.estado==='aceptada'?' · aceptada ✓':''}</div>
-    <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap"><button class="wbtn wbtn-g" style="flex:1;justify-content:center" onclick="compartirCotizaWeb('${c.id}')">📤 Compartir</button>${c.origen!=='cita'?`<button class="wbtn wbtn-g" onclick="editarCotizaWeb(${c.id})">✏️</button><button class="wbtn wbtn-gr" onclick="inactivarCotizaWeb(${c.id})">Inactivar</button>`:''}</div>
-  </div>`).join('')+`</div>`:'<div class="empty">Aún no hay cotizaciones. Crea una nueva o llegan desde las citas.</div>');
+    <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap"><button class="wbtn wbtn-g" style="flex:1;justify-content:center" onclick="compartirCotizaWeb('${c.id}')">💬 Compartir</button>${c.origen!=='cita'?`<button class="wbtn wbtn-g" style="flex:1;justify-content:center" onclick="window.open('/api/cotizacion/'+CURRENT_TALLER+'/${c.id}','_blank')">📄 PDF</button><button class="wbtn wbtn-g" onclick="editarCotizaWeb(${c.id})">✏️</button><button class="wbtn wbtn-gr" onclick="inactivarCotizaWeb(${c.id})">Inactivar</button>`:''}</div>
+  </div>`).join('')+`</div>`:'<div class="empty">'+(bq.trim()?'No se encontraron cotizaciones.':'Aún no hay cotizaciones. Crea una nueva o llegan desde las citas.')+'</div>');
 }
-function abrirNuevaCotiza(){_cotEdit=null;_cotCli=null;_cotVeh=null;_cotItems=[];pintarCotizaModal();document.getElementById('cotizaModal').style.display='flex';}
-function editarCotizaWeb(id){const c=(store.cotizaciones||[]).find(x=>x.id===id);if(!c)return;_cotEdit=c;_cotCli=store.clients.find(x=>x.n===c.cliente)||{n:c.cliente,doc:c.doc,tel:c.tel};_cotVeh=store.vehicles.find(v=>v.model===c.vehiculo&&v.plate===c.placa)||null;_cotItems=(c.items||[]).map(r=>({...r}));pintarCotizaModal();document.getElementById('cotizaModal').style.display='flex';}
+function abrirNuevaCotiza(){_cotEdit=null;_cotCli=null;_cotVeh=null;_cotItems=[];window._cotDescuento='';window._cotTipo='servicio';pintarCotizaModal();document.getElementById('cotizaModal').style.display='flex';}
+function editarCotizaWeb(id){const c=(store.cotizaciones||[]).find(x=>x.id===id);if(!c)return;_cotEdit=c;_cotCli=store.clients.find(x=>x.n===c.cliente)||{n:c.cliente,doc:c.doc,tel:c.tel};_cotVeh=store.vehicles.find(v=>v.model===c.vehiculo&&v.plate===c.placa)||null;_cotItems=(c.items||[]).map(r=>({...r}));window._cotDescuento=c.descuento||'';pintarCotizaModal();document.getElementById('cotizaModal').style.display='flex';}
 function inactivarCotizaWeb(id){if(!confirm('¿Inactivar esta cotización?'))return;const c=(store.cotizaciones||[]).find(x=>x.id===id);if(c)c.estado='inactiva';renderWeb();store.emit('Cotización inactivada');}
 function pintarCotizaModal(){
   const cur=curSym();const b=document.getElementById('cotizaBody');if(!b)return;
@@ -942,37 +946,47 @@ function pintarCotizaModal(){
     return;
   }
   const vehs=store.vehicles.filter(v=>v.owner===_cotCli.n);
-  const tot=_cotItems.reduce((a,r)=>a+(+r.p||0),0);
+  const tot=_cotItems.reduce((a,r)=>a+(+r.p||0)*(+r.cant||1),0)-(+window._cotDescuento||0);
+  window._cotTipo=window._cotTipo||'servicio';
   b.innerHTML=`
     <div style="background:var(--surface-2);border-radius:10px;padding:12px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center"><div><b>${_cotCli.n}</b><div style="font-size:12px;color:var(--muted)">${_cotCli.doc||'sin doc'} · ${_cotCli.tel||'sin tel'}</div></div><button class="wbtn wbtn-g" onclick="_cotCli=null;window._cotQ='';pintarCotizaModal()">Cambiar</button></div>
     <label style="font-size:12px;font-weight:700;color:var(--muted)">Vehículo</label>
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 12px">${vehs.length?vehs.map(v=>`<button class="wbtn ${_cotVeh&&_cotVeh.id===v.id?'wbtn-d':'wbtn-g'}" onclick="elegirCotVeh(${v.id})">${v.model} · ${v.plate}</button>`).join(''):'<span style="font-size:12px;color:var(--muted)">Sin vehículos (opcional)</span>'}</div>
     <label style="font-size:12px;font-weight:700;color:var(--muted)">Servicios y repuestos</label>
-    <div style="margin:6px 0">${_cotItems.map((r,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)"><span style="flex:1">${r.n}</span><b>${cur} ${(+r.p||0).toLocaleString('es-VE')}</b><button class="wbtn wbtn-gr" style="padding:3px 9px" onclick="quitarCotItem(${i})">✕</button></div>`).join('')||'<div style="font-size:12px;color:var(--muted)">Aún sin ítems.</div>'}</div>
-    <div style="display:flex;gap:8px"><input id="citN" placeholder="Servicio o repuesto" style="flex:1"><input id="citP" type="number" placeholder="Precio" style="width:90px"><button class="wbtn wbtn-g" onclick="agregarCotItem()">＋</button></div>
+    <div style="margin:6px 0">${_cotItems.map((r,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)"><span style="flex:1">${r.tipo==='repuesto'?'🔩':'🔧'} ${r.n}${r.detalle?' — '+r.detalle:''}</span><b>${cur} ${(+r.p||0).toLocaleString('es-VE')}</b><button class="wbtn wbtn-gr" style="padding:3px 9px" onclick="quitarCotItem(${i})">✕</button></div>`).join('')||'<div style="font-size:12px;color:var(--muted)">Aún sin ítems.</div>'}</div>
+    <div style="display:flex;gap:6px;margin-bottom:6px">
+      <button class="wbtn ${window._cotTipo==='servicio'?'wbtn-d':'wbtn-g'}" onclick="window._cotTipo='servicio';pintarCotizaModal()">🔧 Servicio</button>
+      <button class="wbtn ${window._cotTipo==='repuesto'?'wbtn-d':'wbtn-g'}" onclick="window._cotTipo='repuesto';pintarCotizaModal()">🔩 Repuesto</button>
+    </div>
+    <div style="display:flex;gap:8px"><input id="citN" placeholder="Nombre" style="flex:1"><input id="citP" type="number" placeholder="Precio" style="width:90px"><button class="wbtn wbtn-g" onclick="agregarCotItem()">＋</button></div>
+    <input id="citD" placeholder="Detalle (opcional)" style="width:100%;margin-top:6px">
+    <label style="font-size:12px;font-weight:700;color:var(--muted);margin-top:12px;display:block">Descuento (opcional)</label>
+    <input id="citDesc" type="number" placeholder="0" value="${window._cotDescuento||''}" oninput="window._cotDescuento=this.value;pintarCotizaModal()" style="width:100%">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:12px;border-top:2px solid var(--line)"><b style="font-size:15px">TOTAL</b><b style="font-size:17px;color:#0F6E56">${cur} ${tot.toLocaleString('es-VE')}</b></div>
     <button class="wbtn wbtn-d" style="width:100%;justify-content:center;margin-top:14px" onclick="guardarCotizaWeb()">${_cotEdit?'Guardar cambios':'Crear cotización'}</button>`;
 }
 function elegirCotCli(id){_cotCli=store.clients.find(c=>c.id===id);const vs=store.vehicles.filter(v=>v.owner===_cotCli.n);_cotVeh=vs.length===1?vs[0]:null;pintarCotizaModal();}
 function elegirCotVeh(id){_cotVeh=store.vehicles.find(v=>v.id===id);pintarCotizaModal();}
-function agregarCotItem(){const n=(document.getElementById('citN').value||'').trim();const p=+document.getElementById('citP').value||0;if(!n){toast('Indica el servicio o repuesto');return;}_cotItems.push({n,p,cant:1});pintarCotizaModal();}
+function agregarCotItem(){const n=(document.getElementById('citN').value||'').trim();const p=+document.getElementById('citP').value||0;const det=(document.getElementById('citD')&&document.getElementById('citD').value||'').trim();if(!n){toast('Indica el nombre');return;}_cotItems.push({n,p,cant:1,tipo:window._cotTipo||'servicio',detalle:det});pintarCotizaModal();}
 function quitarCotItem(i){_cotItems.splice(i,1);pintarCotizaModal();}
 async function guardarCotizaWeb(){
   if(!_cotCli){toast('Elige el cliente');return;}if(!_cotItems.length){toast('Agrega al menos un ítem');return;}
-  const tot=_cotItems.reduce((a,r)=>a+(+r.p||0),0);if(!store.cotizaciones)store.cotizaciones=[];if(!store.config)store.config={};
+  const tot=_cotItems.reduce((a,r)=>a+(+r.p||0)*(+r.cant||1),0)-(+window._cotDescuento||0);if(!store.cotizaciones)store.cotizaciones=[];if(!store.config)store.config={};
   const num=_cotEdit&&_cotEdit.num?_cotEdit.num:((store.config.ultimoNumCotiza||0)+1);
-  const cot={id:_cotEdit?_cotEdit.id:Date.now(),num,cliente:_cotCli.n,doc:_cotCli.doc||'',tel:_cotCli.tel||'',vehiculo:_cotVeh?_cotVeh.model:'',placa:_cotVeh?_cotVeh.plate:'',items:_cotItems,monto:tot,estado:'activa',origen:'manual',fecha:new Date().toLocaleDateString('es-VE')};
+  const cot={id:_cotEdit?_cotEdit.id:Date.now(),num,cliente:_cotCli.n,doc:_cotCli.doc||'',tel:_cotCli.tel||'',vehiculo:_cotVeh?_cotVeh.model:'',placa:_cotVeh?_cotVeh.plate:'',items:_cotItems,monto:tot,descuento:+window._cotDescuento||0,estado:'activa',origen:'manual',fecha:new Date().toLocaleDateString('es-VE')};
   if(_cotEdit){store.cotizaciones=store.cotizaciones.map(x=>x.id===_cotEdit.id?cot:x);}else{store.cotizaciones.unshift(cot);store.config.ultimoNumCotiza=num;}
   try{await apiReq('/api/state?taller='+CURRENT_TALLER,{method:'PUT',body:JSON.stringify({data:store})});}catch(e){}
+  window._cotDescuento='';window._cotTipo='servicio';
   document.getElementById('cotizaModal').style.display='none';renderWeb();store.emit(_cotEdit?'Cotización actualizada':'Cotización creada ✓');
 }
 function compartirCotizaWeb(id){
   let c;if(String(id).startsWith('cita-')){const cid=+String(id).slice(5);const ci=store.citas.find(x=>x.id===cid);if(!ci)return;c={num:null,cliente:ci.cliente,vehiculo:ci.vehiculo,placa:ci.placa,items:ci.repuestos||[],monto:ci.monto||0,tel:''};}
   else{c=(store.cotizaciones||[]).find(x=>x.id===id);}
   if(!c)return;const cur=curSym();
-  let txt='🧾 COTIZACIÓN'+(c.num?' N° '+String(c.num).padStart(4,'0'):'')+'\n'+(CURRENT_TALLER_NAME||'TallerOS')+'\n\n👤 '+c.cliente+'\n';
+  let txt='🧾 COTIZACIÓN'+(c.num?' P-'+String(c.num).padStart(6,'0'):'')+'\n'+(CURRENT_TALLER_NAME||'TallerOS')+'\n\n👤 '+c.cliente+'\n';
   if(c.vehiculo)txt+='🚗 '+c.vehiculo+(c.placa?' · '+c.placa:'')+'\n';
   txt+='\nSERVICIOS / REPUESTOS:\n';(c.items||[]).forEach(r=>{txt+='• '+r.n+' — '+cur+' '+(+r.p||0).toLocaleString('es-VE')+'\n';});
+  if(c.descuento)txt+='\nDescuento: '+cur+' '+(+c.descuento).toLocaleString('es-VE');
   txt+='\nTOTAL: '+cur+' '+(+c.monto||0).toLocaleString('es-VE');
   const tel=(c.tel||'').replace(/[^0-9]/g,'');window.open('https://wa.me/'+tel+'?text='+encodeURIComponent(txt),'_blank');
 }
@@ -1036,10 +1050,10 @@ function dashHTML(){
   const _cotAct=[...(store.cotizaciones||[]).filter(c=>c.estado!=='inactiva'),...(store.citas||[]).filter(c=>c.estado==='cotizada')];
   const _totCot=_cotAct.reduce((a,c)=>a+(+c.monto||0),0);
   const _vf=window._dashVista||'general';
-  const _VF={general:['Ganancia general','#0F6E56',_totCobrado,'Total cobrado a clientes'],cotizaciones:['Cotizaciones','#0891b2',_totCot,_cotAct.length+' cotización(es) por realizar'],honorarios:['Pago honorarios','#D97706',_totHon,'Pagado a los técnicos'],neto:['Ganancia sin honorarios','#16191d',_totNeto,'Lo que queda tras pagar técnicos']};
+  const _VF={general:['Ganancia general','#0F6E56',_totCobrado,'Total cobrado a clientes'],cotizaciones:['Cotización','#0891b2',_totCot,_cotAct.length+' cotización(es) por realizar'],honorarios:['Pagos','#D97706',_totHon,'Pagado a los técnicos'],neto:['Ganancia sin honorarios',_totNeto<0?'#dc2626':'#16191d',_totNeto,_totNeto<0?'Se pagó más en honorarios de lo cobrado':'Lo que queda tras pagar técnicos']};
   const _v=_VF[_vf];
-  const _chips=Object.entries(_VF).map(([k,v])=>`<button onclick="window._dashVista='${k}';document.getElementById('w-dash').innerHTML=dashHTML()" style="padding:7px 13px;border-radius:20px;border:none;cursor:pointer;font-weight:700;font-size:12.5px;font-family:inherit;background:${_vf===k?v[1]:'#eef0f2'};color:${_vf===k?'#fff':'#6b7480'}">${v[0]}</button>`).join('');
-  const _panel=`<div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px">${_chips}</div>
+  const _opts=Object.entries(_VF).map(([k,v])=>`<option value="${k}" ${_vf===k?'selected':''}>${v[0]}</option>`).join('');
+  const _panel=`<select onchange="window._dashVista=this.value;document.getElementById('w-dash').innerHTML=dashHTML()" style="padding:9px 13px;border-radius:10px;border:1px solid #d7dee6;font-weight:700;font-size:12.5px;font-family:inherit;margin-bottom:12px;background:#fff;color:#16191d">${_opts}</select>
     <div style="background:${_v[1]};border-radius:16px;padding:20px 22px;margin-bottom:16px;color:#fff">
       <div style="font-size:13px;opacity:.85;font-weight:600">${_v[0]}</div>
       <div style="font-size:30px;font-weight:800;margin-top:4px">${cur} ${(_v[2]||0).toLocaleString('es-VE')}</div>
@@ -1073,7 +1087,7 @@ function renderWeb(){
   try{renderSOS();}catch(e){}
   document.getElementById('w-dash').innerHTML=dashHTML();
   const cols=[["espera","En espera"],["rep","En reparación"],["term","Terminado"]];
-  document.getElementById('w-board').innerHTML=`<div class="searchbar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="qBoard" value="${(BUSCA.board||'').replace(/"/g,'&quot;')}" placeholder="Buscar por vehículo, placa, cliente, técnico o trabajo…" oninput="BUSCA.board=this.value;renderBoardOnly()">${BUSCA.board?`<button onclick="BUSCA.board='';renderBoardOnly()">✕</button>`:''}</div><div class="board">${cols.map(([k,l])=>{const items=store.vehicles.filter(v=>v.activo!==false&&v.recepcion&&!v.cerrada&&coincideVeh(v,BUSCA.board)&&(k==='espera'?(!v.status||v.status==='espera'||v.status==='reprog'):k==='rep'?(v.status==='rep'||v.status==='wait'):k==='term'?(v.status==='term'||v.status==='ent'):v.status===k));return `<div class="col"><h3>${l}<span class="cnt">${items.length}</span></h3>${items.map(v=>{const st=STATUS[v.status];const d=dias(v.ingreso);return `<div class="ocard" style="cursor:pointer" onclick="openOrder(${v.id})"><div class="ot">${v.model.split(' ').slice(0,2).join(' ')}<span class="plate">${v.plate}</span></div><div class="om">${v.motivo}</div><span class="pill s-${st.c}"><span class="pd"></span>${st.l}</span><div style="font-size:11px;color:var(--muted);margin-top:7px">👤 ${v.owner}${v.mech?` · 🔧 ${v.mech}`:''}</div>${(()=>{const cl=store.clients.find(c=>c.n===v.owner);const me=store.mecanicos.find(m=>m.n===v.mech);const tel=cl&&cl.tel;const telM=me&&me.tel;return (tel||telM)?`<div style="display:flex;gap:6px;margin-top:7px;flex-wrap:wrap" onclick="event.stopPropagation()">${tel?`<a href="tel:${tel}" class="telchip">📞 ${tel}</a><a href="https://wa.me/${(tel||'').replace(/[^0-9]/g,'')}" target="_blank" class="telchip wa">💬 Cliente</a>`:''}${telM?`<a href="https://wa.me/${(telM||'').replace(/[^0-9]/g,'')}" target="_blank" class="telchip wa">💬 Técnico</a>`:''}</div>`:'';})()}<div style="font-size:10.5px;color:var(--muted);margin-top:6px;display:flex;align-items:center;gap:5px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Ingresó ${fmtDate(v.ingreso)} · <b style="color:${d>5?'var(--red)':'var(--amber)'}">${d} día${d===1?'':'s'}</b> en taller</div>${v.status!=='espera'&&v.status!=='reprog'?`<div class="opr"><div class="pbar"><i style="width:${v.progress}%"></i></div>${v.progress}%</div>`:''}</div>`;}).join('')||'<div class="empty">Vacío</div>'}</div>`;}).join('')}</div>`;
+  document.getElementById('w-board').innerHTML=`<div class="searchbar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="qBoard" value="${(BUSCA.board||'').replace(/"/g,'&quot;')}" placeholder="Buscar por N° de orden, vehículo, placa, cliente, técnico o trabajo…" oninput="BUSCA.board=this.value;renderBoardOnly()">${BUSCA.board?`<button onclick="BUSCA.board='';renderBoardOnly()">✕</button>`:''}</div><div class="board">${cols.map(([k,l])=>{const items=store.vehicles.filter(v=>v.activo!==false&&v.recepcion&&!v.cerrada&&coincideVeh(v,BUSCA.board)&&(k==='espera'?(!v.status||v.status==='espera'||v.status==='reprog'):k==='rep'?(v.status==='rep'||v.status==='wait'):k==='term'?(v.status==='term'||v.status==='ent'):v.status===k));return `<div class="col"><h3>${l}<span class="cnt">${items.length}</span></h3>${items.map(v=>{const st=STATUS[v.status];const d=dias(v.ingreso);return `<div class="ocard" style="cursor:pointer" onclick="openOrder(${v.id})"><div class="ot">${v.model.split(' ').slice(0,2).join(' ')}<span class="plate">${v.plate}</span></div><div class="om">${v.motivo}</div><span class="pill s-${st.c}"><span class="pd"></span>${st.l}</span><div style="font-size:11px;color:var(--muted);margin-top:7px">👤 ${v.owner}${v.mech?` · 🔧 ${v.mech}`:''}</div>${(()=>{const cl=store.clients.find(c=>c.n===v.owner);const me=store.mecanicos.find(m=>m.n===v.mech);const tel=cl&&cl.tel;const telM=me&&me.tel;return (tel||telM)?`<div style="display:flex;gap:6px;margin-top:7px;flex-wrap:wrap" onclick="event.stopPropagation()">${tel?`<a href="tel:${tel}" class="telchip">📞 ${tel}</a><a href="https://wa.me/${(tel||'').replace(/[^0-9]/g,'')}" target="_blank" class="telchip wa">💬 Cliente</a>`:''}${telM?`<a href="https://wa.me/${(telM||'').replace(/[^0-9]/g,'')}" target="_blank" class="telchip wa">💬 Técnico</a>`:''}</div>`:'';})()}<div style="font-size:10.5px;color:var(--muted);margin-top:6px;display:flex;align-items:center;gap:5px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Ingresó ${fmtDate(v.ingreso)} · <b style="color:${d>5?'var(--red)':'var(--amber)'}">${d} día${d===1?'':'s'}</b> en taller</div>${v.status!=='espera'&&v.status!=='reprog'?`<div class="opr"><div class="pbar"><i style="width:${v.progress}%"></i></div>${v.progress}%</div>`:''}</div>`;}).join('')||'<div class="empty">Vacío</div>'}</div>`;}).join('')}</div>`;
   // HISTORIAL
   document.getElementById('w-hist').innerHTML=`<div class="searchbar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="qHist" value="${(BUSCA.hist||'').replace(/"/g,'&quot;')}" placeholder="Buscar por placa, cliente, técnico, trabajo…" oninput="BUSCA.hist=this.value;renderHistOnly()">${BUSCA.hist?`<button onclick="BUSCA.hist='';renderHistOnly()">✕</button>`:''}</div>
    <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
@@ -1126,6 +1140,7 @@ function histDetail(i){const h=store.history[i];window._actaId=h.vehId;window._h
    ${(h.pagos&&(h.pagos||[]).length)?`<div style="margin-top:6px">${(h.pagos||[]).map(p=>`<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:5px 0;border-bottom:1px solid var(--line)">${p.foto?`<img src="${p.foto}" style="width:34px;height:34px;border-radius:6px;object-fit:cover">`:''}<span style="flex:1">Cuota ${p.n} · ${p.codigo||'—'} · ${p.fecha||''} ${p.hora||''}</span><b>${cur} ${(+p.monto||0).toLocaleString('es-VE')}</b></div>`).join('')}</div>`:''}
    ${(+h.saldo>0)?`<button class="wbtn wbtn-d noprint" style="margin-top:10px" onclick="abonarCuota(${i})">＋ Registrar cuota</button>`:''}
    <h3 style="font-size:14px;margin:16px 0 8px">Honorarios del técnico</h3>
+   ${(h.servicios&&h.servicios.length)?`<div style="margin-bottom:8px">${h.servicios.map(sv=>`<div class="kv"><span class="k">${sv.desc||sv.n||''}</span>${sv.precio?`<span class="vv">${cur} ${(+sv.precio).toLocaleString('es-VE')}</span>`:''}</div>`).join('')}</div>`:''}
    ${h.honorario?`<div class="kv"><span class="k">Pagado a ${h.honorario.tecnico||h.mech||'técnico'}</span><span class="vv" style="color:var(--green)">${cur} ${(+h.honorario.monto).toLocaleString('es-VE')} · ${h.honorario.pct}%</span></div><div class="kv"><span class="k">Fecha</span><span class="vv">${h.honorario.fecha||''}</span></div>`:'<div class="dt2" style="padding:4px 0 8px">Aún no se ha pagado honorario por este trabajo.</div>'}
    <div class="noprint" style="display:flex;gap:8px;align-items:center;margin-top:6px">
      <input id="honMonto" type="number" placeholder="Monto al técnico" style="flex:1" oninput="honPreview(${i})">
@@ -1160,7 +1175,7 @@ const PAISES=[
 ];
 let BUSCA={board:'',veh:'',cli:'',hist:'',recep:'',mant:'',hd:'',hh:'',sos:''};
 function norm(t){return (t==null?'':String(t)).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
-function coincideVeh(v,q){if(!q||!q.trim())return true;const cl=store.clients.find(c=>c.n===v.owner)||{};const campos=[v.model,v.plate,v.owner,v.mech,v.motivo,v.marca,v.modelo,v.color,v.anio,v.tipoVeh,cl.doc,cl.tel,cl.mail,(v.recepcion&&v.recepcion.trabajo),(v.recepcion&&v.recepcion.motivo)];const t=norm(campos.filter(Boolean).join(' '));return norm(q).split(/\s+/).filter(Boolean).every(w=>t.includes(w));}
+function coincideVeh(v,q){if(!q||!q.trim())return true;const cl=store.clients.find(c=>c.n===v.owner)||{};const osTxt=v.numOrden?('OS'+String(v.numOrden).padStart(4,'0')):'';const campos=[v.model,v.plate,v.owner,v.mech,v.motivo,v.marca,v.modelo,v.color,v.anio,v.tipoVeh,cl.doc,cl.tel,cl.mail,osTxt,v.numOrden,(v.recepcion&&v.recepcion.trabajo),(v.recepcion&&v.recepcion.motivo)];const t=norm(campos.filter(Boolean).join(' '));return norm(q).split(/\s+/).filter(Boolean).every(w=>t.includes(w));}
 function coincideCli(c,q){if(!q||!q.trim())return true;const vs=store.vehicles.filter(v=>v.owner===c.n).map(v=>v.model+' '+v.plate).join(' ');const t=norm([c.n,c.doc,c.tel,c.mail,vs].filter(Boolean).join(' '));return norm(q).split(/\s+/).filter(Boolean).every(w=>t.includes(w));}
 function renderVehOnly(){const el=document.getElementById('qVeh');const pos=el?el.selectionStart:null;renderWeb();const n=document.getElementById('qVeh');if(n){n.focus();if(pos!=null)try{n.setSelectionRange(pos,pos)}catch(e){}}}
 function renderCliOnly(){const el=document.getElementById('qCli');const pos=el?el.selectionStart:null;renderWeb();const n=document.getElementById('qCli');if(n){n.focus();if(pos!=null)try{n.setSelectionRange(pos,pos)}catch(e){}}}
@@ -1650,9 +1665,18 @@ function compartirCredenciales(u){
   } else {
     window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank');
   }}
-// Compartir acceso desde la ficha (sin la contraseña, que no se guarda en texto)
-function compartirAccesoCli(id){const c=store.clients.find(x=>x.id===id);if(!c)return;if(!c.usuario){toast('Este cliente no tiene usuario de acceso');return;}compartirCredenciales({n:c.n,usuario:c.usuario,rol:'cliente',tel:c.tel,clave:''});}
-function compartirAccesoMec(id){const m=store.mecanicos.find(x=>x.id===id);if(!m)return;if(!m.usuario){toast('Este técnico no tiene usuario de acceso');return;}compartirCredenciales({n:m.n,usuario:m.usuario,rol:'técnico',tel:m.tel,clave:''});}
+// Compartir acceso desde la ficha: como la contraseña se guarda con hash, se genera una
+// contraseña temporal nueva, se guarda en el servidor, y se comparte junto al usuario.
+async function regenerarYCompartir(u,rol){
+  const nuevaClave=Math.random().toString(36).slice(-4)+Math.floor(1000+Math.random()*9000);
+  if(!confirm('Se generará una nueva contraseña temporal para '+u.n+' y se compartirá junto al usuario. ¿Continuar?'))return;
+  try{
+    await apiReq('/api/talleres/'+CURRENT_TALLER+'/cuenta',{method:'PUT',body:JSON.stringify({usuario:u.usuario,nombre:u.n,rol,telefono:u.tel,password:nuevaClave})});
+    compartirCredenciales({n:u.n,usuario:u.usuario,rol:rol==='mecanico'?'técnico':'cliente',tel:u.tel,clave:nuevaClave});
+  }catch(e){toast('No se pudo generar la contraseña: '+e.message);}
+}
+function compartirAccesoCli(id){const c=store.clients.find(x=>x.id===id);if(!c)return;if(!c.usuario){toast('Este cliente no tiene usuario de acceso');return;}regenerarYCompartir(c,'cliente');}
+function compartirAccesoMec(id){const m=store.mecanicos.find(x=>x.id===id);if(!m)return;if(!m.usuario){toast('Este técnico no tiene usuario de acceso');return;}regenerarYCompartir(m,'mecanico');}
 function toggleUser(id){const u=store.usuarios.find(x=>x.id===id);u.activo=u.activo===false;renderWeb();store.emit(u.activo?'Usuario activado':'Usuario inactivado');}
 // Vehículos
 function openVehForm(id){const v=id?veh(id):null;const act=v?v.activo!==false:true;const acts=store.clients.filter(c=>c.activo!==false);
