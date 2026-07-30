@@ -1823,16 +1823,22 @@ function can(mod,acc){if(!ME)return false;if(ME.rol==='superadmin')return true;c
 function aplicarPermisosMenu(){if(!ME||ME.rol==='superadmin')return;document.querySelectorAll('.wside a[data-w]').forEach(a=>{const m=WMAP[a.dataset.w];if(m&&!can(m,'ver'))a.style.display='none';});}
 const BASECONFIG=JSON.parse(JSON.stringify(store.config)); // catálogos base (moneda, docs, seguros, especialidades, marcas)
 let _persistT;
-function persistData(){if(!CURRENT_TALLER)return;clearTimeout(_persistT);_persistT=setTimeout(()=>{const d={vehicles:store.vehicles,clients:store.clients,mecanicos:store.mecanicos,usuarios:store.usuarios,history:store.history,citas:store.citas,notifs:store.notifs,facturas:store.facturas||[],config:store.config,sos:store.sos||[]};fetch(API+'/api/state?taller='+CURRENT_TALLER,{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},body:JSON.stringify({data:d})}).catch(()=>{});},500);}
+let _dataLoadedOk=false;
+function persistData(){if(!CURRENT_TALLER||!_dataLoadedOk)return;clearTimeout(_persistT);_persistT=setTimeout(()=>{const d={vehicles:store.vehicles,clients:store.clients,mecanicos:store.mecanicos,usuarios:store.usuarios,history:store.history,citas:store.citas,notifs:store.notifs,facturas:store.facturas||[],config:store.config,sos:store.sos||[],cotizaciones:store.cotizaciones||[]};fetch(API+'/api/state?taller='+CURRENT_TALLER,{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},body:JSON.stringify({data:d})}).catch(()=>{});},500);}
 async function persistNow(){if(!CURRENT_TALLER)return;clearTimeout(_persistT);const d={vehicles:store.vehicles,clients:store.clients,mecanicos:store.mecanicos,usuarios:store.usuarios,history:store.history,citas:store.citas,notifs:store.notifs,facturas:store.facturas||[],config:store.config,sos:store.sos||[]};try{await fetch(API+'/api/state?taller='+CURRENT_TALLER,{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},body:JSON.stringify({data:d})});}catch(e){}}
 async function loadData(){if(!CURRENT_TALLER)return;
-  // Taller nuevo = vacío (el admin carga clientes/vehículos/órdenes), pero CON catálogos base de configuración.
-  store.vehicles=[];store.clients=[];store.mecanicos=[];store.usuarios=[];store.history=[];store.citas=[];store.notifs=[];store.facturas=[];store.sos=[];
-  store.config=JSON.parse(JSON.stringify(BASECONFIG));
-  try{const r=await fetch(API+'/api/state?taller='+CURRENT_TALLER,{headers:{'Authorization':'Bearer '+TOKEN}});const j=await r.json();const d=j&&j.data;
-    if(d){['vehicles','clients','mecanicos','usuarios','history','citas','notifs','facturas','sos'].forEach(k=>{if(d[k])store[k]=d[k];});
+  _dataLoadedOk=false;
+  try{const r=await fetch(API+'/api/state?taller='+CURRENT_TALLER,{headers:{'Authorization':'Bearer '+TOKEN}});
+    if(!r.ok)throw new Error('http '+r.status);
+    const j=await r.json();const d=j&&j.data;
+    // Solo ahora, con la respuesta del servidor confirmada, reemplazamos los datos locales.
+    // Si algo de esto falla, NO tocamos store: así nunca se autoguarda una versión vacía por encima de datos reales.
+    store.vehicles=[];store.clients=[];store.mecanicos=[];store.usuarios=[];store.history=[];store.citas=[];store.notifs=[];store.facturas=[];store.sos=[];store.cotizaciones=[];
+    store.config=JSON.parse(JSON.stringify(BASECONFIG));
+    if(d){['vehicles','clients','mecanicos','usuarios','history','citas','notifs','facturas','sos','cotizaciones'].forEach(k=>{if(d[k])store[k]=d[k];});
       if(d.config)store.config={...BASECONFIG,...d.config,currency:{...(BASECONFIG.currency||{}),...(d.config.currency||{})}};}
-  }catch(e){}}
+    _dataLoadedOk=true;
+  }catch(e){toast('No se pudo conectar con el servidor. Reintenta en unos segundos (F5).');}}
 function resetData(){if(!CURRENT_TALLER)return;fetch(API+'/api/state?taller='+CURRENT_TALLER,{method:'DELETE',headers:{'Authorization':'Bearer '+TOKEN}}).catch(()=>{}).finally(()=>enterTaller(CURRENT_TALLER,CURRENT_TALLER_NAME));}
 
 /* ===== LOGIN Y RECUPERACIÓN ===== */
@@ -2003,6 +2009,10 @@ async function enterTaller(id,nombre){CURRENT_TALLER=id;CURRENT_TALLER_NAME=nomb
   const blg=document.getElementById('brandLogo'),bic=document.getElementById('brandIcon');if(blg&&bic){if(tt&&tt.logo){blg.src=tt.logo;blg.style.display='';bic.style.display='none';}else{blg.style.display='none';bic.style.display='';}}
   setWho();renderTallerSelector();
   await loadData();
+  if(!_dataLoadedOk){
+    document.getElementById('w-dash').innerHTML='<div class="empty" style="padding:40px 20px"><div style="font-size:15px;font-weight:700;margin-bottom:8px">No se pudo conectar con el servidor</div><div style="color:var(--muted);margin-bottom:16px">Puede que el servidor esté iniciando (tarda hasta 1 minuto en el plan gratuito). Tus datos están a salvo, solo falta cargarlos.</div><button class="wbtn wbtn-d" onclick="enterTaller(CURRENT_TALLER,CURRENT_TALLER_NAME)">Reintentar</button></div>';
+    return;
+  }
   ['renderPhone','renderWeb','renderWebRecep','renderConfig'].forEach(fn=>{try{window[fn]&&window[fn]();}catch(e){console.error(fn,e);}});
   const dl=document.querySelector('.wside a[data-w="dash"]');if(dl)dl.click();}
 function renderNoTaller(){removeSuper();const el=document.createElement('div');el.id='superPanel';el.className='pickerwrap';el.innerHTML=`<div class="pickcard"><div style="padding:26px;text-align:center"><h3>Sin talleres asignados</h3><div class="sub" style="margin:8px 0 16px">${ME.nombre}, todavía no tienes talleres asignados. Pide al Super Administrador que te asigne uno.</div><button class="lbtn lbtn-p" onclick="logout()">Cerrar sesión</button></div></div>`;document.body.appendChild(el);}
