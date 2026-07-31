@@ -185,6 +185,9 @@ export default function AdminHomeScreen({ navigation, route }) {
         method: 'PUT',
         body: JSON.stringify({ usuario: item.usuario, nombre: item.n, rol, telefono: item.tel, password: clave }),
       });
+      const arrKey = rol === 'cliente' ? 'clients' : 'mecanicos';
+      const arr = (data[arrKey] || []).map((x) => (x.id === item.id ? { ...x, claveActual: clave } : x));
+      guardar({ ...data, [arrKey]: arr });
       setPassPrompt(null); setPassPromptValor('');
       compartirAcceso({ nombreTaller: taller && taller.nombre, nombre: item.n, usuario: item.usuario, clave, rolTxt, tel: item.tel });
     } catch (e) {
@@ -385,7 +388,7 @@ export default function AdminHomeScreen({ navigation, route }) {
               const opciones = [
                 { text: 'Editar', onPress: () => setModal({ tipo: 'cliente', item }) },
               ];
-              if (item.usuario) opciones.push({ text: '💬 Compartir acceso', onPress: () => { setPassPromptValor(''); setPassPrompt({ item, rol: 'cliente', rolTxt: 'cliente' }); } });
+              if (item.usuario) opciones.push({ text: '💬 Compartir acceso', onPress: () => { if (item.claveActual) { compartirAcceso({ nombreTaller: taller && taller.nombre, nombre: item.n, usuario: item.usuario, clave: item.claveActual, rolTxt: 'cliente', tel: item.tel }); } else { setPassPromptValor(''); setPassPrompt({ item, rol: 'cliente', rolTxt: 'cliente' }); } } });
               opciones.push({ text: item.activo === false ? 'Activar' : 'Inactivar', style: item.activo === false ? 'default' : 'destructive', onPress: () => toggleActivo('cliente', item) });
               opciones.push({ text: 'Cancelar', style: 'cancel' });
               Alert.alert(item.n, item.usuario ? 'Acceso: ' + item.usuario : 'Sin acceso a la app', opciones);
@@ -414,7 +417,7 @@ export default function AdminHomeScreen({ navigation, route }) {
               const opciones = [
                 { text: 'Editar', onPress: () => setModal({ tipo: 'mecanico', item }) },
               ];
-              if (item.usuario) opciones.push({ text: '💬 Compartir acceso', onPress: () => { setPassPromptValor(''); setPassPrompt({ item, rol: 'mecanico', rolTxt: 'técnico' }); } });
+              if (item.usuario) opciones.push({ text: '💬 Compartir acceso', onPress: () => { if (item.claveActual) { compartirAcceso({ nombreTaller: taller && taller.nombre, nombre: item.n, usuario: item.usuario, clave: item.claveActual, rolTxt: 'técnico', tel: item.tel }); } else { setPassPromptValor(''); setPassPrompt({ item, rol: 'mecanico', rolTxt: 'técnico' }); } } });
               opciones.push({ text: item.activo === false ? 'Activar' : 'Inactivar', style: item.activo === false ? 'default' : 'destructive', onPress: () => toggleActivo('mecanico', item) });
               opciones.push({ text: 'Cancelar', style: 'cancel' });
               Alert.alert(item.n, item.usuario ? 'Acceso: ' + item.usuario : 'Sin acceso a la app', opciones);
@@ -2017,7 +2020,7 @@ function FormModal({ modal, close, data, guardar, cur, pickFoto, taller }) {
       if (!f.n) { Alert.alert('Falta', 'Nombre del cliente.'); return; }
       const ok = await crearCuenta('cliente'); if (!ok) return;
       const claveCliNueva = f.password;
-      const limpio = { ...f }; delete limpio.password; delete limpio.password2;
+      const limpio = { ...f }; delete limpio.password; delete limpio.password2; if (claveCliNueva) limpio.claveActual = claveCliNueva;
       let arr = data.clients || [];
       if (item) arr = arr.map((c) => (c.id === item.id ? { ...c, ...limpio } : c));
       else arr = [...arr, { ...limpio, id: nid(arr), ini: inits(f.n), gas: 0 }];
@@ -2035,7 +2038,7 @@ function FormModal({ modal, close, data, guardar, cur, pickFoto, taller }) {
       if (!f.n) { Alert.alert('Falta', 'Nombre del técnico.'); return; }
       const ok = await crearCuenta('mecanico'); if (!ok) return;
       const limpioMecClave = f.password;
-      const limpio = { ...f }; delete limpio.password; delete limpio.password2;
+      const limpio = { ...f }; delete limpio.password; delete limpio.password2; if (limpioMecClave) limpio.claveActual = limpioMecClave;
       let arr = data.mecanicos || [];
       if (item) arr = arr.map((m) => (m.id === item.id ? { ...m, ...limpio } : m));
       else arr = [...arr, { ...limpio, id: nid(arr), ini: inits(f.n), c: '#2563EB', rat: 5, base: 0 }];

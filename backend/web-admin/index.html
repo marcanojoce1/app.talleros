@@ -1202,7 +1202,7 @@ function histDetail(i){const h=store.history[i];window._actaId=h.vehId;window._h
    ${(h.damages||[]).length?(h.damages||[]).map(d=>`<div class="kv"><span class="k">#${d.n} ${d.tipo}</span><span class="vv">${sn[d.sev]}</span></div>`).join(''):'<div style="font-size:13px;color:var(--muted)">Sin daños registrados.</div>'}
    <h3 style="font-size:14px;margin:16px 0 8px">Bitácora del trabajo</h3>
    ${(h.bitacora||[]).map(b=>`<div style="font-size:13px;padding:4px 0;color:var(--ink-2)">• ${b}</div>`).join('')}
-   <div class="noprint" style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap"><button class="wbtn wbtn-p" style="flex:1;justify-content:center;min-width:150px" onclick="abrirActaPDF(window._actaId)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Acta (PDF)</button><button class="wbtn wbtn-d" style="flex:1;justify-content:center;min-width:170px" onclick="window.open(API+'/api/trabajo/'+CURRENT_TALLER+'/'+window._histVehId,'_blank')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg> Trabajo realizado (PDF)</button><button class="wbtn" style="flex:1;justify-content:center;min-width:120px;background:#25D366;color:#0b3d20" onclick="waShare('TRABAJO REALIZADO — ${h.veh} (${h.placa})\\nCliente: ${h.cliente}\\nTrabajo: ${h.trabajo}\\nTécnico: ${h.mech}\\nFecha: ${h.fecha}\\n\\nTotal: ${curSym()} ${(+h.total||h.costo||0).toLocaleString('es-VE')}\\nPagado: ${curSym()} ${(+h.pagado||0).toLocaleString('es-VE')}\\n${(+h.saldo>0)?`Saldo pendiente: ${curSym()} ${(+h.saldo).toLocaleString('es-VE')}`:'Estado: PAGADO ✓'}\\n\\n📄 Informe completo con fotos:\\n'+API+'/api/trabajo/'+CURRENT_TALLER+'/'+${h.vehId}+'\\n— TallerOS')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2z"/></svg> WhatsApp</button></div>`;
+   <div class="noprint" style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap"><button class="wbtn wbtn-p" style="flex:1;justify-content:center;min-width:150px" onclick="abrirActaPDF(window._actaId)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Acta (PDF)</button><button class="wbtn wbtn-d" style="flex:1;justify-content:center;min-width:170px" onclick="window.open(API+'/api/trabajo/'+CURRENT_TALLER+'/'+window._histVehId,'_blank')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg> Trabajo realizado (PDF)</button><button class="wbtn" style="flex:1;justify-content:center;min-width:120px;background:#25D366;color:#0b3d20" onclick="waShare('TRABAJO REALIZADO ${h.recepcion&&h.recepcion.numOrden?'— OS'+String(h.recepcion.numOrden).padStart(4,'0')+' ':''}— ${h.veh} (${h.placa})\\nCliente: ${h.cliente}\\nTrabajo: ${h.trabajo}\\nTécnico: ${h.mech}\\nFecha: ${h.fecha}\\n\\nTotal: ${curSym()} ${(+h.total||h.costo||0).toLocaleString('es-VE')}\\nPagado: ${curSym()} ${(+h.pagado||0).toLocaleString('es-VE')}\\n${(+h.saldo>0)?`Saldo pendiente: ${curSym()} ${(+h.saldo).toLocaleString('es-VE')}`:'Estado: PAGADO ✓'}\\n\\n📄 Informe completo con fotos:\\n'+API+'/api/trabajo/'+CURRENT_TALLER+'/'+${h.vehId}+'\\n— TallerOS')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2z"/></svg> WhatsApp</button></div>`;
   document.getElementById('modal').classList.add('on');
 }
 const PAISES=[
@@ -1593,7 +1593,7 @@ async function saveClient(id){const n=val('clN').trim();if(!n){toast('Ingresa el
       if(p)body.password=p;
       try{await apiReq('/api/talleres/'+CURRENT_TALLER+'/cuenta',{method:'PUT',body:JSON.stringify(body)});}
       catch(e){toast(e.message||'No se pudo actualizar el acceso');return;}
-      data.usuario=u;
+      data.usuario=u;if(p)data.claveActual=p;
     }
     Object.assign(c,data);closeModal();renderWeb();renderWebRecep();store.emit(u?'Cliente y acceso actualizados ✓':'Cliente actualizado con éxito');return;}
   if(data.doc&&store.clients.some(c=>c.doc&&c.doc.toLowerCase()===data.doc.toLowerCase())){toast('Ya existe un cliente con ese documento');return;}
@@ -1605,9 +1605,9 @@ async function saveClient(id){const n=val('clN').trim();if(!n){toast('Ingresa el
   if(!CURRENT_TALLER){toast('Selecciona un taller');return;}
   try{await apiReq('/api/talleres/'+CURRENT_TALLER+'/cuenta',{method:'POST',body:JSON.stringify({nombre:n,usuario,correo,password:pass,rol:'cliente',telefono:data.tel})});}
   catch(e){toast(e.message||'No se pudo crear la cuenta de acceso');return;}
-  store.clients.push(Object.assign({id:Date.now(),gas:0,usuario},data));
+  store.clients.push(Object.assign({id:Date.now(),gas:0,usuario,claveActual:pass},data));
   closeModal();renderWeb();renderWebRecep();store.emit('Cliente registrado con acceso a la app');
-  setTimeout(()=>{if(confirm('✅ Cliente registrado.\n\nUsuario: '+usuario+'\nContraseña: '+pass+'\n\n¿Compartir estos datos por WhatsApp?'))compartirCredenciales({n,usuario,clave:pass,rol:'cliente',tel:data.tel});},300);}
+  setTimeout(()=>{compartirCredenciales({n,usuario,clave:pass,rol:'cliente',tel:data.tel});},300);}
 function toggleClient(id){const c=store.clients.find(x=>x.id===id);c.activo=c.activo===false;renderWeb();renderWebRecep();store.emit(c.activo?'Cliente activado':'Cliente inactivado');}
 // Técnicos
 function openMechForm(id){const m=id?store.mecanicos.find(x=>x.id===id):null;const act=m?m.activo!==false:true;
@@ -1641,7 +1641,7 @@ async function saveMech(id){const n=val('meN').trim();if(!n){toast('Ingresa el n
       if(p)body.password=p;
       try{await apiReq('/api/talleres/'+CURRENT_TALLER+'/cuenta',{method:'PUT',body:JSON.stringify(body)});}
       catch(e){toast(e.message||'No se pudo actualizar el acceso');return;}
-      data.usuario=u;data.correo=co;
+      data.usuario=u;data.correo=co;if(p)data.claveActual=p;
     }
     Object.assign(m,data);closeModal();renderWeb();renderWebRecep();store.emit(u?'Técnico y acceso actualizados ✓':'Técnico actualizado con éxito');return;}
   if(data.doc&&store.mecanicos.some(m=>m.doc&&m.doc.toLowerCase()===data.doc.toLowerCase())){toast('Ya existe un técnico con ese documento');return;}
@@ -1653,9 +1653,9 @@ async function saveMech(id){const n=val('meN').trim();if(!n){toast('Ingresa el n
   if(!CURRENT_TALLER){toast('Selecciona un taller');return;}
   try{await apiReq('/api/talleres/'+CURRENT_TALLER+'/cuenta',{method:'POST',body:JSON.stringify({nombre:n,usuario,correo,password:pass,rol:'mecanico',telefono:data.tel})});}
   catch(e){toast(e.message||'No se pudo crear la cuenta de acceso');return;}
-  store.mecanicos.push(Object.assign({id:Date.now(),c:AVCOLORS[store.mecanicos.length%AVCOLORS.length],rat:5,base:0,usuario},data));
+  store.mecanicos.push(Object.assign({id:Date.now(),c:AVCOLORS[store.mecanicos.length%AVCOLORS.length],rat:5,base:0,usuario,claveActual:pass},data));
   closeModal();renderWeb();renderWebRecep();store.emit('Técnico registrado con acceso a la app');
-  setTimeout(()=>{if(confirm('✅ Técnico registrado.\n\nUsuario: '+usuario+'\nContraseña: '+pass+'\n\n¿Compartir estos datos por WhatsApp?'))compartirCredenciales({n,usuario,clave:pass,rol:'técnico',tel:data.tel});},300);}
+  setTimeout(()=>{compartirCredenciales({n,usuario,clave:pass,rol:'técnico',tel:data.tel});},300);}
 function toggleMech(id){const m=store.mecanicos.find(x=>x.id===id);m.activo=m.activo===false;renderWeb();renderWebRecep();store.emit(m.activo?'Técnico activado':'Técnico inactivado');}
 function addEspecialidad(){const w=document.getElementById('meNewWrap');if(!w)return;w.style.display='block';const i=document.getElementById('meNewSp');if(i)i.focus();}
 function addEspecialidadGuardar(){const i=document.getElementById('meNewSp');if(!i)return;const v=i.value.trim();if(!v){toast('Escribe la especialidad');return;}if(!store.config.especialidades)store.config.especialidades=[];if(!store.config.especialidades.includes(v))store.config.especialidades.push(v);const sel=document.getElementById('meS');const o=document.createElement('option');o.textContent=v;sel.appendChild(o);sel.value=v;i.value='';document.getElementById('meNewWrap').style.display='none';persistData();toast('Especialidad agregada: '+v);}
@@ -1701,26 +1701,40 @@ function textoCreds(u){
   if(u.clave) txt+='\nPor seguridad, cambia tu contraseña al entrar.';
   else txt+='\n(Si no recuerdas tu contraseña, pide al taller que la restablezca.)';
   return txt;}
-async function compartirCredenciales(u){
-  const txt=textoCreds(u);
+function compartirCredenciales(u){
+  window._shareTxt=textoCreds(u);
+  window._shareTel=(u.tel||'').replace(/[^0-9]/g,'');
+  window._shareTitulo='Acceso — '+u.n;
+  document.getElementById('modalH').innerHTML=`<h2>Compartir acceso</h2>`;
+  document.getElementById('modalB').innerHTML=`
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:14px">${u.n} — usuario: <b>${u.usuario}</b></div>
+    ${window._shareTel?`<button class="wbtn" style="width:100%;justify-content:center;margin-bottom:10px;background:#25D366;color:#0b3d20" onclick="closeModal();_waDirecto()"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2z"/></svg> Enviar directo por WhatsApp (${u.tel})</button>`:''}
+    <button class="wbtn wbtn-d" style="width:100%;justify-content:center" onclick="closeModal();_compartirNativo()">📤 Compartir</button>`;
+  document.getElementById('modal').classList.add('on');
+}
+async function _waDirecto(){window.open('https://wa.me/'+window._shareTel+'?text='+encodeURIComponent(window._shareTxt),'_blank');}
+async function _compartirNativo(){
   if(navigator.share){
-    try{ await navigator.share({title:'Acceso — '+u.n,text:txt}); return; }
+    try{ await navigator.share({title:window._shareTitulo,text:window._shareTxt}); return; }
     catch(e){ if(e&&e.name==='AbortError')return; }
   }
-  const tel=(u.tel||'').replace(/[^0-9]/g,'');
-  window.open(tel?('https://wa.me/'+tel+'?text='+encodeURIComponent(txt)):('https://wa.me/?text='+encodeURIComponent(txt)),'_blank');
+  window.open('https://wa.me/?text='+encodeURIComponent(window._shareTxt),'_blank');
 }
-// Compartir acceso desde la ficha: como la contraseña se guarda con hash, no se puede
-// "recuperar" la que se puso al crear. Se le pide al admin que escriba la contraseña que
-// quiere compartir (ej. la misma que siempre usa), se guarda, y se comparte esa.
+// Compartir acceso desde la ficha: usa la contraseña que se guardó al crear/editar el
+// acceso (misma que ve el cliente/técnico). Si nunca se guardó una (cuentas antiguas),
+// se pide una sola vez y de ahí en adelante se reutiliza siempre esa misma.
 async function regenerarYCompartir(u,rol){
-  const nuevaClave=prompt('Escribe la contraseña que quieres compartir con '+u.n+' (mínimo 6 caracteres):','');
-  if(nuevaClave===null)return;
-  if(!nuevaClave||nuevaClave.length<6){toast('La contraseña debe tener al menos 6 caracteres');return;}
-  try{
-    await apiReq('/api/talleres/'+CURRENT_TALLER+'/cuenta',{method:'PUT',body:JSON.stringify({usuario:u.usuario,nombre:u.n,rol,telefono:u.tel,password:nuevaClave})});
-    compartirCredenciales({n:u.n,usuario:u.usuario,rol:rol==='mecanico'?'técnico':'cliente',tel:u.tel,clave:nuevaClave});
-  }catch(e){toast('No se pudo actualizar la contraseña: '+e.message);}
+  let clave=u.claveActual;
+  if(!clave){
+    clave=prompt('Esta cuenta no tiene una contraseña guardada todavía. Escribe una para '+u.n+' (mínimo 6 caracteres):','');
+    if(clave===null)return;
+    if(!clave||clave.length<6){toast('La contraseña debe tener al menos 6 caracteres');return;}
+    try{
+      await apiReq('/api/talleres/'+CURRENT_TALLER+'/cuenta',{method:'PUT',body:JSON.stringify({usuario:u.usuario,nombre:u.n,rol,telefono:u.tel,password:clave})});
+    }catch(e){toast('No se pudo actualizar la contraseña: '+e.message);return;}
+    u.claveActual=clave;persistData();
+  }
+  compartirCredenciales({n:u.n,usuario:u.usuario,rol:rol==='mecanico'?'técnico':'cliente',tel:u.tel,clave});
 }
 function compartirAccesoCli(id){const c=store.clients.find(x=>x.id===id);if(!c)return;if(!c.usuario){toast('Este cliente no tiene usuario de acceso');return;}regenerarYCompartir(c,'cliente');}
 function compartirAccesoMec(id){const m=store.mecanicos.find(x=>x.id===id);if(!m)return;if(!m.usuario){toast('Este técnico no tiene usuario de acceso');return;}regenerarYCompartir(m,'mecanico');}
@@ -1789,7 +1803,16 @@ async function waShare(text){
   }
   window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
 }
-function compartirActaWA(id){abrirActaPDF(id);setTimeout(()=>{waShare(orderText(veh(id)));},800);toast('Se abrió el acta en PDF y WhatsApp. Descarga el PDF y adjúntalo en el chat.');}
+async function compartirActaWA(id){
+  const v=veh(id);const os=v.numOrden?('OS'+String(v.numOrden).padStart(4,'0')):'';
+  const actaUrl=API+'/api/acta/'+CURRENT_TALLER+'/'+v.id;
+  const txt=`📄 ACTA DE RECEPCIÓN ${os?'— '+os+' ':''}— ${v.model} (${v.plate})\nCliente: ${v.owner}\n\nDescarga/abre el PDF aquí:\n${actaUrl}\n— TallerOS`;
+  if(navigator.share){
+    try{ await navigator.share({title:'Acta '+os+' — '+v.plate,text:txt,url:actaUrl}); return; }
+    catch(e){ if(e&&e.name==='AbortError')return; }
+  }
+  window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank');
+}
 function recepBlock(r){if(!r)return '<div style="font-size:12px;color:var(--muted)">Sin recepción registrada.</div>';
   return `<div class="kv"><span class="k">Ingreso</span><span class="vv">${r.fecha} · ${r.hora} (${r.via||''})</span></div>
    <div class="kv"><span class="k">Motivo</span><span class="vv">${r.motivo}</span></div>

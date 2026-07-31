@@ -545,7 +545,8 @@ function renderMecDetail(sc){
      <details style="margin-top:9px"><summary style="font-size:12px;font-weight:600;color:var(--blue);cursor:pointer">Programar / editar recordatorio</summary>
        <div style="margin-top:9px"><div class="mlabel">Tipo de servicio</div><select class="msel" id="nmTipo">${TIPOS.map(t=>`<option ${t===v.nextMaint.tipo?'selected':''}>${t}</option>`).join('')}</select>
        <div class="mlabel" style="margin-top:8px">Fecha</div><input type="date" class="minput" id="nmFecha" value="${v.nextMaint.fecha}">
-       <button class="mbtn mbtn-p" style="margin-top:10px" onclick="saveReminder(${v.id})">🔔 Guardar recordatorio</button></div>
+       <button class="mbtn mbtn-p" style="margin-top:10px" onclick="saveReminder(${v.id})">🔔 Guardar recordatorio</button>
+       ${v.reminderOn?`<button class="mbtn" style="margin-top:8px;background:#fdecec;color:#dc2626" onclick="quitarReminder(${v.id})">🔕 Quitar recordatorio</button>`:''}</div>
      </details>
    </div>
    <div class="mcard"><div style="font-size:12px;font-weight:600;margin-bottom:9px">Estado del trabajo</div>
@@ -827,7 +828,8 @@ function addPhoto(id){const v=veh(id);v.advances.push({t:'Foto del avance',m:v.m
 function addVideo(id){const v=veh(id);v.advances.push({t:'Video del trabajo subido',m:v.mech||'Técnico',type:'foto',media:'video',ago:'ahora'});notify(v,`🎥 El técnico subió un video del trabajo en tu ${v.model}. Toca para verlo.`);}
 function reportExtra(id){const v=veh(id);v.pending={desc:'Se detectó fuga en bomba de freno. Requiere reemplazo de la pieza.',cost:240};v.advances.push({t:'Trabajo adicional reportado',m:'Esperando aprobación del cliente',type:'aprob',ago:'ahora'});notify(v,`Tu ${v.model} requiere un trabajo adicional. Revisa y aprueba en la app.`);}
 function approve(id,ok){const v=veh(id);if(!v.pending)return;if(ok){v.cost+=v.pending.cost;v.advances.push({t:'Trabajo adicional APROBADO',m:`Cliente · +${curSym()} ${v.pending.cost}`,type:'check',ago:'ahora'});}else{v.advances.push({t:'Trabajo adicional rechazado',m:'Cliente',type:'nota',ago:'ahora'});}v.pending=null;renderPhone();renderWeb();store.emit(ok?'Cliente aceptó el adicional':'Cliente rechazó el adicional');}
-function saveReminder(id){const v=veh(id);v.nextMaint.tipo=document.getElementById('nmTipo').value;v.nextMaint.fecha=document.getElementById('nmFecha').value;v.reminderOn=true;v.advances.push({t:'Recordatorio de mantenimiento programado',m:`${v.nextMaint.tipo} · ${fmtDate(v.nextMaint.fecha)}`,type:'maint',ago:'ahora'});notify(v,`Recordatorio: tu ${v.model} tiene mantenimiento (${v.nextMaint.tipo}) el ${fmtDate(v.nextMaint.fecha)}.`);}
+function saveReminder(id){const v=veh(id);v.nextMaint.tipo=document.getElementById('nmTipo').value;v.nextMaint.fecha=document.getElementById('nmFecha').value;v.reminderOn=true;v.advances.push({t:'Recordatorio de mantenimiento programado',m:`${v.nextMaint.tipo} · ${fmtDate(v.nextMaint.fecha)}`,type:'maint',ago:'ahora'});notify(v,`Recordatorio: tu ${v.model} tiene mantenimiento (${v.nextMaint.tipo}) el ${fmtDate(v.nextMaint.fecha)}.`);renderPhone();persistData();}
+function quitarReminder(id){if(!confirm('¿Quitar el recordatorio de mantenimiento de este vehículo?'))return;const v=veh(id);v.reminderOn=false;renderPhone();persistData();toast('Recordatorio quitado');}
 function bookCita(id){const v=veh(id);const f=document.getElementById('ciFecha').value;if(!f){toast('Elige una fecha');return;}store.citas.push({id:Date.now(),cliente:v.owner,veh:v.model,tipo:document.getElementById('ciTipo').value,fecha:f,hora:document.getElementById('ciHora').value,status:'pendiente'});renderPhone();renderWeb();store.emit('Cita solicitada — visible en la web');}
 function honPreview(i){const h=store.history[i];const m=+document.getElementById('honMonto').value||0;const cobrado=+h.total||+h.costo||0;const pct=cobrado>0?Math.round(m/cobrado*1000)/10:0;const el=document.getElementById('honPct');if(el)el.textContent=m?pct+'% de lo cobrado':'';}
 async function pagarHonorarioWeb(i){const h=store.history[i];const m=+document.getElementById('honMonto').value||0;if(!m){toast('Indica el monto a pagar al técnico');return;}const cobrado=+h.total||+h.costo||0;const pct=cobrado>0?Math.round(m/cobrado*1000)/10:0;h.honorario={monto:m,pct,fecha:new Date().toISOString().slice(0,10),tecnico:h.mech};
@@ -981,7 +983,7 @@ async function guardarCotizaWeb(){
   window._cotDescuento='';window._cotTipo='servicio';
   document.getElementById('cotizaModal').style.display='none';renderWeb();store.emit(_cotEdit?'Cotización actualizada':'Cotización creada ✓');
 }
-function compartirCotizaWeb(id){
+async function compartirCotizaWeb(id){
   let c;if(String(id).startsWith('cita-')){const cid=+String(id).slice(5);const ci=store.citas.find(x=>x.id===cid);if(!ci)return;c={num:null,cliente:ci.cliente,vehiculo:ci.vehiculo,placa:ci.placa,items:ci.repuestos||[],monto:ci.monto||0,tel:''};}
   else{c=(store.cotizaciones||[]).find(x=>String(x.id)===String(id));}
   if(!c)return;const cur=curSym();
@@ -990,7 +992,45 @@ function compartirCotizaWeb(id){
   txt+='\nSERVICIOS / REPUESTOS:\n';(c.items||[]).forEach(r=>{txt+='• '+r.n+' — '+cur+' '+(+r.p||0).toLocaleString('es-VE')+'\n';});
   if(c.descuento)txt+='\nDescuento: '+cur+' '+(+c.descuento).toLocaleString('es-VE');
   txt+='\nTOTAL: '+cur+' '+(+c.monto||0).toLocaleString('es-VE');
+  if(navigator.share){
+    try{ await navigator.share({title:'Cotización — '+c.cliente,text:txt}); return; }
+    catch(e){ if(e&&e.name==='AbortError')return; }
+  }
   const tel=(c.tel||'').replace(/[^0-9]/g,'');window.open('https://wa.me/'+tel+'?text='+encodeURIComponent(txt),'_blank');
+}
+function abrirBloqueoDias(){window._calBloqMes=new Date();pintarCalBloqueo();document.getElementById('modal').classList.add('on');}
+function pintarCalBloqueo(){
+  if(!store.diasBloqueados)store.diasBloqueados=[];
+  const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const DIAS=['D','L','M','M','J','V','S'];
+  const ver=window._calBloqMes||new Date();const hoy=new Date();const hoy0=new Date(hoy.getFullYear(),hoy.getMonth(),hoy.getDate());
+  const a=ver.getFullYear(),m=ver.getMonth();
+  const primerDia=new Date(a,m,1).getDay();const diasMes=new Date(a,m+1,0).getDate();
+  const fmt=dd=>a+'-'+String(m+1).padStart(2,'0')+'-'+String(dd).padStart(2,'0');
+  let celdas='';for(let i=0;i<primerDia;i++)celdas+='<div></div>';
+  for(let d=1;d<=diasMes;d++){
+    const fechaStr=fmt(d);const pasado=new Date(a,m,d)<hoy0;const bloq=store.diasBloqueados.includes(fechaStr);
+    celdas+=`<div style="display:flex;align-items:center;justify-content:center;padding:3px"><button ${pasado?'disabled':''} onclick="toggleDiaBloqueadoWeb('${fechaStr}')" style="width:34px;height:34px;border-radius:50%;border:0;cursor:${pasado?'default':'pointer'};background:${bloq?'#64748B':'transparent'};color:${bloq?'#fff':'#3a4048'};opacity:${pasado?.3:1};font-weight:600;font-size:14px">${d}</button></div>`;
+  }
+  document.getElementById('modalH').innerHTML=`<h2>🚫 Días no laborables</h2>`;
+  document.getElementById('modalB').innerHTML=`
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Toca un día para bloquearlo o desbloquearlo. Los clientes no podrán agendar citas en los días bloqueados (en gris).</div>
+    <div style="background:#f7f8fa;border-radius:12px;padding:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <button class="wbtn wbtn-g" style="padding:6px 12px" onclick="window._calBloqMes=new Date(${a},${m-1},1);pintarCalBloqueo()">‹</button>
+        <b style="font-size:14px">${MESES[m]} ${a}</b>
+        <button class="wbtn wbtn-g" style="padding:6px 12px" onclick="window._calBloqMes=new Date(${a},${m+1},1);pintarCalBloqueo()">›</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:11px;color:var(--muted);font-weight:700;margin-bottom:2px">${DIAS.map(x=>`<div>${x}</div>`).join('')}</div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr)">${celdas}</div>
+    </div>
+    <button class="wbtn wbtn-d" style="width:100%;justify-content:center;margin-top:14px" onclick="closeModal()">Listo</button>`;
+}
+function toggleDiaBloqueadoWeb(fecha){
+  if(!store.diasBloqueados)store.diasBloqueados=[];
+  const i=store.diasBloqueados.indexOf(fecha);
+  if(i>=0)store.diasBloqueados.splice(i,1);else store.diasBloqueados.push(fecha);
+  persistData();pintarCalBloqueo();
 }
 function navTo(w){const a=document.querySelector('.op-item[data-w="'+w+'"]');if(a)a.click();}
 function newCitaWeb(){
@@ -1104,7 +1144,9 @@ function renderWeb(){
   const ESTC={solicitada:['Por cotizar','s-pend'],cotizada:['Esperando cliente','s-rep'],aceptada:['Aceptada ✓','s-aprob'],rechazada:['Rechazada','s-espera'],cancelada:['Cancelada','s-espera']};
   const ordC={solicitada:0,cotizada:1,aceptada:2,rechazada:3,cancelada:4};
   const citasOrd=(store.citas||[]).slice().sort((a,b)=>(ordC[a.estado]??9)-(ordC[b.estado]??9));
-  document.getElementById('w-citas').innerHTML=(citasOrd.length?citasOrd.map(c=>{
+  document.getElementById('w-citas').innerHTML=
+    `<button class="wbtn wbtn-d" style="width:100%;justify-content:center;margin-bottom:14px;background:#f2ecfd;color:#7c3aed;border:1px solid #e2d6fb" onclick="abrirBloqueoDias()">🚫 Bloquear días no laborables${(store.diasBloqueados||[]).length?' ('+store.diasBloqueados.length+')':''}</button>`+
+    (citasOrd.length?citasOrd.map(c=>{
     const est=ESTC[c.estado]||ESTC.solicitada;
     const reps=(c.repuestos||[]).map(r=>`<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12.5px"><span>${r.n}</span><b>${curSym()} ${(+r.p||0).toLocaleString('es-VE')}</b></div>`).join('');
     return `<div class="wcard" style="margin-bottom:12px">
@@ -1160,7 +1202,7 @@ function histDetail(i){const h=store.history[i];window._actaId=h.vehId;window._h
    ${(h.damages||[]).length?(h.damages||[]).map(d=>`<div class="kv"><span class="k">#${d.n} ${d.tipo}</span><span class="vv">${sn[d.sev]}</span></div>`).join(''):'<div style="font-size:13px;color:var(--muted)">Sin daños registrados.</div>'}
    <h3 style="font-size:14px;margin:16px 0 8px">Bitácora del trabajo</h3>
    ${(h.bitacora||[]).map(b=>`<div style="font-size:13px;padding:4px 0;color:var(--ink-2)">• ${b}</div>`).join('')}
-   <div class="noprint" style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap"><button class="wbtn wbtn-p" style="flex:1;justify-content:center;min-width:150px" onclick="abrirActaPDF(window._actaId)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Acta (PDF)</button><button class="wbtn wbtn-d" style="flex:1;justify-content:center;min-width:170px" onclick="window.open(API+'/api/trabajo/'+CURRENT_TALLER+'/'+window._histVehId,'_blank')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg> Trabajo realizado (PDF)</button><button class="wbtn" style="flex:1;justify-content:center;min-width:120px;background:#25D366;color:#0b3d20" onclick="waShare('TRABAJO REALIZADO — ${h.veh} (${h.placa})\\nCliente: ${h.cliente}\\nTrabajo: ${h.trabajo}\\nTécnico: ${h.mech}\\nFecha: ${h.fecha}\\n\\nTotal: ${curSym()} ${(+h.total||h.costo||0).toLocaleString('es-VE')}\\nPagado: ${curSym()} ${(+h.pagado||0).toLocaleString('es-VE')}\\n${(+h.saldo>0)?`Saldo pendiente: ${curSym()} ${(+h.saldo).toLocaleString('es-VE')}`:'Estado: PAGADO ✓'}\\n\\n📄 Informe completo con fotos:\\n'+API+'/api/trabajo/'+CURRENT_TALLER+'/'+${h.vehId}+'\\n— TallerOS')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2z"/></svg> WhatsApp</button></div>`;
+   <div class="noprint" style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap"><button class="wbtn wbtn-p" style="flex:1;justify-content:center;min-width:150px" onclick="abrirActaPDF(window._actaId)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Acta (PDF)</button><button class="wbtn wbtn-d" style="flex:1;justify-content:center;min-width:170px" onclick="window.open(API+'/api/trabajo/'+CURRENT_TALLER+'/'+window._histVehId,'_blank')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg> Trabajo realizado (PDF)</button><button class="wbtn" style="flex:1;justify-content:center;min-width:120px;background:#25D366;color:#0b3d20" onclick="waShare('TRABAJO REALIZADO ${h.recepcion&&h.recepcion.numOrden?'— OS'+String(h.recepcion.numOrden).padStart(4,'0')+' ':''}— ${h.veh} (${h.placa})\\nCliente: ${h.cliente}\\nTrabajo: ${h.trabajo}\\nTécnico: ${h.mech}\\nFecha: ${h.fecha}\\n\\nTotal: ${curSym()} ${(+h.total||h.costo||0).toLocaleString('es-VE')}\\nPagado: ${curSym()} ${(+h.pagado||0).toLocaleString('es-VE')}\\n${(+h.saldo>0)?`Saldo pendiente: ${curSym()} ${(+h.saldo).toLocaleString('es-VE')}`:'Estado: PAGADO ✓'}\\n\\n📄 Informe completo con fotos:\\n'+API+'/api/trabajo/'+CURRENT_TALLER+'/'+${h.vehId}+'\\n— TallerOS')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2z"/></svg> WhatsApp</button></div>`;
   document.getElementById('modal').classList.add('on');
 }
 const PAISES=[
@@ -1551,7 +1593,7 @@ async function saveClient(id){const n=val('clN').trim();if(!n){toast('Ingresa el
       if(p)body.password=p;
       try{await apiReq('/api/talleres/'+CURRENT_TALLER+'/cuenta',{method:'PUT',body:JSON.stringify(body)});}
       catch(e){toast(e.message||'No se pudo actualizar el acceso');return;}
-      data.usuario=u;
+      data.usuario=u;if(p)data.claveActual=p;
     }
     Object.assign(c,data);closeModal();renderWeb();renderWebRecep();store.emit(u?'Cliente y acceso actualizados ✓':'Cliente actualizado con éxito');return;}
   if(data.doc&&store.clients.some(c=>c.doc&&c.doc.toLowerCase()===data.doc.toLowerCase())){toast('Ya existe un cliente con ese documento');return;}
@@ -1563,9 +1605,9 @@ async function saveClient(id){const n=val('clN').trim();if(!n){toast('Ingresa el
   if(!CURRENT_TALLER){toast('Selecciona un taller');return;}
   try{await apiReq('/api/talleres/'+CURRENT_TALLER+'/cuenta',{method:'POST',body:JSON.stringify({nombre:n,usuario,correo,password:pass,rol:'cliente',telefono:data.tel})});}
   catch(e){toast(e.message||'No se pudo crear la cuenta de acceso');return;}
-  store.clients.push(Object.assign({id:Date.now(),gas:0,usuario},data));
+  store.clients.push(Object.assign({id:Date.now(),gas:0,usuario,claveActual:pass},data));
   closeModal();renderWeb();renderWebRecep();store.emit('Cliente registrado con acceso a la app');
-  setTimeout(()=>{if(confirm('✅ Cliente registrado.\n\nUsuario: '+usuario+'\nContraseña: '+pass+'\n\n¿Compartir estos datos por WhatsApp?'))compartirCredenciales({n,usuario,clave:pass,rol:'cliente',tel:data.tel});},300);}
+  setTimeout(()=>{compartirCredenciales({n,usuario,clave:pass,rol:'cliente',tel:data.tel});},300);}
 function toggleClient(id){const c=store.clients.find(x=>x.id===id);c.activo=c.activo===false;renderWeb();renderWebRecep();store.emit(c.activo?'Cliente activado':'Cliente inactivado');}
 // Técnicos
 function openMechForm(id){const m=id?store.mecanicos.find(x=>x.id===id):null;const act=m?m.activo!==false:true;
@@ -1599,7 +1641,7 @@ async function saveMech(id){const n=val('meN').trim();if(!n){toast('Ingresa el n
       if(p)body.password=p;
       try{await apiReq('/api/talleres/'+CURRENT_TALLER+'/cuenta',{method:'PUT',body:JSON.stringify(body)});}
       catch(e){toast(e.message||'No se pudo actualizar el acceso');return;}
-      data.usuario=u;data.correo=co;
+      data.usuario=u;data.correo=co;if(p)data.claveActual=p;
     }
     Object.assign(m,data);closeModal();renderWeb();renderWebRecep();store.emit(u?'Técnico y acceso actualizados ✓':'Técnico actualizado con éxito');return;}
   if(data.doc&&store.mecanicos.some(m=>m.doc&&m.doc.toLowerCase()===data.doc.toLowerCase())){toast('Ya existe un técnico con ese documento');return;}
@@ -1611,9 +1653,9 @@ async function saveMech(id){const n=val('meN').trim();if(!n){toast('Ingresa el n
   if(!CURRENT_TALLER){toast('Selecciona un taller');return;}
   try{await apiReq('/api/talleres/'+CURRENT_TALLER+'/cuenta',{method:'POST',body:JSON.stringify({nombre:n,usuario,correo,password:pass,rol:'mecanico',telefono:data.tel})});}
   catch(e){toast(e.message||'No se pudo crear la cuenta de acceso');return;}
-  store.mecanicos.push(Object.assign({id:Date.now(),c:AVCOLORS[store.mecanicos.length%AVCOLORS.length],rat:5,base:0,usuario},data));
+  store.mecanicos.push(Object.assign({id:Date.now(),c:AVCOLORS[store.mecanicos.length%AVCOLORS.length],rat:5,base:0,usuario,claveActual:pass},data));
   closeModal();renderWeb();renderWebRecep();store.emit('Técnico registrado con acceso a la app');
-  setTimeout(()=>{if(confirm('✅ Técnico registrado.\n\nUsuario: '+usuario+'\nContraseña: '+pass+'\n\n¿Compartir estos datos por WhatsApp?'))compartirCredenciales({n,usuario,clave:pass,rol:'técnico',tel:data.tel});},300);}
+  setTimeout(()=>{compartirCredenciales({n,usuario,clave:pass,rol:'técnico',tel:data.tel});},300);}
 function toggleMech(id){const m=store.mecanicos.find(x=>x.id===id);m.activo=m.activo===false;renderWeb();renderWebRecep();store.emit(m.activo?'Técnico activado':'Técnico inactivado');}
 function addEspecialidad(){const w=document.getElementById('meNewWrap');if(!w)return;w.style.display='block';const i=document.getElementById('meNewSp');if(i)i.focus();}
 function addEspecialidadGuardar(){const i=document.getElementById('meNewSp');if(!i)return;const v=i.value.trim();if(!v){toast('Escribe la especialidad');return;}if(!store.config.especialidades)store.config.especialidades=[];if(!store.config.especialidades.includes(v))store.config.especialidades.push(v);const sel=document.getElementById('meS');const o=document.createElement('option');o.textContent=v;sel.appendChild(o);sel.value=v;i.value='';document.getElementById('meNewWrap').style.display='none';persistData();toast('Especialidad agregada: '+v);}
@@ -1660,28 +1702,39 @@ function textoCreds(u){
   else txt+='\n(Si no recuerdas tu contraseña, pide al taller que la restablezca.)';
   return txt;}
 function compartirCredenciales(u){
-  const txt=textoCreds(u);const tel=(u.tel||'').replace(/[^0-9]/g,'');
-  const persona=(u.rol==='técnico'?'al técnico':'al cliente');
-  if(tel){
-    if(confirm('¿Cómo quieres compartir los datos de '+u.n+'?\n\n• Aceptar: enviar directo '+persona+' ('+u.tel+')\n• Cancelar: elegir a quién enviar')){
-      window.open('https://wa.me/'+tel+'?text='+encodeURIComponent(txt),'_blank');
-    } else {
-      window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank');
-    }
-  } else {
-    window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank');
-  }}
-// Compartir acceso desde la ficha: como la contraseña se guarda con hash, no se puede
-// "recuperar" la que se puso al crear. Se le pide al admin que escriba la contraseña que
-// quiere compartir (ej. la misma que siempre usa), se guarda, y se comparte esa.
+  window._shareTxt=textoCreds(u);
+  window._shareTel=(u.tel||'').replace(/[^0-9]/g,'');
+  window._shareTitulo='Acceso — '+u.n;
+  document.getElementById('modalH').innerHTML=`<h2>Compartir acceso</h2>`;
+  document.getElementById('modalB').innerHTML=`
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:14px">${u.n} — usuario: <b>${u.usuario}</b></div>
+    ${window._shareTel?`<button class="wbtn" style="width:100%;justify-content:center;margin-bottom:10px;background:#25D366;color:#0b3d20" onclick="closeModal();_waDirecto()"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2z"/></svg> Enviar directo por WhatsApp (${u.tel})</button>`:''}
+    <button class="wbtn wbtn-d" style="width:100%;justify-content:center" onclick="closeModal();_compartirNativo()">📤 Compartir</button>`;
+  document.getElementById('modal').classList.add('on');
+}
+async function _waDirecto(){window.open('https://wa.me/'+window._shareTel+'?text='+encodeURIComponent(window._shareTxt),'_blank');}
+async function _compartirNativo(){
+  if(navigator.share){
+    try{ await navigator.share({title:window._shareTitulo,text:window._shareTxt}); return; }
+    catch(e){ if(e&&e.name==='AbortError')return; }
+  }
+  window.open('https://wa.me/?text='+encodeURIComponent(window._shareTxt),'_blank');
+}
+// Compartir acceso desde la ficha: usa la contraseña que se guardó al crear/editar el
+// acceso (misma que ve el cliente/técnico). Si nunca se guardó una (cuentas antiguas),
+// se pide una sola vez y de ahí en adelante se reutiliza siempre esa misma.
 async function regenerarYCompartir(u,rol){
-  const nuevaClave=prompt('Escribe la contraseña que quieres compartir con '+u.n+' (mínimo 6 caracteres):','');
-  if(nuevaClave===null)return;
-  if(!nuevaClave||nuevaClave.length<6){toast('La contraseña debe tener al menos 6 caracteres');return;}
-  try{
-    await apiReq('/api/talleres/'+CURRENT_TALLER+'/cuenta',{method:'PUT',body:JSON.stringify({usuario:u.usuario,nombre:u.n,rol,telefono:u.tel,password:nuevaClave})});
-    compartirCredenciales({n:u.n,usuario:u.usuario,rol:rol==='mecanico'?'técnico':'cliente',tel:u.tel,clave:nuevaClave});
-  }catch(e){toast('No se pudo actualizar la contraseña: '+e.message);}
+  let clave=u.claveActual;
+  if(!clave){
+    clave=prompt('Esta cuenta no tiene una contraseña guardada todavía. Escribe una para '+u.n+' (mínimo 6 caracteres):','');
+    if(clave===null)return;
+    if(!clave||clave.length<6){toast('La contraseña debe tener al menos 6 caracteres');return;}
+    try{
+      await apiReq('/api/talleres/'+CURRENT_TALLER+'/cuenta',{method:'PUT',body:JSON.stringify({usuario:u.usuario,nombre:u.n,rol,telefono:u.tel,password:clave})});
+    }catch(e){toast('No se pudo actualizar la contraseña: '+e.message);return;}
+    u.claveActual=clave;persistData();
+  }
+  compartirCredenciales({n:u.n,usuario:u.usuario,rol:rol==='mecanico'?'técnico':'cliente',tel:u.tel,clave});
 }
 function compartirAccesoCli(id){const c=store.clients.find(x=>x.id===id);if(!c)return;if(!c.usuario){toast('Este cliente no tiene usuario de acceso');return;}regenerarYCompartir(c,'cliente');}
 function compartirAccesoMec(id){const m=store.mecanicos.find(x=>x.id===id);if(!m)return;if(!m.usuario){toast('Este técnico no tiene usuario de acceso');return;}regenerarYCompartir(m,'mecanico');}
@@ -1743,8 +1796,23 @@ function toggleVeh(id){const v=veh(id);v.activo=v.activo===false;renderWeb();ren
 /* ===== ÓRDENES / ACTA / COMPARTIR ===== */
 function dias(iso){if(!iso)return 0;const d=new Date(iso+'T08:00:00');return Math.max(0,Math.floor((Date.now()-d)/86400000));}
 function verFotoGrande(src){const d=document.createElement('div');d.style.cssText='position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.92);display:grid;place-items:center;cursor:zoom-out;padding:20px';d.innerHTML=`<img src="${src}" style="max-width:96%;max-height:92%;border-radius:10px"/>`;d.onclick=()=>d.remove();document.body.appendChild(d);}
-function waShare(text){window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');}
-function compartirActaWA(id){abrirActaPDF(id);setTimeout(()=>{waShare(orderText(veh(id)));},800);toast('Se abrió el acta en PDF y WhatsApp. Descarga el PDF y adjúntalo en el chat.');}
+async function waShare(text){
+  if(navigator.share){
+    try{ await navigator.share({title:CURRENT_TALLER_NAME||'TallerOS',text}); return; }
+    catch(e){ if(e&&e.name==='AbortError')return; }
+  }
+  window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
+}
+async function compartirActaWA(id){
+  const v=veh(id);const os=v.numOrden?('OS'+String(v.numOrden).padStart(4,'0')):'';
+  const actaUrl=API+'/api/acta/'+CURRENT_TALLER+'/'+v.id;
+  const txt=`📄 ACTA DE RECEPCIÓN ${os?'— '+os+' ':''}— ${v.model} (${v.plate})\nCliente: ${v.owner}\n\nDescarga/abre el PDF aquí:\n${actaUrl}\n— TallerOS`;
+  if(navigator.share){
+    try{ await navigator.share({title:'Acta '+os+' — '+v.plate,text:txt,url:actaUrl}); return; }
+    catch(e){ if(e&&e.name==='AbortError')return; }
+  }
+  window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank');
+}
 function recepBlock(r){if(!r)return '<div style="font-size:12px;color:var(--muted)">Sin recepción registrada.</div>';
   return `<div class="kv"><span class="k">Ingreso</span><span class="vv">${r.fecha} · ${r.hora} (${r.via||''})</span></div>
    <div class="kv"><span class="k">Motivo</span><span class="vv">${r.motivo}</span></div>
@@ -1863,7 +1931,7 @@ function aplicarPermisosMenu(){if(!ME||ME.rol==='superadmin')return;document.que
 const BASECONFIG=JSON.parse(JSON.stringify(store.config)); // catálogos base (moneda, docs, seguros, especialidades, marcas)
 let _persistT;
 let _dataLoadedOk=false;
-function persistData(){if(!CURRENT_TALLER||!_dataLoadedOk)return;clearTimeout(_persistT);_persistT=setTimeout(()=>{const d={vehicles:store.vehicles,clients:store.clients,mecanicos:store.mecanicos,usuarios:store.usuarios,history:store.history,citas:store.citas,notifs:store.notifs,facturas:store.facturas||[],config:store.config,sos:store.sos||[],cotizaciones:store.cotizaciones||[]};fetch(API+'/api/state?taller='+CURRENT_TALLER,{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},body:JSON.stringify({data:d})}).catch(()=>{});},500);}
+function persistData(){if(!CURRENT_TALLER||!_dataLoadedOk)return;clearTimeout(_persistT);_persistT=setTimeout(()=>{const d={vehicles:store.vehicles,clients:store.clients,mecanicos:store.mecanicos,usuarios:store.usuarios,history:store.history,citas:store.citas,notifs:store.notifs,facturas:store.facturas||[],config:store.config,sos:store.sos||[],cotizaciones:store.cotizaciones||[],diasBloqueados:store.diasBloqueados||[]};fetch(API+'/api/state?taller='+CURRENT_TALLER,{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},body:JSON.stringify({data:d})}).catch(()=>{});},500);}
 async function persistNow(){if(!CURRENT_TALLER)return;clearTimeout(_persistT);const d={vehicles:store.vehicles,clients:store.clients,mecanicos:store.mecanicos,usuarios:store.usuarios,history:store.history,citas:store.citas,notifs:store.notifs,facturas:store.facturas||[],config:store.config,sos:store.sos||[]};try{await fetch(API+'/api/state?taller='+CURRENT_TALLER,{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},body:JSON.stringify({data:d})});}catch(e){}}
 async function loadData(){if(!CURRENT_TALLER)return;
   _dataLoadedOk=false;
@@ -1872,9 +1940,9 @@ async function loadData(){if(!CURRENT_TALLER)return;
     const j=await r.json();const d=j&&j.data;
     // Solo ahora, con la respuesta del servidor confirmada, reemplazamos los datos locales.
     // Si algo de esto falla, NO tocamos store: así nunca se autoguarda una versión vacía por encima de datos reales.
-    store.vehicles=[];store.clients=[];store.mecanicos=[];store.usuarios=[];store.history=[];store.citas=[];store.notifs=[];store.facturas=[];store.sos=[];store.cotizaciones=[];
+    store.vehicles=[];store.clients=[];store.mecanicos=[];store.usuarios=[];store.history=[];store.citas=[];store.notifs=[];store.facturas=[];store.sos=[];store.cotizaciones=[];store.diasBloqueados=[];
     store.config=JSON.parse(JSON.stringify(BASECONFIG));
-    if(d){['vehicles','clients','mecanicos','usuarios','history','citas','notifs','facturas','sos','cotizaciones'].forEach(k=>{if(d[k])store[k]=d[k];});
+    if(d){['vehicles','clients','mecanicos','usuarios','history','citas','notifs','facturas','sos','cotizaciones','diasBloqueados'].forEach(k=>{if(d[k])store[k]=d[k];});
       if(d.config)store.config={...BASECONFIG,...d.config,currency:{...(BASECONFIG.currency||{}),...(d.config.currency||{})}};}
     _dataLoadedOk=true;
   }catch(e){toast('No se pudo conectar con el servidor. Reintenta en unos segundos (F5).');}}
