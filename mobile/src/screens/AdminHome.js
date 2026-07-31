@@ -125,6 +125,8 @@ export default function AdminHomeScreen({ navigation, route }) {
   const [taller, setTaller] = useState(null);
   const [data, setData] = useState({});
   const [tab, setTab] = useState('inicio');
+  const [passPrompt, setPassPrompt] = useState(null); // { item, rol, rolTxt } | null
+  const [passPromptValor, setPassPromptValor] = useState('');
   // El botón/gesto ATRÁS del teléfono: desde un menú vuelve al inicio; desde el inicio, comportamiento normal (salir)
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -172,18 +174,21 @@ export default function AdminHomeScreen({ navigation, route }) {
   };
 
   // La contraseña se guarda con hash en el servidor, así que no se puede "recuperar" la
-  // original: para poder compartir usuario + contraseña en cualquier momento, se genera
-  // una contraseña temporal nueva, se guarda, y se comparte esa (igual que al crear el acceso).
+  // original: se le pide al admin que escriba la contraseña que quiere compartir (ej. la
+  // misma que siempre usa), se guarda, y se comparte esa — así el cliente/técnico entra
+  // con una contraseña conocida y luego la puede cambiar.
   const regenerarYCompartir = async (item, rol, rolTxt) => {
-    const nuevaClave = Math.random().toString(36).slice(-4) + Math.floor(1000 + Math.random() * 9000);
+    const clave = (passPromptValor || '').trim();
+    if (clave.length < 6) { Alert.alert('Contraseña muy corta', 'Debe tener al menos 6 caracteres.'); return; }
     try {
       await api('/api/talleres/' + taller.id + '/cuenta', {
         method: 'PUT',
-        body: JSON.stringify({ usuario: item.usuario, nombre: item.n, rol, telefono: item.tel, password: nuevaClave }),
+        body: JSON.stringify({ usuario: item.usuario, nombre: item.n, rol, telefono: item.tel, password: clave }),
       });
-      compartirAcceso({ nombreTaller: taller && taller.nombre, nombre: item.n, usuario: item.usuario, clave: nuevaClave, rolTxt, tel: item.tel });
+      setPassPrompt(null); setPassPromptValor('');
+      compartirAcceso({ nombreTaller: taller && taller.nombre, nombre: item.n, usuario: item.usuario, clave, rolTxt, tel: item.tel });
     } catch (e) {
-      Alert.alert('Error', 'No se pudo generar la contraseña: ' + e.message);
+      Alert.alert('Error', 'No se pudo actualizar la contraseña: ' + e.message);
     }
   };
 
@@ -380,7 +385,7 @@ export default function AdminHomeScreen({ navigation, route }) {
               const opciones = [
                 { text: 'Editar', onPress: () => setModal({ tipo: 'cliente', item }) },
               ];
-              if (item.usuario) opciones.push({ text: '💬 Compartir acceso', onPress: () => Alert.alert('Compartir acceso', 'Se generará una nueva contraseña temporal para ' + item.n + ' y se compartirá junto al usuario.', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Continuar', onPress: () => regenerarYCompartir(item, 'cliente', 'cliente') }]) });
+              if (item.usuario) opciones.push({ text: '💬 Compartir acceso', onPress: () => { setPassPromptValor(''); setPassPrompt({ item, rol: 'cliente', rolTxt: 'cliente' }); } });
               opciones.push({ text: item.activo === false ? 'Activar' : 'Inactivar', style: item.activo === false ? 'default' : 'destructive', onPress: () => toggleActivo('cliente', item) });
               opciones.push({ text: 'Cancelar', style: 'cancel' });
               Alert.alert(item.n, item.usuario ? 'Acceso: ' + item.usuario : 'Sin acceso a la app', opciones);
@@ -409,7 +414,7 @@ export default function AdminHomeScreen({ navigation, route }) {
               const opciones = [
                 { text: 'Editar', onPress: () => setModal({ tipo: 'mecanico', item }) },
               ];
-              if (item.usuario) opciones.push({ text: '💬 Compartir acceso', onPress: () => Alert.alert('Compartir acceso', 'Se generará una nueva contraseña temporal para ' + item.n + ' y se compartirá junto al usuario.', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Continuar', onPress: () => regenerarYCompartir(item, 'mecanico', 'técnico') }]) });
+              if (item.usuario) opciones.push({ text: '💬 Compartir acceso', onPress: () => { setPassPromptValor(''); setPassPrompt({ item, rol: 'mecanico', rolTxt: 'técnico' }); } });
               opciones.push({ text: item.activo === false ? 'Activar' : 'Inactivar', style: item.activo === false ? 'default' : 'destructive', onPress: () => toggleActivo('mecanico', item) });
               opciones.push({ text: 'Cancelar', style: 'cancel' });
               Alert.alert(item.n, item.usuario ? 'Acceso: ' + item.usuario : 'Sin acceso a la app', opciones);
@@ -453,6 +458,28 @@ export default function AdminHomeScreen({ navigation, route }) {
       {modal && modal.tipo === 'acta' && <Acta item={modal.item} close={() => setModal(null)} />}
       {modal && modal.tipo === 'avances' && <AvancesModal item={modal.item} close={() => setModal(null)} taller={taller} />}
       {modal && modal.tipo !== 'acta' && modal.tipo !== 'avances' && <FormModal modal={modal} close={() => setModal(null)} data={data} guardar={guardar} cur={cur} pickFoto={pickFoto} taller={taller} />}
+
+      <Modal visible={!!passPrompt} transparent animationType="fade" onRequestClose={() => setPassPrompt(null)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,.5)', justifyContent: 'center', padding: 24 }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 20 }}>
+            <Text style={{ fontSize: 16, fontWeight: '800', color: '#16191d', marginBottom: 6 }}>Compartir acceso</Text>
+            <Text style={{ fontSize: 13, color: '#6b7480', marginBottom: 14 }}>
+              Escribe la contraseña que quieres compartir con {passPrompt && passPrompt.item.n} (mínimo 6 caracteres). Se guardará como su contraseña de acceso.
+            </Text>
+            <TextInput
+              style={{ borderWidth: 1, borderColor: '#d7dee6', borderRadius: 10, padding: 12, fontSize: 15 }}
+              value={passPromptValor} onChangeText={setPassPromptValor} placeholder="Ej. 123456" placeholderTextColor="#9aa3ad" secureTextEntry={false} autoCapitalize="none" />
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
+              <TouchableOpacity style={{ flex: 1, padding: 12, borderRadius: 10, backgroundColor: '#eef0f2', alignItems: 'center' }} onPress={() => { setPassPrompt(null); setPassPromptValor(''); }}>
+                <Text style={{ fontWeight: '700', color: '#6b7480' }}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={{ flex: 1, padding: 12, borderRadius: 10, backgroundColor: '#F5B700', alignItems: 'center' }} onPress={() => passPrompt && regenerarYCompartir(passPrompt.item, passPrompt.rol, passPrompt.rolTxt)}>
+                <Text style={{ fontWeight: '700', color: '#16191d' }}>Guardar y compartir</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

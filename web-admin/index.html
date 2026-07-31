@@ -684,6 +684,8 @@ function recStep(n){if(n>=2&&!rec.vehId){toast('Selecciona un vehículo');return
 function recPrio(b,p){document.querySelectorAll('#recPrio button').forEach(x=>x.classList.remove('on'));b.classList.add('on');rec.prioridad=p;}
 function recFuel(b,i){document.querySelectorAll('#recFuel button').forEach(x=>x.classList.remove('on'));b.classList.add('on');rec.combustible=i;}
 function toggleArr(b,arr,val){const i=arr.indexOf(val);if(i>=0){arr.splice(i,1);b.classList.remove('on');}else{arr.push(val);b.classList.add('on');}}
+function wrecAgregarExtra(campo,contId,inputId){const inp=document.getElementById(inputId);const v=(inp.value||'').trim();if(!v){toast('Escribe el nombre');return;}if(wrec[campo].includes(v)){toast('Ya está en la lista');return;}wrec[campo].push(v);inp.value='';
+  const cont=document.getElementById(contId);const b=document.createElement('button');b.className='on';b.textContent=v;b.onclick=()=>toggleArr(b,wrec[campo],v);cont.appendChild(b);}
 function pickType(b,t){const i=rec.types.indexOf(t);if(i>=0){rec.types.splice(i,1);b.classList.remove('on');}else{rec.types.push(t);b.classList.add('on');}}
 function pickSev(b,s){document.querySelectorAll('#recSev button').forEach(x=>x.classList.remove('on'));b.classList.add('on');rec.sev=s;}
 function renderDlist(){
@@ -981,7 +983,7 @@ async function guardarCotizaWeb(){
 }
 function compartirCotizaWeb(id){
   let c;if(String(id).startsWith('cita-')){const cid=+String(id).slice(5);const ci=store.citas.find(x=>x.id===cid);if(!ci)return;c={num:null,cliente:ci.cliente,vehiculo:ci.vehiculo,placa:ci.placa,items:ci.repuestos||[],monto:ci.monto||0,tel:''};}
-  else{c=(store.cotizaciones||[]).find(x=>x.id===id);}
+  else{c=(store.cotizaciones||[]).find(x=>String(x.id)===String(id));}
   if(!c)return;const cur=curSym();
   let txt='🧾 COTIZACIÓN'+(c.num?' P-'+String(c.num).padStart(6,'0'):'')+'\n'+(CURRENT_TALLER_NAME||'TallerOS')+'\n\n👤 '+c.cliente+'\n';
   if(c.vehiculo)txt+='🚗 '+c.vehiculo+(c.placa?' · '+c.placa:'')+'\n';
@@ -1222,8 +1224,10 @@ function renderWebRecep(){
       <div class="fld"><label>Técnico asignado</label><select onchange="wrec.mech=this.value">${['(Por asignar)'].concat(store.mecanicos.filter(m=>m.activo!==false).map(m=>m.n)).map(n=>`<option ${n===wrec.mech||(n==='(Por asignar)'&&!wrec.mech)?'selected':''}>${n}</option>`).join('')}</select></div>
       <div class="fld"><label>Prioridad</label><div class="wsev" id="wrPrio">${['Baja','Media','Alta'].map(p=>`<button data-s="${p==='Alta'?'grave':p==='Media'?'mod':'leve'}" class="${p===wrec.prioridad?'on':''}" onclick="wPrio(this,'${p}')">${p}</button>`).join('')}</div></div>
       <div style="display:flex;gap:10px"><div class="fld" style="flex:1"><label>Combustible</label><div class="fuel" id="wrFuel">${FUELSH.map((l,i)=>`<button class="${i===wrec.combustible?'on':''}" onclick="wFuel(this,${i})">${l}</button>`).join('')}</div></div><div class="fld" style="width:120px"><label>Kilometraje</label><input value="${wrec.km}" oninput="wrec.km=this.value" placeholder="84 500"></div></div>
-      <div class="fld"><label>Accesorios entregados</label><div class="wchips" id="wrAcc">${RACC.map(a=>`<button class="${wrec.accesorios.includes(a)?'on':''}" onclick="toggleArr(this,wrec.accesorios,'${a}')">${a}</button>`).join('')}</div></div>
-      <div class="fld"><label>Documentos entregados</label><div class="wchips" id="wrDoc">${RDOC.map(d=>`<button class="${wrec.documentos.includes(d)?'on':''}" onclick="toggleArr(this,wrec.documentos,'${d}')">${d}</button>`).join('')}</div></div>
+      <div class="fld"><label>Accesorios entregados</label><div class="wchips" id="wrAcc">${RACC.map(a=>`<button class="${wrec.accesorios.includes(a)?'on':''}" onclick="toggleArr(this,wrec.accesorios,'${a}')">${a}</button>`).join('')}${wrec.accesorios.filter(a=>!RACC.includes(a)).map(a=>`<button class="on" onclick="toggleArr(this,wrec.accesorios,'${a}')">${a}</button>`).join('')}</div>
+        <div style="display:flex;gap:8px;margin-top:8px"><input id="wrAccNew" placeholder="¿Falta uno? Escríbelo aquí…" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();wrecAgregarExtra('accesorios','wrAcc','wrAccNew');}"><button type="button" class="wbtn wbtn-g" onclick="wrecAgregarExtra('accesorios','wrAcc','wrAccNew')">＋ Agregar</button></div></div>
+      <div class="fld"><label>Documentos entregados</label><div class="wchips" id="wrDoc">${RDOC.map(d=>`<button class="${wrec.documentos.includes(d)?'on':''}" onclick="toggleArr(this,wrec.documentos,'${d}')">${d}</button>`).join('')}${wrec.documentos.filter(d=>!RDOC.includes(d)).map(d=>`<button class="on" onclick="toggleArr(this,wrec.documentos,'${d}')">${d}</button>`).join('')}</div>
+        <div style="display:flex;gap:8px;margin-top:8px"><input id="wrDocNew" placeholder="¿Falta uno? Escríbelo aquí…" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();wrecAgregarExtra('documentos','wrDoc','wrDocNew');}"><button type="button" class="wbtn wbtn-g" onclick="wrecAgregarExtra('documentos','wrDoc','wrDocNew')">＋ Agregar</button></div></div>
     </div></div>
     <div class="fld" style="margin-top:18px"><label>Observaciones</label><textarea style="width:100%;min-height:140px;resize:vertical" oninput="wrec.obs=this.value" placeholder="Estado general del vehículo, detalles, daños previos, comentarios del cliente…">${wrec.obs}</textarea></div>
     <div class="fld"><label>Firmas</label><div class="sigwrap"><div class="sigbox"><div class="sighd"><span>Cliente</span><button onclick="clearSig('wSigCli')">Borrar</button></div><canvas id="wSigCli" class="sigcv"></canvas></div><div class="sigbox"><div class="sighd"><span>Recepcionista</span><button onclick="clearSig('wSigRec')">Borrar</button></div><canvas id="wSigRec" class="sigcv"></canvas></div></div></div>
@@ -1534,6 +1538,7 @@ function openClientForm(id){const c=id?store.clients.find(x=>x.id===id):null;con
    <div class="fld"><label>Estado</label>${estadoSel('clA',act)}</div>
    <button class="wbtn wbtn-d" style="width:100%;justify-content:center" onclick="saveClient(${id||0})">${c?'Guardar cambios':'Registrar cliente'}</button>`;
   document.getElementById('modal').classList.add('on');
+  paisHint('clPais','clThint');
 }
 async function saveClient(id){const n=val('clN').trim();if(!n){toast('Ingresa el nombre');return;}const paisCod=val('clPais')||'+58';const telNum=(val('clTnum')||'').trim();const tel=telNum?paisCod+' '+telNum:'';const data={n,ini:inits(n),tipoDoc:val('clTD'),doc:val('clD'),tel,paisCod,telNum,correo:val('clE'),dir:val('clDir'),activo:val('clA')==='1'};
   if(id){const c=store.clients.find(x=>x.id===id);const u=val('clU').trim(),p=val('clP'),p2=val('clP2'),co=(val('clE')||'').trim();
@@ -1581,6 +1586,7 @@ function openMechForm(id){const m=id?store.mecanicos.find(x=>x.id===id):null;con
    <div class="fld"><label>Estado</label>${estadoSel('meA',act)}</div>
    <button class="wbtn wbtn-d" style="width:100%;justify-content:center" onclick="saveMech(${id||0})">${m?'Guardar cambios':'Registrar técnico'}</button>`;
   document.getElementById('modal').classList.add('on');
+  paisHint('mePais','meThint');
 }
 async function saveMech(id){const n=val('meN').trim();if(!n){toast('Ingresa el nombre');return;}const paisCod=val('mePais')||'+58';const telNum=(val('meTnum')||'').trim();const tel=telNum?paisCod+' '+telNum:'';const data={n,ini:inits(n),sp:val('meS')||'General',doc:val('meD'),tel,paisCod,telNum,activo:val('meA')==='1'};
   if(id){const m=store.mecanicos.find(x=>x.id===id);const u=val('meU').trim(),p=val('meP'),p2=val('meP2'),co=(val('meE')||'').trim();
@@ -1665,15 +1671,17 @@ function compartirCredenciales(u){
   } else {
     window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank');
   }}
-// Compartir acceso desde la ficha: como la contraseña se guarda con hash, se genera una
-// contraseña temporal nueva, se guarda en el servidor, y se comparte junto al usuario.
+// Compartir acceso desde la ficha: como la contraseña se guarda con hash, no se puede
+// "recuperar" la que se puso al crear. Se le pide al admin que escriba la contraseña que
+// quiere compartir (ej. la misma que siempre usa), se guarda, y se comparte esa.
 async function regenerarYCompartir(u,rol){
-  const nuevaClave=Math.random().toString(36).slice(-4)+Math.floor(1000+Math.random()*9000);
-  if(!confirm('Se generará una nueva contraseña temporal para '+u.n+' y se compartirá junto al usuario. ¿Continuar?'))return;
+  const nuevaClave=prompt('Escribe la contraseña que quieres compartir con '+u.n+' (mínimo 6 caracteres):','');
+  if(nuevaClave===null)return;
+  if(!nuevaClave||nuevaClave.length<6){toast('La contraseña debe tener al menos 6 caracteres');return;}
   try{
     await apiReq('/api/talleres/'+CURRENT_TALLER+'/cuenta',{method:'PUT',body:JSON.stringify({usuario:u.usuario,nombre:u.n,rol,telefono:u.tel,password:nuevaClave})});
     compartirCredenciales({n:u.n,usuario:u.usuario,rol:rol==='mecanico'?'técnico':'cliente',tel:u.tel,clave:nuevaClave});
-  }catch(e){toast('No se pudo generar la contraseña: '+e.message);}
+  }catch(e){toast('No se pudo actualizar la contraseña: '+e.message);}
 }
 function compartirAccesoCli(id){const c=store.clients.find(x=>x.id===id);if(!c)return;if(!c.usuario){toast('Este cliente no tiene usuario de acceso');return;}regenerarYCompartir(c,'cliente');}
 function compartirAccesoMec(id){const m=store.mecanicos.find(x=>x.id===id);if(!m)return;if(!m.usuario){toast('Este técnico no tiene usuario de acceso');return;}regenerarYCompartir(m,'mecanico');}
@@ -1681,19 +1689,50 @@ function toggleUser(id){const u=store.usuarios.find(x=>x.id===id);u.activo=u.act
 // Vehículos
 function openVehForm(id){const v=id?veh(id):null;const act=v?v.activo!==false:true;const acts=store.clients.filter(c=>c.activo!==false);
   const curMarca=v?(v.marca||(v.model||'').split(' ')[0]):store.config.marcas[0].marca;
+  if(!store.config.tiposVeh)store.config.tiposVeh=[...TIPO_VEH];
   document.getElementById('modalH').innerHTML=`<h2>${v?'Editar':'Nuevo'} vehículo</h2>`;
   document.getElementById('modalB').innerHTML=`
-   <div class="fld"><label>Propietario (busca por nombre, cédula o teléfono)</label><input id="veO" list="veOList" value="${v?(v.owner||''):''}" placeholder="Escribe para buscar…" autocomplete="off"><datalist id="veOList">${acts.map(c=>`<option value="${(c.n||'').replace(/"/g,'&quot;')}">${c.n}${c.doc?' · '+c.doc:''}${c.tel?' · '+c.tel:''}</option>`).join('')}</datalist></div>
-   <div style="display:flex;gap:10px"><div class="fld" style="flex:1"><label>Marca</label><select id="veMarca" onchange="vehModelos(this.value)">${store.config.marcas.map(m=>`<option ${m.marca===curMarca?'selected':''}>${m.marca}</option>`).join('')}</select></div><div class="fld" style="flex:1"><label>Modelo</label><select id="veModelo"></select></div></div>
+   <div class="fld"><label>Propietario</label>
+     <div class="searchbar" style="margin-bottom:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+       <input id="veO" value="${v?(v.owner||''):''}" placeholder="Escribe para buscar por nombre, cédula o teléfono…" autocomplete="off" oninput="vehFiltrarClientes(this.value)" onfocus="vehFiltrarClientes(this.value)"></div>
+     <div id="veOResults" style="position:relative;z-index:5"></div>
+   </div>
+   <div style="display:flex;gap:10px">
+     <div class="fld" style="flex:1"><label style="display:flex;align-items:center;justify-content:space-between">Marca <button type="button" class="wbtn wbtn-g" style="padding:3px 9px;font-size:11px" onclick="vehAddMarca()">＋ Nueva</button></label><select id="veMarca" onchange="vehModelos(this.value)">${store.config.marcas.map(m=>`<option ${m.marca===curMarca?'selected':''}>${m.marca}</option>`).join('')}</select>
+       <div class="fld" id="veMarcaNewWrap" style="display:none;margin-top:6px"><div style="display:flex;gap:8px"><input id="veMarcaNew" placeholder="Nueva marca"><button type="button" class="wbtn wbtn-d" style="white-space:nowrap" onclick="vehAddMarcaGuardar()">Agregar</button></div></div>
+     </div>
+     <div class="fld" style="flex:1"><label style="display:flex;align-items:center;justify-content:space-between">Modelo <button type="button" class="wbtn wbtn-g" style="padding:3px 9px;font-size:11px" onclick="vehAddModelo()">＋ Nuevo</button></label><select id="veModelo"></select>
+       <div class="fld" id="veModeloNewWrap" style="display:none;margin-top:6px"><div style="display:flex;gap:8px"><input id="veModeloNew" placeholder="Nuevo modelo"><button type="button" class="wbtn wbtn-d" style="white-space:nowrap" onclick="vehAddModeloGuardar()">Agregar</button></div></div>
+     </div>
+   </div>
    <div style="display:flex;gap:10px"><div class="fld" style="flex:1"><label>Placa</label><input id="veP" value="${v?v.plate:''}" placeholder="AB123CD"></div><div class="fld" style="flex:1"><label>Año</label><input id="veY" value="${v?(v.anio||''):''}" placeholder="2022"></div></div>
-   <div style="display:flex;gap:10px"><div class="fld" style="flex:1"><label>Color</label><input id="veC" value="${v?(v.color||''):''}" placeholder="ej. Plata"></div><div class="fld" style="flex:1"><label>Tipo de vehículo</label><select id="veTv">${TIPO_VEH.map(t=>`<option ${v&&v.tipoVeh===t?'selected':''}>${t}</option>`).join('')}</select></div></div>
+   <div style="display:flex;gap:10px"><div class="fld" style="flex:1"><label>Color</label><input id="veC" value="${v?(v.color||''):''}" placeholder="ej. Plata"></div>
+     <div class="fld" style="flex:1"><label style="display:flex;align-items:center;justify-content:space-between">Tipo de vehículo <button type="button" class="wbtn wbtn-g" style="padding:3px 9px;font-size:11px" onclick="vehAddTipo()">＋ Nuevo</button></label><select id="veTv">${store.config.tiposVeh.map(t=>`<option ${v&&v.tipoVeh===t?'selected':''}>${t}</option>`).join('')}</select>
+       <div class="fld" id="veTipoNewWrap" style="display:none;margin-top:6px"><div style="display:flex;gap:8px"><input id="veTipoNew" placeholder="Nuevo tipo"><button type="button" class="wbtn wbtn-d" style="white-space:nowrap" onclick="vehAddTipoGuardar()">Agregar</button></div></div>
+     </div>
+   </div>
    <div style="display:flex;gap:10px"><div class="fld" style="flex:1"><label>Tipo de seguro</label><select id="veSg">${store.config.insuranceTypes.map(t=>`<option ${v&&v.tipoSeguro===t?'selected':''}>${t}</option>`).join('')}</select></div><div class="fld" style="flex:1"><label>N° de póliza</label><input id="veNs" value="${v?(v.nroSeguro||''):''}" placeholder="ej. RCV-00128"></div></div>
    <div class="fld"><label>Estado</label>${estadoSel('veA',act)}</div>
-   <div style="font-size:11px;color:var(--muted);margin-bottom:10px">¿No aparece la marca o el modelo? Agrégalos en <b>Configuración › Marcas y modelos</b>.</div>
    <button class="wbtn wbtn-d" style="width:100%;justify-content:center" onclick="saveVeh(${id||0})">${v?'Guardar cambios':'Registrar vehículo'}</button>`;
   document.getElementById('modal').classList.add('on');
   vehModelos(curMarca, v?v.modelo:null);
 }
+function vehFiltrarClientes(q){
+  const el=document.getElementById('veOResults');if(!el)return;
+  const acts=store.clients.filter(c=>c.activo!==false);
+  const norm=t=>(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const qq=norm(q);
+  const res=(qq?acts.filter(c=>norm(c.n+' '+(c.doc||'')+' '+(c.tel||'')).includes(qq)):acts).slice(0,8);
+  if(!qq){el.innerHTML='';return;}
+  el.innerHTML=res.length?`<div style="position:absolute;top:2px;left:0;right:0;background:#fff;border:1px solid var(--line);border-radius:10px;max-height:220px;overflow:auto;box-shadow:0 6px 18px rgba(0,0,0,.12)">${res.map(c=>`<div onclick="vehElegirCliente('${c.n.replace(/'/g,"\\'")}')" style="padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--line);font-size:12.5px"><b>${c.n}</b><div style="color:var(--muted);font-size:11px">${c.doc||''}${c.tel?' · '+c.tel:''}</div></div>`).join('')}</div>`:`<div style="position:absolute;top:2px;left:0;right:0;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--muted)">Sin resultados. Regístralo primero como cliente.</div>`;
+}
+function vehElegirCliente(nombre){document.getElementById('veO').value=nombre;document.getElementById('veOResults').innerHTML='';}
+function vehAddMarca(){const w=document.getElementById('veMarcaNewWrap');if(!w)return;w.style.display='block';document.getElementById('veMarcaNew').focus();}
+function vehAddMarcaGuardar(){const v=(document.getElementById('veMarcaNew').value||'').trim();if(!v){toast('Escribe la marca');return;}if(!store.config.marcas.some(m=>m.marca===v))store.config.marcas.push({marca:v,modelos:[]});const sel=document.getElementById('veMarca');const o=document.createElement('option');o.textContent=v;sel.appendChild(o);sel.value=v;vehModelos(v);document.getElementById('veMarcaNewWrap').style.display='none';document.getElementById('veMarcaNew').value='';persistData();toast('Marca agregada: '+v);}
+function vehAddModelo(){const w=document.getElementById('veModeloNewWrap');if(!w)return;w.style.display='block';document.getElementById('veModeloNew').focus();}
+function vehAddModeloGuardar(){const marca=val('veMarca');const nv=(document.getElementById('veModeloNew').value||'').trim();if(!nv){toast('Escribe el modelo');return;}const m=store.config.marcas.find(x=>x.marca===marca);if(m){if(!m.modelos)m.modelos=[];if(!m.modelos.includes(nv))m.modelos.push(nv);}const sel=document.getElementById('veModelo');const o=document.createElement('option');o.textContent=nv;sel.appendChild(o);sel.value=nv;document.getElementById('veModeloNewWrap').style.display='none';document.getElementById('veModeloNew').value='';persistData();toast('Modelo agregado: '+nv);}
+function vehAddTipo(){const w=document.getElementById('veTipoNewWrap');if(!w)return;w.style.display='block';document.getElementById('veTipoNew').focus();}
+function vehAddTipoGuardar(){const v=(document.getElementById('veTipoNew').value||'').trim();if(!v){toast('Escribe el tipo de vehículo');return;}if(!store.config.tiposVeh)store.config.tiposVeh=[...TIPO_VEH];if(!store.config.tiposVeh.includes(v))store.config.tiposVeh.push(v);const sel=document.getElementById('veTv');const o=document.createElement('option');o.textContent=v;sel.appendChild(o);sel.value=v;document.getElementById('veTipoNewWrap').style.display='none';document.getElementById('veTipoNew').value='';persistData();toast('Tipo agregado: '+v);}
 function vehModelos(marca,sel){const m=store.config.marcas.find(x=>x.marca===marca);const opts=(m?m.modelos:[]);document.getElementById('veModelo').innerHTML=opts.map(o=>`<option ${o===sel?'selected':''}>${o}</option>`).join('')||'<option>—</option>';}
 function saveVeh(id){const marca=val('veMarca'),modelo=val('veModelo'),anio=val('veY').trim();const owner=val('veO');const model=`${marca} ${modelo}${anio?' '+anio:''}`.trim();
   const data={model,marca,modelo,plate:val('veP').toUpperCase(),owner,anio,color:val('veC'),tipoVeh:val('veTv'),tipoSeguro:val('veSg'),nroSeguro:val('veNs'),activo:val('veA')==='1',ini:inits(marca+' '+modelo)};
