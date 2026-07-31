@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Alert, ScrollView, TextInput, Image, Modal, Pressable, Linking, BackHandler } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { api, getState, putState, clearSession, getApiUrl } from '../api';
-import { compartirActaPDF, abrirEnNavegador, compartirCotizacionPDF } from '../acta';
+import { compartirActaPDF, abrirEnNavegador, compartirCotizacionPDF, compartirResumenEsperaPDF } from '../acta';
 import { Dropdown, FirmaPad, FirmaVista, CarroSVG, etiqueta, colorMarca, marcaDe, Calendario, BotonAjustes, AjustesModal } from '../ui';
 
 const STATUS = {
@@ -139,6 +139,7 @@ export default function AdminHomeScreen({ navigation, route }) {
   const [error, setError] = useState('');
   const [modal, setModal] = useState(null);
   const [qOrd, setQOrd] = useState('');
+  const [resumenOpen, setResumenOpen] = useState(false);
   const [fCod, setFCod] = useState(''); const [fMonto, setFMonto] = useState(''); const [fFoto, setFFoto] = useState(null);
 
   useEffect(() => {
@@ -338,7 +339,16 @@ export default function AdminHomeScreen({ navigation, route }) {
           { k: 'term', t: 'Terminado', filtro: (v) => v.status === 'term' },
         ];
         return (
+          <>
           <ScrollView contentContainerStyle={{ padding: 14 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={recargar} />}>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+              <TouchableOpacity style={[s.act, { flex: 1, backgroundColor: '#eef0f2', justifyContent: 'center' }]} onPress={() => setResumenOpen(true)}>
+                <Text style={s.actT}>👁️ Ver Resumen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.act, { flex: 1, backgroundColor: '#e8f6ec', justifyContent: 'center' }]} onPress={() => taller && compartirResumenEsperaPDF(taller.id)}>
+                <Text style={[s.actT, { color: '#0F6E56' }]}>💬 Compartir Resumen</Text>
+              </TouchableOpacity>
+            </View>
             <TextInput style={[s.input, { marginBottom: 14 }]} value={qOrd} onChangeText={setQOrd}
               placeholder="Buscar por N° de orden, vehículo, placa, cliente o técnico…" />
             {!V.length && !loading ? <Text style={s.muted}>Sin vehículos recibidos. Registra una recepción para generar la orden.</Text> : null}
@@ -392,6 +402,28 @@ export default function AdminHomeScreen({ navigation, route }) {
               );
             })}
           </ScrollView>
+          <Modal visible={resumenOpen} transparent animationType="slide" onRequestClose={() => setResumenOpen(false)}>
+            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,.5)', justifyContent: 'flex-end' }}>
+              <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 18, paddingBottom: 30, maxHeight: '80%' }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <Text style={{ fontSize: 16, fontWeight: '800', color: '#16191d' }}>📋 Vehículos en espera</Text>
+                  <TouchableOpacity onPress={() => setResumenOpen(false)}><Text style={{ fontSize: 22, color: '#6b7480' }}>✕</Text></TouchableOpacity>
+                </View>
+                <ScrollView>
+                  {V.filter((v) => !v.status || v.status === 'espera' || v.status === 'reprog').length ? V.filter((v) => !v.status || v.status === 'espera' || v.status === 'reprog').map((v) => {
+                    const d = v.ingreso ? Math.max(0, Math.floor((Date.now() - new Date(v.ingreso).getTime()) / 86400000)) : 0;
+                    return (
+                      <View key={v.id} style={{ paddingVertical: 10, borderBottomWidth: 1, borderColor: '#f0f2f5' }}>
+                        <Text style={{ fontWeight: '800', color: '#16191d' }}>{v.model} <Text style={{ color: '#6b7480', fontWeight: '600' }}>{v.plate}</Text></Text>
+                        <Text style={s.muted}>{v.owner} · {v.motivo} · {d} día(s) en taller</Text>
+                      </View>
+                    );
+                  }) : <Text style={s.muted}>No hay vehículos en espera.</Text>}
+                </ScrollView>
+              </View>
+            </View>
+          </Modal>
+          </>
         );
       })()}
 
@@ -681,6 +713,12 @@ function Recepcion({ data, guardar, onListo }) {
   const [accesorios, setAccesorios] = useState((cfg.accesorios && cfg.accesorios.length) ? cfg.accesorios : ACCS);
   const [cliente, setCliente] = useState('');
   const [vehId, setVehId] = useState(null);
+  const [tipoIngreso, setTipoIngreso] = useState('nuevo'); // 'nuevo' | 'cotizacion'
+  const [busquedaCot, setBusquedaCot] = useState('');
+  const [cotizacionId, setCotizacionId] = useState(null);
+  const [cotizacionNum, setCotizacionNum] = useState(null);
+  const [montoCotizacion, setMontoCotizacion] = useState(0);
+  const [cotizacionItems, setCotizacionItems] = useState([]);
   const [mech, setMech] = useState('');
   const [tipoVeh, setTipoVeh] = useState('Automóvil');
   const [color, setColor] = useState('');
@@ -707,6 +745,24 @@ function Recepcion({ data, guardar, onListo }) {
   const cvs = vehicles.filter((v) => v.owner === cliente && v.activo !== false);
   const vSel = vehicles.find((v) => v.id === vehId);
   const cSel = clients.find((c) => c.n === cliente);
+  const norm = (t) => (t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const cotizacionesDisponibles = (data.cotizaciones || []).filter((c) => c.estado === 'aprobada' && !c.usadaRecepcion);
+  const cotizacionesFiltradas = busquedaCot.trim()
+    ? cotizacionesDisponibles.filter((c) => norm((c.num ? 'P-' + String(c.num).padStart(6, '0') : '') + ' ' + (c.cliente || '') + ' ' + (c.placa || '')).includes(norm(busquedaCot)))
+    : cotizacionesDisponibles;
+  const elegirCotizacion = (c) => {
+    setCotizacionId(c.id); setCotizacionNum(c.num); setMontoCotizacion(c.monto || 0); setCotizacionItems(c.items || []);
+    setCliente(c.cliente);
+    const vehsCli = vehicles.filter((v) => v.owner === c.cliente && v.activo !== false);
+    if (!vehsCli.length) { Alert.alert('Sin vehículo', c.cliente + ' no tiene un vehículo registrado — regístralo primero.'); setVehId(null); return; }
+    const porPlaca = c.placa ? vehsCli.find((v) => v.plate === c.placa) : null;
+    const elegido = porPlaca || vehsCli[0];
+    setVehId(elegido.id);
+    if (elegido.color) setColor(elegido.color);
+    if (elegido.tipoVeh) setTipoVeh(elegido.tipoVeh);
+    if (c.placa && !porPlaca) Alert.alert('Verifica el vehículo', 'La cotización era para la placa ' + c.placa + ', pero no está entre los vehículos de ' + c.cliente + '. Se seleccionó otro por defecto.');
+  };
+  const quitarCotizacion = () => { setCotizacionId(null); setCotizacionNum(null); setMontoCotizacion(0); setCotizacionItems([]); };
   const togArr = (arr, set, v) => set(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
   const borrarPin = (i) => {
     Alert.alert('Quitar daño', '¿Quitar el daño #' + (i + 1) + ' de esta vista?', [
@@ -753,16 +809,20 @@ function Recepcion({ data, guardar, onListo }) {
     // Número de orden de servicio correlativo (va aumentando)
     const nOrden = ((data.config && data.config.ultimoNumOrden) || 0) + 1;
     const vs = vehicles.map((v) => v.id !== vehId ? v : {
-      ...v, status: 'espera', progress: 0, cerrada: false, cost: 0, pending: null, entregado: false, motivo: trabajo, mech: mech || v.mech || null,
+      ...v, status: 'espera', progress: 0, cerrada: false, cost: cotizacionId ? (+montoCotizacion || 0) : 0, pending: null, entregado: false, motivo: trabajo, mech: mech || v.mech || null,
       color: color || v.color, tipoVeh, numOrden: nOrden,
       ingreso: now.toISOString().slice(0, 10), recepDamages: dmgs, recepLados: ladosCon,
-      recepcion: { fecha: now.toLocaleDateString('es-VE'), hora: now.toTimeString().slice(0, 5), tipoVeh, color, motivo, trabajo, prioridad: prio, combustible: comb, km: km || '—', accesorios: acc, documentos: docs, obs, via: 'App', firmaCli, firmaRec, numOrden: nOrden },
-      advances: [{ t: 'Vehículo recibido — recepción digital (app)', m: (motivo || trabajo) + ' · ' + dmgs.length + ' daño(s)', type: 'recep', ago: 'ahora' }],
+      recepcion: { fecha: now.toLocaleDateString('es-VE'), hora: now.toTimeString().slice(0, 5), tipoVeh, color, motivo, trabajo, prioridad: prio, combustible: comb, km: km || '—', accesorios: acc, documentos: docs, obs, via: 'App', firmaCli, firmaRec, numOrden: nOrden, cotizacionId: cotizacionId || null, cotizacionNum: cotizacionNum || null, montoCotizacion: cotizacionId ? (+montoCotizacion || 0) : 0, cotizacionItems: cotizacionId ? cotizacionItems : [] },
+      advances: [{ t: 'Vehículo recibido — recepción digital (app)', m: (motivo || trabajo) + ' · ' + dmgs.length + ' daño(s)' + (cotizacionId ? ' · cobre por cotización P-' + String(cotizacionNum || 0).padStart(6, '0') : ''), type: 'recep', ago: 'ahora' }],
     });
+    const cotsActualizadas = cotizacionId
+      ? (data.cotizaciones || []).map((c) => (c.id === cotizacionId ? { ...c, usadaRecepcion: true, vehIdRecepcion: vehId } : c))
+      : data.cotizaciones;
     // guarda también los catálogos nuevos (motivos/trabajos/marcas) para que la web los vea
-    guardar({ ...data, vehicles: vs, config: { ...cfg, motivos, trabajos, tiposDano: tipos, accesorios, ultimoNumOrden: nOrden } });
+    guardar({ ...data, vehicles: vs, cotizaciones: cotsActualizadas, config: { ...cfg, motivos, trabajos, tiposDano: tipos, accesorios, ultimoNumOrden: nOrden } });
     setDmg({ sup: [], front: [], izq: [], der: [], post: [] }); setMotivo(''); setTrabajo(''); setAcc([]); setDocs([]); setObs('');
     setFirmaCli(null); setFirmaRec(null); setKm(''); setMech(''); setColor(''); setTipoVeh('Automóvil');
+    setTipoIngreso('nuevo'); quitarCotizacion(); setBusquedaCot('');
     Alert.alert('Recepción registrada ✓', 'Se generó la Orden de Trabajo. El vehículo ya está en el módulo Órdenes.', [
       { text: 'Ver órdenes', onPress: onListo },
       { text: 'Registrar otra', onPress: () => { setCliente(''); setVehId(null); setPrio('Media'); setComb('½'); setDocs([]); if (scrollRef.current) scrollRef.current.scrollTo({ y: 0, animated: true }); } },
@@ -771,6 +831,39 @@ function Recepcion({ data, guardar, onListo }) {
 
   return (
     <ScrollView ref={scrollRef} contentContainerStyle={{ padding: 14 }}>
+      <Text style={s.label}>Tipo de recepción</Text>
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+        <TouchableOpacity style={[s.pillBtn, { flex: 1, alignItems: 'center' }, tipoIngreso !== 'cotizacion' && s.pillBtnOn]} onPress={() => setTipoIngreso('nuevo')}>
+          <Text style={[s.pillBtnT, tipoIngreso !== 'cotizacion' && { color: '#16191d' }]}>Nuevo Cliente</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[s.pillBtn, { flex: 1, alignItems: 'center' }, tipoIngreso === 'cotizacion' && s.pillBtnOn]} onPress={() => setTipoIngreso('cotizacion')}>
+          <Text style={[s.pillBtnT, tipoIngreso === 'cotizacion' && { color: '#16191d' }]}>Recepción por Cotización</Text>
+        </TouchableOpacity>
+      </View>
+
+      {tipoIngreso === 'cotizacion' ? (
+        cotizacionId ? (
+          <View style={{ backgroundColor: '#e8f6ec', borderRadius: 10, padding: 12, marginBottom: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View>
+              <Text style={{ fontWeight: '800', color: '#0F6E56' }}>Cobre por cotización P-{String(cotizacionNum || 0).padStart(6, '0')}</Text>
+              <Text style={s.muted}>Monto: {cur} {(+montoCotizacion || 0).toLocaleString('es-VE')}</Text>
+            </View>
+            <TouchableOpacity onPress={quitarCotizacion}><Text style={{ color: '#dc2626', fontWeight: '700' }}>Quitar</Text></TouchableOpacity>
+          </View>
+        ) : (
+          <View style={{ marginBottom: 14 }}>
+            <Text style={s.label}>Buscar cotización aprobada</Text>
+            <TextInput style={s.input} value={busquedaCot} onChangeText={setBusquedaCot} placeholder="N° de cotización, cliente o placa…" placeholderTextColor="#9aa3ad" />
+            {cotizacionesFiltradas.length ? cotizacionesFiltradas.slice(0, 8).map((c) => (
+              <TouchableOpacity key={c.id} onPress={() => elegirCotizacion(c)} style={{ paddingVertical: 10, borderBottomWidth: 1, borderColor: '#f0f2f5' }}>
+                <Text style={{ fontWeight: '700', color: '#16191d' }}>P-{String(c.num).padStart(6, '0')} — {c.cliente}</Text>
+                <Text style={s.muted}>{c.vehiculo || ''}{c.placa ? ' · ' + c.placa : ''} · {cur} {(+c.monto || 0).toLocaleString('es-VE')}</Text>
+              </TouchableOpacity>
+            )) : <Text style={s.muted}>No hay cotizaciones aprobadas disponibles con ese criterio.</Text>}
+          </View>
+        )
+      ) : null}
+
       <Dropdown label="Cliente" obligatorio value={cliente} placeholder="Selecciona el cliente"
         options={clients.map((c) => c.n)}
         meta={Object.fromEntries(clients.map((c) => [c.n, [c.tipoDoc, c.doc, c.tel, c.correo].filter(Boolean).join(' · ')]))}
@@ -1120,7 +1213,6 @@ function Cotizaciones({ data, guardar, cur, loading, recargar, taller, onNav }) 
   }));
   const cotsPropias = data.cotizaciones || [];
   const todas = [...cotsPropias.filter((c) => c.estado !== 'inactiva'), ...cotsCitas];
-
   const [crear, setCrear] = React.useState(false);
   const [editar, setEditar] = React.useState(null);
   const [q, setQ] = React.useState('');
@@ -1143,6 +1235,8 @@ function Cotizaciones({ data, guardar, cur, loading, recargar, taller, onNav }) 
   const todasFiltradas = buscar.trim()
     ? todas.filter((c) => norm((c.num ? 'P-' + String(c.num).padStart(6, '0') : '') + ' ' + (c.cliente || '') + ' ' + (c.doc || '')).includes(norm(buscar)))
     : todas;
+  const pendientesFiltradas = todasFiltradas.filter((c) => c.estado !== 'aprobada');
+  const aprobadasFiltradas = todasFiltradas.filter((c) => c.estado === 'aprobada');
 
   const abrirCrear = () => { setCli(null); setVeh(null); setItems([]); setItN(''); setItP(''); setItTipo('servicio'); setItDetalle(''); setDescuento(''); setQ(''); setEditar(null); setCrear(true); };
   const abrirEditar = (c) => {
@@ -1184,6 +1278,17 @@ function Cotizaciones({ data, guardar, cur, loading, recargar, taller, onNav }) 
     ]);
   };
 
+  const aprobarCotizacionAdmin = (c) => {
+    Alert.alert('Aprobar cotización', '¿Aprobar esta cotización sin la autorización del cliente?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Aprobar', onPress: () => guardar({
+          ...data, cotizaciones: (data.cotizaciones || []).map((x) => (x.id === c.id ? { ...x, estado: 'aprobada', aprobadoPor: 'admin', fechaAprobacion: new Date().toLocaleDateString('es-VE') } : x)),
+        }),
+      },
+    ]);
+  };
+
   const compartirCotiza = (c) => {
     const nombreTaller = taller ? taller.nombre : 'TallerOS';
     let txt = '🧾 COTIZACIÓN' + (c.num ? ' P-' + String(c.num).padStart(6, '0') : '') + '\n' + nombreTaller + '\n\n';
@@ -1206,8 +1311,8 @@ function Cotizaciones({ data, guardar, cur, loading, recargar, taller, onNav }) 
         <Text style={s.btnT}>＋ Nueva cotización</Text>
       </TouchableOpacity>
 
-      {!todasFiltradas.length ? <Text style={s.muted}>{buscar.trim() ? 'No se encontraron cotizaciones.' : 'Aún no hay cotizaciones. Crea una nueva o llegan desde las citas.'}</Text> : null}
-      {todasFiltradas.map((c) => (
+      {!pendientesFiltradas.length ? <Text style={s.muted}>{buscar.trim() ? 'No se encontraron cotizaciones pendientes.' : 'Aún no hay cotizaciones por aprobar.'}</Text> : null}
+      {pendientesFiltradas.map((c) => (
         <View key={c.id} style={s.card}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <Text style={{ fontSize: 15, fontWeight: '800', color: '#0F6E56' }}>🧾 {c.num ? 'P-' + String(c.num).padStart(6, '0') : (c.origen === 'cita' ? 'Desde cita' : '')}</Text>
@@ -1219,8 +1324,27 @@ function Cotizaciones({ data, guardar, cur, loading, recargar, taller, onNav }) 
           <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
             <TouchableOpacity style={[s.act, { flex: 1, backgroundColor: '#e8f6ec' }]} onPress={() => compartirCotiza(c)}><Text style={[s.actT, { color: '#0F6E56' }]}>💬 Compartir</Text></TouchableOpacity>
             {c.origen !== 'cita' ? <TouchableOpacity style={[s.act, { flex: 1, backgroundColor: '#fdf3e0' }]} onPress={() => taller && compartirCotizacionPDF(taller.id, c)}><Text style={[s.actT, { color: '#b45309' }]}>📄 PDF</Text></TouchableOpacity> : null}
+            {c.origen !== 'cita' ? <TouchableOpacity style={[s.act, { backgroundColor: '#e8f6ec' }]} onPress={() => aprobarCotizacionAdmin(c)}><Text style={[s.actT, { color: '#0F6E56' }]}>✅ Aprobar</Text></TouchableOpacity> : null}
             {c.origen !== 'cita' ? <TouchableOpacity style={[s.act, { flex: 1 }]} onPress={() => abrirEditar(c)}><Text style={s.actT}>✏️ Editar</Text></TouchableOpacity> : null}
             {c.origen !== 'cita' ? <TouchableOpacity style={[s.act, { backgroundColor: '#fdecec', paddingHorizontal: 14 }]} onPress={() => inactivar(c)}><Text style={[s.actT, { color: '#dc2626' }]}>Inactivar</Text></TouchableOpacity> : null}
+          </View>
+        </View>
+      ))}
+
+      <Text style={[s.label, { marginTop: 18, marginBottom: 10, fontSize: 14, fontWeight: '800', color: '#16406b' }]}>Historial de cotizaciones aprobadas</Text>
+      {!aprobadasFiltradas.length ? <Text style={s.muted}>Aún no hay cotizaciones aprobadas.</Text> : null}
+      {aprobadasFiltradas.map((c) => (
+        <View key={c.id} style={s.card}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={{ fontSize: 15, fontWeight: '800', color: '#0F6E56' }}>🧾 {c.num ? 'P-' + String(c.num).padStart(6, '0') : ''}</Text>
+            <Text style={{ fontWeight: '800', color: '#16191d' }}>{cur} {(+c.monto || 0).toLocaleString('es-VE')}</Text>
+          </View>
+          <Text style={s.muted}>👤 {c.cliente}</Text>
+          {c.vehiculo ? <Text style={s.muted}>🚗 {c.vehiculo}{c.placa ? ' · ' + c.placa : ''}</Text> : null}
+          <Text style={s.muted}>Aprobada por {c.aprobadoPor === 'admin' ? 'el taller' : 'el cliente'}{c.fechaAprobacion ? ' el ' + c.fechaAprobacion : ''}</Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+            <TouchableOpacity style={[s.act, { flex: 1, backgroundColor: '#e8f6ec' }]} onPress={() => compartirCotiza(c)}><Text style={[s.actT, { color: '#0F6E56' }]}>💬 Compartir</Text></TouchableOpacity>
+            <TouchableOpacity style={[s.act, { flex: 1, backgroundColor: '#fdf3e0' }]} onPress={() => taller && compartirCotizacionPDF(taller.id, c)}><Text style={[s.actT, { color: '#b45309' }]}>📄 PDF</Text></TouchableOpacity>
           </View>
         </View>
       ))}

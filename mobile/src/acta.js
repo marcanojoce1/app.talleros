@@ -110,6 +110,75 @@ export async function compartirCotizacionPDF(tallerId, cot) {
   }
 }
 
+// Comparte el resumen en PDF de los vehículos en espera (Órdenes de Taller)
+export async function compartirResumenEsperaPDF(tallerId) {
+  const base = getApiUrl();
+  if (!base) { Alert.alert('Servidor no configurado', 'Cierra sesión y escribe la dirección del servidor en la pantalla de inicio.'); return; }
+  const titulo = 'Resumen de espera';
+  const Print = cargarModulo('print');
+  const Sharing = cargarModulo('sharing');
+  const urlDoc = `${base}/api/resumen-espera/${tallerId}`;
+
+  if (!Print || !Print.printToFileAsync) {
+    Alert.alert(titulo, 'Se abrirá en el navegador. Desde ahí puedes imprimirlo, guardarlo como PDF o compartirlo.', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Abrir', onPress: () => Linking.openURL(urlDoc).catch(() => Alert.alert('No se pudo abrir', urlDoc)) },
+    ]);
+    return;
+  }
+  try {
+    let html;
+    try {
+      const token = await getToken();
+      const res = await fetch(`${urlDoc}?raw=1`, { headers: token ? { Authorization: 'Bearer ' + token } : {} });
+      if (!res.ok) throw new Error('servidor ' + res.status);
+      html = await res.text();
+    } catch (netErr) {
+      Alert.alert('Sin conexión', 'No se pudo obtener el documento del servidor.\n\n' + (netErr.message || ''), [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Abrir en navegador', onPress: () => Linking.openURL(urlDoc).catch(() => {}) },
+      ]);
+      return;
+    }
+    if (!html || html.length < 100) { Alert.alert(titulo, 'El documento aún no tiene contenido.'); return; }
+    let uri;
+    try {
+      const out = await Print.printToFileAsync({ html, base64: false });
+      uri = out && out.uri;
+    } catch (pdfErr) {
+      Alert.alert('No se pudo crear el PDF', (pdfErr.message || '') + '\n\nPuedes abrirlo en el navegador.', [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Abrir en navegador', onPress: () => Linking.openURL(urlDoc).catch(() => {}) },
+      ]);
+      return;
+    }
+    if (!uri) { Alert.alert('No se pudo crear el PDF', 'El archivo salió vacío.'); return; }
+    try {
+      const FS = cargarModulo('fs');
+      if (FS && FS.moveAsync && FS.cacheDirectory) {
+        const destino = FS.cacheDirectory + 'Resumen_espera_' + new Date().toISOString().slice(0, 10) + '.pdf';
+        try { if (FS.deleteAsync) await FS.deleteAsync(destino, { idempotent: true }); } catch (e) {}
+        await FS.moveAsync({ from: uri, to: destino });
+        uri = destino;
+      }
+    } catch (e) {}
+    let puedeCompartir = false;
+    try { puedeCompartir = Sharing && Sharing.isAvailableAsync ? await Sharing.isAvailableAsync() : false; } catch (e) { puedeCompartir = false; }
+    if (puedeCompartir) {
+      await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: titulo, UTI: 'com.adobe.pdf' });
+    } else if (Print.printAsync) {
+      await Print.printAsync({ uri });
+    } else {
+      Alert.alert(titulo, 'PDF generado en:\n' + uri);
+    }
+  } catch (e) {
+    Alert.alert('Error', (e && e.message) || 'No se pudo generar el documento.', [
+      { text: 'Cerrar', style: 'cancel' },
+      { text: 'Abrir en navegador', onPress: () => Linking.openURL(urlDoc).catch(() => {}) },
+    ]);
+  }
+}
+
 // Genera el PDF y abre el menú de compartir. Si no se puede, ofrece el navegador.
 export async function compartirActaPDF(tallerId, veh, tipo = 'acta') {
   const base = getApiUrl();
