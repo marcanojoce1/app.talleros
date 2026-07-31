@@ -177,6 +177,26 @@ export default function AdminHomeScreen({ navigation, route }) {
   // original: se le pide al admin que escriba la contraseña que quiere compartir (ej. la
   // misma que siempre usa), se guarda, y se comparte esa — así el cliente/técnico entra
   // con una contraseña conocida y luego la puede cambiar.
+  // Si nunca se guardó una contraseña (cuentas antiguas), se genera una automáticamente
+  // sin preguntar nada, se guarda, y de ahí en adelante siempre se reutiliza esa misma.
+  const asegurarClaveYCompartir = async (item, rol, rolTxt) => {
+    let clave = item.claveActual;
+    if (!clave) {
+      clave = 'Taller' + Math.floor(1000 + Math.random() * 9000);
+      try {
+        await api('/api/talleres/' + taller.id + '/cuenta', {
+          method: 'PUT',
+          body: JSON.stringify({ usuario: item.usuario, nombre: item.n, rol, telefono: item.tel, password: clave }),
+        });
+        const arrKey = rol === 'cliente' ? 'clients' : 'mecanicos';
+        const arr = (data[arrKey] || []).map((x) => (x.id === item.id ? { ...x, claveActual: clave } : x));
+        guardar({ ...data, [arrKey]: arr });
+      } catch (e) {
+        Alert.alert('Error', 'No se pudo preparar el acceso: ' + e.message); return;
+      }
+    }
+    compartirAcceso({ nombreTaller: taller && taller.nombre, nombre: item.n, usuario: item.usuario, clave, rolTxt, tel: item.tel });
+  };
   const regenerarYCompartir = async (item, rol, rolTxt) => {
     const clave = (passPromptValor || '').trim();
     if (clave.length < 6) { Alert.alert('Contraseña muy corta', 'Debe tener al menos 6 caracteres.'); return; }
@@ -388,7 +408,7 @@ export default function AdminHomeScreen({ navigation, route }) {
               const opciones = [
                 { text: 'Editar', onPress: () => setModal({ tipo: 'cliente', item }) },
               ];
-              if (item.usuario) opciones.push({ text: '💬 Compartir acceso', onPress: () => { if (item.claveActual) { compartirAcceso({ nombreTaller: taller && taller.nombre, nombre: item.n, usuario: item.usuario, clave: item.claveActual, rolTxt: 'cliente', tel: item.tel }); } else { setPassPromptValor(''); setPassPrompt({ item, rol: 'cliente', rolTxt: 'cliente' }); } } });
+              if (item.usuario) opciones.push({ text: '💬 Compartir acceso', onPress: () => asegurarClaveYCompartir(item, 'cliente', 'cliente') });
               opciones.push({ text: item.activo === false ? 'Activar' : 'Inactivar', style: item.activo === false ? 'default' : 'destructive', onPress: () => toggleActivo('cliente', item) });
               opciones.push({ text: 'Cancelar', style: 'cancel' });
               Alert.alert(item.n, item.usuario ? 'Acceso: ' + item.usuario : 'Sin acceso a la app', opciones);
@@ -417,7 +437,7 @@ export default function AdminHomeScreen({ navigation, route }) {
               const opciones = [
                 { text: 'Editar', onPress: () => setModal({ tipo: 'mecanico', item }) },
               ];
-              if (item.usuario) opciones.push({ text: '💬 Compartir acceso', onPress: () => { if (item.claveActual) { compartirAcceso({ nombreTaller: taller && taller.nombre, nombre: item.n, usuario: item.usuario, clave: item.claveActual, rolTxt: 'técnico', tel: item.tel }); } else { setPassPromptValor(''); setPassPrompt({ item, rol: 'mecanico', rolTxt: 'técnico' }); } } });
+              if (item.usuario) opciones.push({ text: '💬 Compartir acceso', onPress: () => asegurarClaveYCompartir(item, 'mecanico', 'técnico') });
               opciones.push({ text: item.activo === false ? 'Activar' : 'Inactivar', style: item.activo === false ? 'default' : 'destructive', onPress: () => toggleActivo('mecanico', item) });
               opciones.push({ text: 'Cancelar', style: 'cancel' });
               Alert.alert(item.n, item.usuario ? 'Acceso: ' + item.usuario : 'Sin acceso a la app', opciones);
