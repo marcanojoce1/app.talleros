@@ -71,11 +71,38 @@ router.get('/', async (req, res) => {
 });
 
 // PUT /api/state?taller=ID   { data: {...} }
+// IMPORTANTE: antes esto REEMPLAZABA todo el estado de golpe. Si dos sesiones trabajan
+// casi al mismo tiempo (la web y la app, o dos pestañas), la que guarda de último borraba
+// silenciosamente lo que la otra había agregado mientras tanto (ej. una cotización nueva
+// desaparecía si luego la app guardaba un cambio de vehículo desde una copia más vieja).
+// Ahora se fusiona por "id" en cada colección: se agregan/actualizan los elementos que
+// llegan, pero nunca se pierde uno que ya existía en el servidor y que el cliente que
+// guarda no conocía todavía.
+function fusionarPorId(actual, entrante) {
+  if (!Array.isArray(entrante)) return Array.isArray(actual) ? actual : [];
+  if (!Array.isArray(actual)) return entrante;
+  const mapa = new Map(actual.map((x) => [x && x.id, x]));
+  entrante.forEach((x) => { if (x && x.id != null) mapa.set(x.id, x); });
+  return Array.from(mapa.values());
+}
+const COLECCIONES_POR_ID = ['clients', 'vehicles', 'mecanicos', 'usuarios', 'history', 'citas', 'cotizaciones', 'notifs', 'facturas', 'sos'];
+
 router.put('/', async (req, res) => {
   const tallerId = Number(req.query.taller);
   if (!tallerId) return res.status(400).json({ error: 'Falta el taller' });
   if (!(await puedeAcceder(req.user, tallerId, true))) return res.status(403).json({ error: 'Sin permiso para modificar este taller' });
-  const data = JSON.stringify(req.body.data || {});
+  const entrante = req.body.data || {};
+
+  const filaActual = (await query('SELECT data FROM app_state WHERE taller_id=$1', [tallerId])).rows[0];
+  let actual = {};
+  if (filaActual && filaActual.data) { try { actual = JSON.parse(filaActual.data); } catch { actual = {}; } }
+
+  const fusionado = { ...actual, ...entrante };
+  COLECCIONES_POR_ID.forEach((k) => { fusionado[k] = fusionarPorId(actual[k], entrante[k]); });
+  fusionado.config = entrante.config || actual.config;
+  fusionado.diasBloqueados = entrante.diasBloqueados || actual.diasBloqueados || [];
+
+  const data = JSON.stringify(fusionado);
   await query(
     `INSERT INTO app_state (taller_id, data, updated_at) VALUES ($1,$2,CURRENT_TIMESTAMP)
      ON CONFLICT (taller_id) DO UPDATE SET data=$2, updated_at=CURRENT_TIMESTAMP`,

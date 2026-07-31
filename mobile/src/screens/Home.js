@@ -111,7 +111,8 @@ export default function HomeScreen({ navigation, route }) {
   const [citaObs, setCitaObs] = useState('');
   const [citaVeh, setCitaVeh] = useState(null);
   const [citaEnviando, setCitaEnviando] = useState(false);
-  const [citaVer, setCitaVer] = useState(null); // cotización que el cliente está revisando
+  const [citaVer, setCitaVer] = useState(null); // cotización (de cita) que el cliente está revisando
+  const [cotizaVer, setCotizaVer] = useState(null); // cotización (directa) que el cliente está revisando
 
   const cargar = useCallback(async () => {
     setError('');
@@ -153,6 +154,7 @@ export default function HomeScreen({ navigation, route }) {
   const horaOcupada = (fecha, hora) => ocupadas.some((c) => c.fecha === fecha && c.hora === hora);
   const miHistorial = history.filter((h) => (h.cliente || '') === me.nombre);
   const misNotifs = notifs.filter((n) => (n.owner || '') === me.nombre);
+  const misCotizacionesPendientes = (data.cotizaciones || []).filter((c) => c.cliente === me.nombre && c.estado !== 'aprobada' && c.estado !== 'inactiva');
   const sinLeer = misNotifs.filter((n) => !n.read || mantVigente(n)).length;
 
   const fondo = esTécnico ? '#f3f5f7' : '#eef3fb'; // el cliente ve un fondo azulado
@@ -362,6 +364,12 @@ export default function HomeScreen({ navigation, route }) {
       cargar();
     } catch (e) { Alert.alert('Error', (e && e.message) || 'No se pudo responder.'); }
   };
+  const aprobarCotizacion = async (cot) => {
+    const arr = (data.cotizaciones || []).map((c) => (c.id === cot.id ? { ...c, estado: 'aprobada', aprobadoPor: 'cliente', fechaAprobacion: new Date().toLocaleDateString('es-VE') } : c));
+    await guardar({ ...data, cotizaciones: arr });
+    setCotizaVer(null);
+    Alert.alert('¡Cotización aprobada! ✅', 'El taller ya puede proceder con el trabajo.');
+  };
   return (
     <View style={[s.wrap, { backgroundColor: fondo }]}>
       <Header titulo="Mi vehículo" sub={taller ? taller.nombre : ''} />
@@ -380,6 +388,16 @@ export default function HomeScreen({ navigation, route }) {
             <View style={{ flex: 1 }}>
               <Text style={{ fontWeight: '800', color: '#166534', fontSize: 14 }}>Cotización lista para tu cita</Text>
               <Text style={{ color: '#3a4048', fontSize: 12.5, marginTop: 2 }}>{c.servicio} · {c.fecha} {c.hora} · {cur} {(+c.monto || 0).toLocaleString('es-VE')} — toca para revisar</Text>
+            </View>
+          </TouchableOpacity>
+        ))}
+
+        {misCotizacionesPendientes.map((c) => (
+          <TouchableOpacity key={c.id} style={s.citaAviso} onPress={() => setCotizaVer(c)}>
+            <Text style={{ fontSize: 24 }}>🧾</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontWeight: '800', color: '#166534', fontSize: 14 }}>Tienes una cotización por aprobar</Text>
+              <Text style={{ color: '#3a4048', fontSize: 12.5, marginTop: 2 }}>{c.vehiculo || ''} · {cur} {(+c.monto || 0).toLocaleString('es-VE')} — toca para revisar</Text>
             </View>
           </TouchableOpacity>
         ))}
@@ -602,6 +620,39 @@ export default function HomeScreen({ navigation, route }) {
                   </TouchableOpacity>
                   <TouchableOpacity style={[s.citaBtn, { flex: 1, backgroundColor: '#16a34a' }]} onPress={() => responderCita(citaVer, true)}>
                     <Text style={s.citaBtnT}>Aceptar cita</Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={!!cotizaVer} transparent animationType="slide" onRequestClose={() => setCotizaVer(null)}>
+        <View style={s.modalWrap}>
+          <View style={s.modalCard}>
+            <View style={s.modalHead}>
+              <Text style={s.modalTitle}>🧾 Cotización</Text>
+              <TouchableOpacity onPress={() => setCotizaVer(null)}><Text style={{ fontSize: 22, color: '#6b7480' }}>✕</Text></TouchableOpacity>
+            </View>
+            {cotizaVer ? (
+              <ScrollView style={{ maxHeight: 460 }}>
+                {cotizaVer.num ? <View style={s.cotizaFila}><Text style={s.cotizaK}>N°</Text><Text style={s.cotizaV}>P-{String(cotizaVer.num).padStart(6, '0')}</Text></View> : null}
+                {cotizaVer.vehiculo ? <View style={s.cotizaFila}><Text style={s.cotizaK}>Vehículo</Text><Text style={s.cotizaV}>{cotizaVer.vehiculo} {cotizaVer.placa ? '· ' + cotizaVer.placa : ''}</Text></View> : null}
+                <Text style={[s.citaLabel, { marginTop: 14 }]}>Servicios y repuestos</Text>
+                {(cotizaVer.items || []).length ? (cotizaVer.items || []).map((r, i) => (
+                  <View key={i} style={s.repuestoFila}>
+                    <Text style={{ flex: 1, color: '#3a4048' }}>{r.tipo === 'repuesto' ? '🔩' : '🔧'} {r.n}</Text>
+                    <Text style={{ fontWeight: '700', color: '#16191d' }}>{cur} {(+r.p || 0).toLocaleString('es-VE')}</Text>
+                  </View>
+                )) : <Text style={s.muted}>Sin ítems detallados.</Text>}
+                <View style={s.totalFila}>
+                  <Text style={{ fontSize: 16, fontWeight: '800', color: '#16191d' }}>TOTAL</Text>
+                  <Text style={{ fontSize: 18, fontWeight: '800', color: '#0F6E56' }}>{cur} {(+cotizaVer.monto || 0).toLocaleString('es-VE')}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 18 }}>
+                  <TouchableOpacity style={[s.citaBtn, { flex: 1, backgroundColor: '#16a34a' }]} onPress={() => aprobarCotizacion(cotizaVer)}>
+                    <Text style={s.citaBtnT}>✅ Aprobar cotización</Text>
                   </TouchableOpacity>
                 </View>
               </ScrollView>

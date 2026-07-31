@@ -1,9 +1,30 @@
 // GET /api/acta/:tallerId/:vehId  → devuelve el ACTA en HTML (imprimible / PDF)
 const express = require('express');
 const { query } = require('../db');
-const { generarActaHTML, generarTrabajoHTML, generarCotizacionHTML } = require('../services/acta');
+const { generarActaHTML, generarTrabajoHTML, generarCotizacionHTML, generarResumenEsperaHTML } = require('../services/acta');
 
 const router = express.Router();
+
+// GET /api/resumen-espera/:tallerId → resumen en HTML/PDF de los vehículos en espera
+router.get('/resumen-espera/:tallerId', async (req, res) => {
+  const tallerId = Number(req.params.tallerId);
+  try {
+    const taller = (await query('SELECT * FROM talleres WHERE id=$1', [tallerId])).rows[0] || { nombre: 'TallerOS' };
+    const st = (await query('SELECT data FROM app_state WHERE taller_id=$1', [tallerId])).rows[0];
+    let d = st ? st.data : {}; if (typeof d === 'string') { try { d = JSON.parse(d); } catch { d = {}; } }
+    const hoy = new Date();
+    const items = (d.vehicles || []).filter((v) => v.activo !== false && v.recepcion && (!v.status || v.status === 'espera' || v.status === 'reprog')).map((v) => {
+      const ing = v.ingreso ? new Date(v.ingreso) : hoy;
+      const dias = Math.max(0, Math.round((hoy - ing) / 86400000));
+      return { ...v, dias };
+    });
+    let html = generarResumenEsperaHTML({ taller, items });
+    if (req.query.raw) html = html.replace(/<!--TOOLBAR_START-->[\s\S]*?<!--TOOLBAR_END-->/, '');
+    res.set('Content-Type', 'text/html; charset=utf-8').send(html);
+  } catch (e) {
+    res.status(500).send('<h3>Error al generar el resumen: ' + e.message + '</h3>');
+  }
+});
 
 // GET /api/cotizacion/:tallerId/:cotId → devuelve la COTIZACIÓN en HTML (imprimible / PDF)
 router.get('/cotizacion/:tallerId/:cotId', async (req, res) => {

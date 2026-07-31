@@ -248,6 +248,7 @@ function generarActaHTML(o = {}) {
       </div>
     </div>
 
+    ${r.cotizacionId ? `<div style="padding:8px 10px;border-bottom:1.5px solid #111;background:#eef8f0"><b>💰 Cobre por cotización P-${String(r.cotizacionNum || 0).padStart(6, '0')}</b> — Monto: ${esc(mon || 'Bs.')} ${Number(r.montoCotizacion || 0).toLocaleString('es-VE')}</div>` : ''}
     ${r.obs && r.obs !== '—' ? `<div style="padding:8px 10px;border-bottom:1.5px solid #111"><b>Observaciones:</b> ${esc(r.obs)}</div>` : ''}
 
     <div class="cond">
@@ -457,4 +458,42 @@ function generarCotizacionHTML(o = {}) {
 </body></html>`;
 }
 
-module.exports = { generarActaHTML, generarTrabajoHTML, generarCotizacionHTML };
+// ===================== RESUMEN DE ESPERA =====================
+// Lista simple en PDF de los vehículos que están en espera de recepción/reparación,
+// para compartir un resumen rápido del taller (ej. a otro turno o al dueño del taller).
+function generarResumenEsperaHTML(o = {}) {
+  const taller = o.taller || {};
+  const items = o.items || [];
+  const fila = (v) => `<tr>
+    <td>${esc(v.model || '')}</td><td>${esc(v.plate || '')}</td><td>${esc(v.owner || '')}</td>
+    <td>${esc(v.motivo || '')}</td><td>${esc(v.dias || 0)} día(s)</td>
+  </tr>`;
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Resumen de espera</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; margin: 0; padding: 16px; font-size: 12px; background: #fff; }
+  .sheet { max-width: 780px; margin: 0 auto; }
+  .head { border-bottom: 2px solid #16406b; padding-bottom: 10px; margin-bottom: 14px; }
+  .head h1 { margin: 0; font-size: 19px; color: #16406b; }
+  .head .sub { font-size: 10px; color: #666; }
+  table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+  th { background: #16406b; color: #fff; padding: 6px 8px; text-align: left; }
+  td { border-bottom: 1px solid #e2e6ea; padding: 6px 8px; }
+  .toolbar { max-width: 780px; margin: 0 auto 10px; }
+  .toolbar button { width: 100%; padding: 12px; border: 0; border-radius: 10px; font-weight: bold; font-size: 14px; cursor: pointer; background: #F5B700; color: #16191d; }
+  @media print { .noprint { display: none; } body { padding: 0; } }
+</style></head>
+<body>
+  <!--TOOLBAR_START--><div class="toolbar noprint"><button onclick="window.print()">🖨️ Imprimir / Guardar PDF</button></div><!--TOOLBAR_END-->
+  <div class="sheet">
+    <div class="head"><h1>${esc(taller.nombre || 'TallerOS')} — Vehículos en espera</h1><div class="sub">Generado el ${new Date().toLocaleString('es-VE')} · ${items.length} vehículo(s)</div></div>
+    <table><tr><th>Vehículo</th><th>Placa</th><th>Cliente</th><th>Motivo</th><th>Días en taller</th></tr>
+      ${items.length ? items.map(fila).join('') : '<tr><td colspan="5" style="text-align:center;color:#888;padding:14px">No hay vehículos en espera.</td></tr>'}
+    </table>
+  </div>
+</body></html>`;
+}
+
+module.exports = { generarActaHTML, generarTrabajoHTML, generarCotizacionHTML, generarResumenEsperaHTML };
