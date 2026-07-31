@@ -700,6 +700,7 @@ function Dashboard({ data, cur, kpis, V, loading, recargar }) {
 
 /* =================== RECEPCIÓN (todo en listas desplegables, como la web) =================== */
 function Recepcion({ data, guardar, onListo }) {
+  const cur = (data.config && data.config.currency && data.config.currency.sym) || 'Bs.';
   const cfg = data.config || {};
   const vehicles = data.vehicles || [];
   const clients = (data.clients || []).filter((c) => c.activo !== false);
