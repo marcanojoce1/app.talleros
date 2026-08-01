@@ -625,7 +625,7 @@ function Dashboard({ data, cur, kpis, V, loading, recargar }) {
   const totalHonorarios = hist.reduce((a, h) => a + (h.honorario ? (+h.honorario.monto || 0) : 0), 0);
   const totalNeto = totalCobrado - totalHonorarios;
   const cotActivas = [
-    ...(data.cotizaciones || []).filter((c) => c.estado !== 'inactiva'),
+    ...(data.cotizaciones || []).filter((c) => c.estado !== 'inactiva' && c.estado !== 'aprobada'),
     ...(data.citas || []).filter((c) => c.estado === 'cotizada').map((c) => ({ monto: c.monto, cliente: c.cliente, items: c.repuestos })),
   ];
   const totalCotiza = cotActivas.reduce((a, c) => a + (+c.monto || 0), 0);
@@ -835,7 +835,7 @@ function Recepcion({ data, guardar, onListo }) {
       <Text style={s.label}>Tipo de recepción</Text>
       <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
         <TouchableOpacity style={[s.pillBtn, { flex: 1, alignItems: 'center' }, tipoIngreso !== 'cotizacion' && s.pillBtnOn]} onPress={() => setTipoIngreso('nuevo')}>
-          <Text style={[s.pillBtnT, tipoIngreso !== 'cotizacion' && { color: '#16191d' }]}>Nuevo Cliente</Text>
+          <Text style={[s.pillBtnT, tipoIngreso !== 'cotizacion' && { color: '#16191d' }]}>Nueva Recepción</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[s.pillBtn, { flex: 1, alignItems: 'center' }, tipoIngreso === 'cotizacion' && s.pillBtnOn]} onPress={() => setTipoIngreso('cotizacion')}>
           <Text style={[s.pillBtnT, tipoIngreso === 'cotizacion' && { color: '#16191d' }]}>Recepción por Cotización</Text>
@@ -855,12 +855,12 @@ function Recepcion({ data, guardar, onListo }) {
           <View style={{ marginBottom: 14 }}>
             <Text style={s.label}>Buscar cotización aprobada</Text>
             <TextInput style={s.input} value={busquedaCot} onChangeText={setBusquedaCot} placeholder="N° de cotización, cliente o placa…" placeholderTextColor="#9aa3ad" />
-            {cotizacionesFiltradas.length ? cotizacionesFiltradas.slice(0, 8).map((c) => (
-              <TouchableOpacity key={c.id} onPress={() => elegirCotizacion(c)} style={{ paddingVertical: 10, borderBottomWidth: 1, borderColor: '#f0f2f5' }}>
-                <Text style={{ fontWeight: '700', color: '#16191d' }}>P-{String(c.num).padStart(6, '0')} — {c.cliente}</Text>
-                <Text style={s.muted}>{c.vehiculo || ''}{c.placa ? ' · ' + c.placa : ''} · {cur} {(+c.monto || 0).toLocaleString('es-VE')}</Text>
-              </TouchableOpacity>
-            )) : <Text style={s.muted}>No hay cotizaciones aprobadas disponibles con ese criterio.</Text>}
+            <Dropdown
+              label="Cotización aprobada" value=""
+              options={cotizacionesFiltradas.map((c) => 'P-' + String(c.num).padStart(6, '0') + ' — ' + c.cliente + (c.vehiculo ? ' — ' + c.vehiculo : '') + ' — ' + cur + ' ' + (+c.monto || 0).toLocaleString('es-VE'))}
+              onChange={(label) => { const num = label.match(/^P-(\d+)/); const c = cotizacionesFiltradas.find((x) => num && x.num === +num[1]); if (c) elegirCotizacion(c); }}
+              placeholder={cotizacionesFiltradas.length ? 'Selecciona la cotización' : 'Ninguna coincide con la búsqueda'}
+              textoVacio="No hay cotizaciones aprobadas disponibles." />
           </View>
         )
       ) : null}
@@ -1446,6 +1446,9 @@ function CitasProgramadas({ data, guardar, cur, loading, recargar, taller }) {
   const [reps, setReps] = React.useState([]);
   const [repN, setRepN] = React.useState('');
   const [repP, setRepP] = React.useState('');
+  const [repTipo, setRepTipo] = React.useState('servicio');
+  const [repDetalle, setRepDetalle] = React.useState('');
+  const [descuentoCita, setDescuentoCita] = React.useState('');
   const [guardando, setGuardando] = React.useState(false);
   const [verBloqueo, setVerBloqueo] = React.useState(false);
   const diasBloqueados = data.diasBloqueados || [];
@@ -1465,22 +1468,22 @@ function CitasProgramadas({ data, guardar, cur, loading, recargar, taller }) {
   const abrirCotizar = (c) => {
     setCotizar(c);
     setReps(c.repuestos && c.repuestos.length ? [...c.repuestos] : []);
-    setRepN(''); setRepP('');
+    setRepN(''); setRepP(''); setRepTipo('servicio'); setRepDetalle(''); setDescuentoCita(c.descuento ? String(c.descuento) : '');
   };
   const agregarRep = () => {
-    if (!repN.trim()) { Alert.alert('Falta', 'Nombre del repuesto o trabajo.'); return; }
-    setReps([...reps, { n: repN.trim(), p: +repP || 0 }]);
-    setRepN(''); setRepP('');
+    if (!repN.trim()) { Alert.alert('Falta', 'Nombre del servicio o repuesto.'); return; }
+    setReps([...reps, { n: repN.trim(), p: +repP || 0, cant: 1, tipo: repTipo, detalle: repDetalle.trim() }]);
+    setRepN(''); setRepP(''); setRepDetalle('');
   };
   const quitarRep = (i) => setReps(reps.filter((_, k) => k !== i));
-  const totalCotiza = reps.reduce((a, r) => a + (+r.p || 0), 0);
+  const totalCotiza = reps.reduce((a, r) => a + (+r.p || 0) * (+r.cant || 1), 0) - (+descuentoCita || 0);
 
   const confirmarCotizacion = async () => {
-    if (!reps.length) { Alert.alert('Falta', 'Agrega al menos un repuesto o trabajo a la cotización.'); return; }
+    if (!reps.length) { Alert.alert('Falta', 'Agrega al menos un servicio o repuesto a la cotización.'); return; }
     setGuardando(true);
     try {
-      await api('/api/state/cita-cotizar?taller=' + taller.id, { method: 'POST', body: JSON.stringify({ id: cotizar.id, repuestos: reps, monto: totalCotiza }) });
-      setCotizar(null); setGuardando(false);
+      await api('/api/state/cita-cotizar?taller=' + taller.id, { method: 'POST', body: JSON.stringify({ id: cotizar.id, repuestos: reps, monto: totalCotiza, descuento: +descuentoCita || 0 }) });
+      setCotizar(null); setGuardando(false); setDescuentoCita(''); setRepTipo('servicio');
       Alert.alert('Cotización enviada ✓', 'El cliente recibió la cotización por ' + cur + ' ' + totalCotiza.toLocaleString('es-VE') + ' y podrá aceptarla o rechazarla.');
       recargar();
     } catch (e) { setGuardando(false); Alert.alert('Error', (e && e.message) || 'No se pudo enviar.'); }
@@ -1558,10 +1561,10 @@ function CitasProgramadas({ data, guardar, cur, loading, recargar, taller }) {
                       {c.observaciones ? <Text style={s.muted}>📝 {c.observaciones}</Text> : null}
                     </View>
 
-                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#16191d', marginBottom: 8 }}>Repuestos y trabajos</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#16191d', marginBottom: 8 }}>Servicios y repuestos</Text>
                     {reps.map((r, i) => (
                       <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6, borderBottomWidth: 1, borderColor: '#f0f2f5' }}>
-                        <Text style={{ flex: 1, color: '#3a4048' }}>{r.n}</Text>
+                        <Text style={{ flex: 1, color: '#3a4048' }}>{r.tipo === 'repuesto' ? '🔩' : '🔧'} {r.n}{r.detalle ? ' — ' + r.detalle : ''}</Text>
                         <Text style={{ fontWeight: '700', color: '#16191d' }}>{cur} {(+r.p || 0).toLocaleString('es-VE')}</Text>
                         <TouchableOpacity onPress={() => quitarRep(i)} style={{ backgroundColor: '#fdecec', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
                           <Text style={{ color: '#dc2626', fontWeight: '800' }}>✕</Text>
@@ -1569,12 +1572,20 @@ function CitasProgramadas({ data, guardar, cur, loading, recargar, taller }) {
                       </View>
                     ))}
                     <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
-                      <TextInput style={[s.input, { flex: 1 }]} value={repN} onChangeText={setRepN} placeholder="Repuesto o trabajo" placeholderTextColor="#9aa3ad" />
+                      <TouchableOpacity onPress={() => setRepTipo('servicio')} style={[s.pillBtn, repTipo === 'servicio' && s.pillBtnOn]}><Text style={[s.pillBtnT, repTipo === 'servicio' && { color: '#16191d' }]}>🔧 Servicio</Text></TouchableOpacity>
+                      <TouchableOpacity onPress={() => setRepTipo('repuesto')} style={[s.pillBtn, repTipo === 'repuesto' && s.pillBtnOn]}><Text style={[s.pillBtnT, repTipo === 'repuesto' && { color: '#16191d' }]}>🔩 Repuesto</Text></TouchableOpacity>
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                      <TextInput style={[s.input, { flex: 1 }]} value={repN} onChangeText={setRepN} placeholder="Nombre" placeholderTextColor="#9aa3ad" />
                       <TextInput style={[s.input, { width: 90 }]} value={repP} onChangeText={setRepP} keyboardType="numeric" placeholder="Precio" placeholderTextColor="#9aa3ad" />
                     </View>
+                    <TextInput style={[s.input, { marginTop: 8 }]} value={repDetalle} onChangeText={setRepDetalle} placeholder="Detalle (opcional)" placeholderTextColor="#9aa3ad" />
                     <TouchableOpacity style={[s.act, { marginTop: 8, backgroundColor: '#e9f0fe' }]} onPress={agregarRep}>
-                      <Text style={[s.actT, { color: '#2563EB' }]}>＋ Agregar a la cotización</Text>
+                      <Text style={[s.actT, { color: '#2563EB' }]}>＋ Agregar</Text>
                     </TouchableOpacity>
+
+                    <Text style={[s.label, { marginTop: 14 }]}>Descuento (opcional)</Text>
+                    <TextInput style={s.input} value={descuentoCita} onChangeText={setDescuentoCita} keyboardType="numeric" placeholder="0" placeholderTextColor="#9aa3ad" />
 
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, paddingTop: 12, borderTopWidth: 2, borderColor: '#e3e7ec' }}>
                       <Text style={{ fontSize: 16, fontWeight: '800', color: '#16191d' }}>TOTAL</Text>
@@ -2243,6 +2254,9 @@ function FormModal({ modal, close, data, guardar, cur, pickFoto, taller }) {
               </View>
             </>)}
             {tipo === 'vehiculo' && (<>
+              <Dropdown label="Propietario" obligatorio value={f.owner} onChange={(v) => set('owner', v)}
+                options={(data.clients || []).map((c) => c.n)} placeholder="Selecciona el propietario"
+                textoVacio="Aún no hay clientes. Regístralos primero." />
               <Dropdown label="Marca" obligatorio value={f.marca} onChange={(v) => { set('marca', v); set('modelo', ''); }}
                 options={marOpts} placeholder="Selecciona la marca"
                 onAdd={(t) => setMarOpts([...marOpts, { marca: t, modelos: [] }])} />
@@ -2256,9 +2270,6 @@ function FormModal({ modal, close, data, guardar, cur, pickFoto, taller }) {
               <Text style={s.label}>Placa *</Text><TextInput style={s.input} value={f.plate} onChangeText={(v) => set('plate', v)} autoCapitalize="characters" />
               <Text style={s.label}>Color</Text><TextInput style={s.input} value={f.color} onChangeText={(v) => set('color', v)} />
               <Dropdown label="Tipo de vehículo" value={f.tipoVeh || 'Automóvil'} options={TIPO_VEH} onChange={(v) => set('tipoVeh', v)} />
-              <Dropdown label="Propietario" obligatorio value={f.owner} onChange={(v) => set('owner', v)}
-                options={(data.clients || []).map((c) => c.n)} placeholder="Selecciona el propietario"
-                textoVacio="Aún no hay clientes. Regístralos primero." />
             </>)}
             {tipo === 'mecanico' && (<>
               <Text style={s.label}>Nombre completo *</Text><TextInput style={s.input} value={f.n} onChangeText={(v) => set('n', v)} />
