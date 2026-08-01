@@ -387,11 +387,12 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover{background:var(--surface-2)}
 
   <div class="web-wrap"><div class="web">
     <div class="wside">
-      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v95</span></div>
+      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v98</span></div>
       <div class="wlbl op-item">Operación</div>
       <a class="on op-item" data-w="dash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
       <a class="op-item" data-w="recep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-6 0v4"/><rect x="2" y="9" width="20" height="11" rx="2"/></svg>Recepción digital</a>
       <a class="op-item" data-w="board"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg>Órdenes de taller</a>
+      <a class="op-item" data-w="avances"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg>Avances <span class="nb" id="avancesNb"></span></a>
       <a class="op-item" data-w="hist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>Trabajos realizados</a>
         <a class="witem" data-w="mant"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span>Próximos mantenimientos</span></a>
         <a class="witem" data-w="sos" id="navSOS"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg><span>Auxilio vial</span><span id="sosDot" class="sosdot"></span></a>
@@ -416,6 +417,7 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover{background:var(--surface-2)}
       <div class="wtop"><div><h1 id="wTitle">Dashboard</h1><p id="wSub">Todo se actualiza al instante desde la app</p></div><div class="who"><span id="tallerSel"></span><div class="av" id="whoAv">JR</div><span id="whoName">Administrador</span><button class="logoutbtn" onclick="openMiClave()" title="Cambiar mi contraseña" style="margin-right:6px">🔑 Mi contraseña</button><button class="logoutbtn" onclick="logout()">Salir</button></div></div>
       <div class="wbody">
         <div class="wview on" id="w-dash"></div><div class="wview" id="w-recep"></div><div class="wview" id="w-board"></div>
+        <div class="wview" id="w-avances"></div>
         <div class="wview" id="w-hist"></div><div class="wview" id="w-citas"></div><div class="wview" id="w-cotiza"></div>
         <div class="wview" id="w-veh"></div><div class="wview" id="w-cli"></div><div class="wview" id="w-mec"></div><div class="wview" id="w-fact"></div><div class="wview" id="w-talleres"></div><div class="wview" id="w-usuarios"></div><div class="wview" id="w-config"></div><div class="wview" id="w-audit"></div><div class="wview" id="w-mant"></div><div class="wview" id="w-sos"></div>
       </div>
@@ -926,7 +928,7 @@ let _cotEdit=null,_cotCli=null,_cotVeh=null,_cotItems=[];
 function renderCotizaWeb(){
   const el=document.getElementById('w-cotiza');if(!el)return;const cur=curSym();
   const propias=(store.cotizaciones||[]).filter(c=>c.estado!=='inactiva');
-  const deCitas=(store.citas||[]).filter(c=>c.estado==='cotizada'||c.estado==='aceptada').map(c=>({id:'cita-'+c.id,num:null,cliente:c.cliente,vehiculo:c.vehiculo,placa:c.placa,items:c.repuestos||[],monto:c.monto||0,estado:c.estado==='aceptada'?'aceptada':'enviada',origen:'cita'}));
+  const deCitas=(store.citas||[]).filter(c=>c.estado==='cotizada'||c.estado==='aceptada').map(c=>({id:'cita-'+c.id,num:null,cliente:c.cliente,vehiculo:c.vehiculo,placa:c.placa,items:c.repuestos||[],monto:c.monto||0,estado:c.estado==='aceptada'?'aprobada':'enviada',aprobadoPor:c.aprobadoPor,fechaAprobacion:c.fechaAprobacion,origen:'cita'}));
   const todasSinFiltro=[...propias,...deCitas];
   const norm=t=>(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   const bq=BUSCA.cotiza||'';
@@ -938,8 +940,8 @@ function renderCotizaWeb(){
     <div style="font-size:12.5px;color:var(--muted);line-height:1.7">👤 ${c.cliente}${c.vehiculo?'<br>🚗 '+c.vehiculo+(c.placa?' · '+c.placa:''):''}<br>${(c.items||[]).length} ítem(s)${c.origen==='cita'?' · desde cita':''}</div>
     <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
       <button class="wbtn wbtn-g" style="flex:1;justify-content:center" onclick="compartirCotizaWeb('${c.id}')">💬 Compartir</button>
-      ${c.origen!=='cita'?`<button class="wbtn wbtn-g" style="flex:1;justify-content:center" onclick="window.open('/api/cotizacion/'+CURRENT_TALLER+'/${c.id}','_blank')">📄 PDF</button>`:''}
-      ${c.origen!=='cita'?`<button class="wbtn" style="background:#e8f6ec;color:#0F6E56" onclick="aprobarCotizacionAdmin(${c.id})">✅ Aprobar</button>`:''}
+      <button class="wbtn wbtn-g" style="flex:1;justify-content:center" onclick="window.open('/api/cotizacion/'+CURRENT_TALLER+'/${c.id}','_blank')">📄 PDF</button>
+      <button class="wbtn" style="background:#e8f6ec;color:#0F6E56" onclick="aprobarCotizacionAdmin('${c.id}')">✅ Aprobar</button>
       ${c.origen!=='cita'?`<button class="wbtn wbtn-g" onclick="editarCotizaWeb(${c.id})">✏️</button><button class="wbtn wbtn-gr" onclick="inactivarCotizaWeb(${c.id})">Inactivar</button>`:''}
     </div>
   </div>`;
@@ -952,7 +954,8 @@ function renderCotizaWeb(){
 function cotizaFiltradas(){
   const norm=t=>(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   const q=BUSCA.cotizaHist||'';
-  let arr=(store.cotizaciones||[]).filter(c=>c.estado==='aprobada');
+  const deCitas=(store.citas||[]).filter(c=>c.estado==='aceptada').map(c=>({id:'cita-'+c.id,num:null,cliente:c.cliente,vehiculo:c.vehiculo,placa:c.placa,items:c.repuestos||[],monto:c.monto||0,aprobadoPor:c.aprobadoPor,fechaAprobacion:c.fechaAprobacion,origen:'cita'}));
+  let arr=[...(store.cotizaciones||[]).filter(c=>c.estado==='aprobada'),...deCitas];
   if(q.trim())arr=arr.filter(c=>norm((c.num?'P-'+String(c.num).padStart(6,'0'):'')+' '+(c.cliente||'')+' '+(c.vehiculo||'')+' '+(c.placa||'')).includes(norm(q)));
   if(BUSCA.cotizaHd)arr=arr.filter(c=>isoFecha(c.fechaAprobacion)>=BUSCA.cotizaHd);
   if(BUSCA.cotizaHh)arr=arr.filter(c=>isoFecha(c.fechaAprobacion)<=BUSCA.cotizaHh);
@@ -965,13 +968,20 @@ function cotizaHistHTML(){
    <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
      <div class="fld" style="margin:0"><label style="font-size:11px">Desde</label><input id="chDesde" type="date" value="${BUSCA.cotizaHd||''}" style="width:150px" onchange="BUSCA.cotizaHd=this.value;renderCotizaHistOnly()"></div>
      <div class="fld" style="margin:0"><label style="font-size:11px">Hasta</label><input id="chHasta" type="date" value="${BUSCA.cotizaHh||''}" style="width:150px" onchange="BUSCA.cotizaHh=this.value;renderCotizaHistOnly()"></div>
-     ${(BUSCA.cotizaHist||BUSCA.cotizaHd||BUSCA.cotizaHh)?`<button class="wbtn wbtn-g" style="align-self:flex-end" onclick="BUSCA.cotizaHist='';BUSCA.cotizaHd='';BUSCA.cotizaHh='';renderCotizaHistOnly()">Limpiar filtros</button><span style="font-size:12px;color:var(--muted);align-self:flex-end;padding-bottom:8px">${arr.length} de ${(store.cotizaciones||[]).filter(c=>c.estado==='aprobada').length}</span>`:''}
+     ${(BUSCA.cotizaHist||BUSCA.cotizaHd||BUSCA.cotizaHh)?`<button class="wbtn wbtn-g" style="align-self:flex-end" onclick="BUSCA.cotizaHist='';BUSCA.cotizaHd='';BUSCA.cotizaHh='';renderCotizaHistOnly()">Limpiar filtros</button><span style="font-size:12px;color:var(--muted);align-self:flex-end;padding-bottom:8px">${arr.length} resultado(s)</span>`:''}
    </div>
-   <table><thead><tr><th>Aprobada</th><th>N°</th><th>Cliente</th><th>Vehículo</th><th>Monto</th><th>Por</th></tr></thead><tbody>${arr.length?arr.map(c=>`<tr class="clk" onclick="cotizaDetail(${c.id})"><td class="mono" style="font-size:12px">${c.fechaAprobacion||''}</td><td><b>${c.num?'P-'+String(c.num).padStart(6,'0'):''}</b></td><td><div class="cell-u"><div class="av-sm">${(c.cliente||'').split(' ').map(x=>x[0]).slice(0,2).join('')}</div><b>${c.cliente}</b></div></td><td>${c.vehiculo||''}${c.placa?' · '+c.placa:''}</td><td><b>${cur} ${(+c.monto||0).toLocaleString('es-VE')}</b></td><td style="color:var(--muted)">${c.aprobadoPor==='admin'?'el taller':'el cliente'}</td></tr>`).join(''):'<tr><td colspan="6" style="color:var(--muted);padding:18px">Ninguna cotización aprobada coincide con la búsqueda.</td></tr>'}</tbody></table>`;
+   <table><thead><tr><th>Aprobada</th><th>N°</th><th>Cliente</th><th>Vehículo</th><th>Monto</th><th>Por</th></tr></thead><tbody>${arr.length?arr.map(c=>`<tr class="clk" onclick="cotizaDetail('${c.id}')"><td class="mono" style="font-size:12px">${c.fechaAprobacion||''}</td><td><b>${c.num?'P-'+String(c.num).padStart(6,'0'):(c.origen==='cita'?'Desde cita':'')}</b></td><td><div class="cell-u"><div class="av-sm">${(c.cliente||'').split(' ').map(x=>x[0]).slice(0,2).join('')}</div><b>${c.cliente}</b></div></td><td>${c.vehiculo||''}${c.placa?' · '+c.placa:''}</td><td><b>${cur} ${(+c.monto||0).toLocaleString('es-VE')}</b></td><td style="color:var(--muted)">${c.aprobadoPor==='admin'?'el taller':'el cliente'}</td></tr>`).join(''):'<tr><td colspan="6" style="color:var(--muted);padding:18px">Ninguna cotización aprobada coincide con la búsqueda.</td></tr>'}</tbody></table>`;
 }
 function renderCotizaHistOnly(){const c=document.getElementById('w-cotiza');if(!c)return;const marcador='<h3 style="font-size:14px;margin:22px 0 10px;color:#16406b">Historial de cotizaciones aprobadas</h3>';const idx=c.innerHTML.indexOf(marcador);if(idx<0){renderCotizaWeb();return;}c.innerHTML=c.innerHTML.slice(0,idx+marcador.length)+cotizaHistHTML();}
 function cotizaDetail(id){
-  const c=(store.cotizaciones||[]).find(x=>x.id===id);if(!c)return;const cur=curSym();
+  let c;
+  if(String(id).startsWith('cita-')){
+    const citaId=+String(id).slice(5);const cita=store.citas.find(x=>x.id===citaId);if(!cita)return;
+    c={id,num:null,cliente:cita.cliente,vehiculo:cita.vehiculo,placa:cita.placa,items:cita.repuestos||[],monto:cita.monto||0,aprobadoPor:cita.aprobadoPor,fechaAprobacion:cita.fechaAprobacion};
+  }else{
+    c=(store.cotizaciones||[]).find(x=>String(x.id)===String(id));
+  }
+  if(!c)return;const cur=curSym();
   document.getElementById('modalH').innerHTML=`<h2>🧾 ${c.num?'P-'+String(c.num).padStart(6,'0'):''}</h2>`;
   document.getElementById('modalB').innerHTML=`
     <div class="kv"><span class="k">Cliente</span><span class="vv">${c.cliente}</span></div>
@@ -987,9 +997,14 @@ function cotizaDetail(id){
   document.getElementById('modal').classList.add('on');
 }
 function aprobarCotizacionAdmin(id){
-  const c=(store.cotizaciones||[]).find(x=>x.id===id);if(!c)return;
   if(!confirm('¿Aprobar esta cotización sin la autorización del cliente?'))return;
-  c.estado='aprobada';c.aprobadoPor='admin';c.fechaAprobacion=new Date().toLocaleDateString('es-VE');
+  if(String(id).startsWith('cita-')){
+    const citaId=+String(id).slice(5);const cita=store.citas.find(x=>x.id===citaId);if(!cita)return;
+    cita.estado='aceptada';cita.aprobadoPor='admin';cita.fechaAprobacion=new Date().toLocaleDateString('es-VE');
+  }else{
+    const c=(store.cotizaciones||[]).find(x=>String(x.id)===String(id));if(!c)return;
+    c.estado='aprobada';c.aprobadoPor='admin';c.fechaAprobacion=new Date().toLocaleDateString('es-VE');
+  }
   renderWeb();persistData();toast('Cotización aprobada ✓');
 }
 function abrirNuevaCotiza(){_cotEdit=null;_cotCli=null;_cotVeh=null;_cotItems=[];window._cotDescuento='';window._cotTipo='servicio';pintarCotizaModal();document.getElementById('cotizaModal').style.display='flex';}
@@ -1006,13 +1021,19 @@ function pintarCotizaModal(){
       <div style="margin-top:8px;max-height:260px;overflow:auto">${lista.slice(0,10).map(c=>`<div onclick="elegirCotCli(${c.id})" style="padding:10px;border-bottom:1px solid var(--line);cursor:pointer"><b>${c.n}</b><div style="font-size:12px;color:var(--muted)">${c.doc||'sin doc'} · ${c.tel||'sin tel'}</div></div>`).join('')||'<div style="text-align:center;padding:16px"><div style="color:var(--muted);margin-bottom:10px">No se encontró ese cliente.</div><button class="wbtn wbtn-d" onclick="document.getElementById(\'cotizaModal\').style.display=\'none\';navTo(\'cli\')">＋ Registrar cliente nuevo</button></div>'}</div>`;
     return;
   }
-  const vehs=store.vehicles.filter(v=>v.owner===_cotCli.n);
+  const vehs=store.vehicles.filter(v=>v.owner===_cotCli.n&&v.activo!==false);
+  if(vehs.length===1&&(!_cotVeh||_cotVeh.id!==vehs[0].id))_cotVeh=vehs[0];
+  if(vehs.length===0&&_cotVeh)_cotVeh=null;
   const tot=_cotItems.reduce((a,r)=>a+(+r.p||0)*(+r.cant||1),0)-(+window._cotDescuento||0);
   window._cotTipo=window._cotTipo||'servicio';
   b.innerHTML=`
     <div style="background:var(--surface-2);border-radius:10px;padding:12px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center"><div><b>${_cotCli.n}</b><div style="font-size:12px;color:var(--muted)">${_cotCli.doc||'sin doc'} · ${_cotCli.tel||'sin tel'}</div></div><button class="wbtn wbtn-g" onclick="_cotCli=null;window._cotQ='';pintarCotizaModal()">Cambiar</button></div>
     <label style="font-size:12px;font-weight:700;color:var(--muted)">Vehículo</label>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 12px">${vehs.length?vehs.map(v=>`<button class="wbtn ${_cotVeh&&_cotVeh.id===v.id?'wbtn-d':'wbtn-g'}" onclick="elegirCotVeh(${v.id})">${v.model} · ${v.plate}</button>`).join(''):'<span style="font-size:12px;color:var(--muted)">Sin vehículos (opcional)</span>'}</div>
+    <div style="margin:6px 0 12px">${
+      vehs.length===0?'<span style="font-size:12px;color:var(--muted)">Sin vehículos (opcional)</span>'
+      :vehs.length===1?`<div style="background:var(--surface-2);border-radius:8px;padding:9px 12px;font-weight:700;font-size:13px">${vehs[0].model} — ${vehs[0].plate}</div>`
+      :`<input id="cotVehBusca" placeholder="Buscar por placa…" autocomplete="off" oninput="cotFiltrarVeh(this.value)" style="width:100%;margin-bottom:6px"><select id="cotVehSel" style="width:100%" onchange="elegirCotVeh(+this.value)"></select>`
+    }</div>
     <label style="font-size:12px;font-weight:700;color:var(--muted)">Servicios y repuestos</label>
     <div style="margin:6px 0">${_cotItems.map((r,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)"><span style="flex:1">${r.tipo==='repuesto'?'🔩':'🔧'} ${r.n}${r.detalle?' — '+r.detalle:''}</span><b>${cur} ${(+r.p||0).toLocaleString('es-VE')}</b><button class="wbtn wbtn-gr" style="padding:3px 9px" onclick="quitarCotItem(${i})">✕</button></div>`).join('')||'<div style="font-size:12px;color:var(--muted)">Aún sin ítems.</div>'}</div>
     <div style="display:flex;gap:6px;margin-bottom:6px">
@@ -1025,9 +1046,18 @@ function pintarCotizaModal(){
     <input id="citDesc" type="number" placeholder="0" value="${window._cotDescuento||''}" oninput="window._cotDescuento=this.value;pintarCotizaModal()" style="width:100%">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:12px;border-top:2px solid var(--line)"><b style="font-size:15px">TOTAL</b><b style="font-size:17px;color:#0F6E56">${cur} ${tot.toLocaleString('es-VE')}</b></div>
     <button class="wbtn wbtn-d" style="width:100%;justify-content:center;margin-top:14px" onclick="guardarCotizaWeb()">${_cotEdit?'Guardar cambios':'Crear cotización'}</button>`;
+  if(vehs.length>1)cotFiltrarVeh('');
 }
 function elegirCotCli(id){_cotCli=store.clients.find(c=>c.id===id);const vs=store.vehicles.filter(v=>v.owner===_cotCli.n);_cotVeh=vs.length===1?vs[0]:null;pintarCotizaModal();}
 function elegirCotVeh(id){_cotVeh=store.vehicles.find(v=>v.id===id);pintarCotizaModal();}
+function cotFiltrarVeh(q){
+  const sel=document.getElementById('cotVehSel');if(!sel||!_cotCli)return;
+  const vehs=store.vehicles.filter(v=>v.owner===_cotCli.n&&v.activo!==false);
+  const norm=t=>(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const qq=norm(q);
+  const res=qq?vehs.filter(v=>norm(v.plate+' '+v.model).includes(qq)):vehs;
+  sel.innerHTML=res.length?res.map(v=>`<option value="${v.id}" ${_cotVeh&&_cotVeh.id===v.id?'selected':''}>${v.model} — ${v.plate}</option>`).join(''):'<option value="">Sin resultados</option>';
+}
 function agregarCotItem(){const n=(document.getElementById('citN').value||'').trim();const p=+document.getElementById('citP').value||0;const det=(document.getElementById('citD')&&document.getElementById('citD').value||'').trim();if(!n){toast('Indica el nombre');return;}_cotItems.push({n,p,cant:1,tipo:window._cotTipo||'servicio',detalle:det});pintarCotizaModal();}
 function quitarCotItem(i){_cotItems.splice(i,1);pintarCotizaModal();}
 async function guardarCotizaWeb(){
@@ -1100,6 +1130,31 @@ function verResumenEspera(){
   document.getElementById('modalB').innerHTML=items.length?items.map(v=>{const d=dias(v.ingreso);return `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><b>${v.model}</b> <span style="color:var(--muted)">${v.plate}</span><div style="font-size:12px;color:var(--muted)">${v.owner} · ${v.motivo} · ${d} día(s) en taller</div></div>`;}).join(''):'<div class="empty">No hay vehículos en espera.</div>';
   document.getElementById('modal').classList.add('on');
 }
+function renderAvancesWeb(){
+  const el=document.getElementById('w-avances');if(!el)return;
+  const conAvances=store.vehicles.filter(v=>(v.advances||[]).length).sort((a,b)=>{
+    const pa=(a.advances||[]).some(x=>x.pendienteRevision)?0:1;
+    const pb=(b.advances||[]).some(x=>x.pendienteRevision)?0:1;
+    return pa-pb;
+  });
+  el.innerHTML=`<div style="font-size:12.5px;color:var(--muted);margin-bottom:14px;line-height:1.6">Aquí llegan los avances de los técnicos que <b>no</b> tienen activado "Notificar al cliente" en su ficha. Revísalos en orden y decide cuáles enviarle al cliente.</div>`+
+    (conAvances.length?conAvances.map(v=>`<div class="wcard" style="margin-bottom:12px">
+      <b style="color:#16191d;font-size:14.5px">${v.model} <span style="color:var(--muted);font-weight:600">${v.plate}</span></b>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px">${v.owner} · ${v.mech||'sin técnico asignado'}</div>
+      ${(v.advances||[]).map((a,i)=>`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line)">
+        <b style="font-size:13px">${i+1}. ${a.t}</b>
+        ${a.m?`<div style="font-size:12px;color:var(--muted)">${a.m}</div>`:''}
+        ${a.pendienteRevision?`<button class="wbtn" style="background:#fdf3e0;color:#b45309;margin-top:6px" onclick="notificarAvanceWeb(${v.id},${i})">🔔 Notificar al cliente</button>`
+          :`<div style="background:#e8f6ec;border-radius:8px;padding:3px 8px;display:inline-block;margin-top:6px"><span style="color:#0F6E56;font-weight:700;font-size:11px">✅ ${a.notificadoCliente?'Visible para el cliente':'Registro interno'}</span></div>`}
+      </div>`).join('')}
+    </div>`).join(''):'<div class="empty">Aún no hay avances registrados.</div>');
+}
+function notificarAvanceWeb(vehId,idx){
+  const v=store.vehicles.find(x=>x.id===vehId);if(!v)return;const a=(v.advances||[])[idx];if(!a)return;
+  a.pendienteRevision=false;a.notificadoCliente=true;
+  store.notifs.push({owner:v.owner,veh:v.model,text:'🔧 '+a.t+(a.m?' — '+a.m:''),time:'ahora',read:false});
+  renderAvancesWeb();persistData();toast('✅ Notificado — el cliente ya puede verlo');
+}
 function navTo(w){const a=document.querySelector('.op-item[data-w="'+w+'"]');if(a)a.click();}
 function newCitaWeb(){
   document.getElementById('modalH').innerHTML='<h2>Nueva cita</h2>';
@@ -1113,7 +1168,7 @@ function newCitaWeb(){
 function createCitaWeb(){const cli=document.getElementById('ncCli').value;const f=document.getElementById('ncFecha').value;if(!f){toast('Elige fecha');return;}const ve=store.vehicles.find(v=>v.owner===cli);const tipo=document.getElementById('ncTipo').value,hora=document.getElementById('ncHora').value;store.citas.push({id:Date.now(),cliente:cli,veh:ve?ve.model:'—',tipo,fecha:f,hora,status:'aprobada'});store.notifs.push({owner:cli,veh:ve?ve.model:'—',text:'📅 Tienes una cita programada para el '+f+' a las '+hora+' ('+tipo+').',time:'ahora',read:false});closeModal();renderWeb();renderPhone();waToast('Cita notificada al cliente en su app');store.emit('Cita creada y cliente notificado ✓');}
 
 /* ===== WEB RENDER ===== */
-const WTITLES={dash:["Dashboard","Todo se actualiza al instante desde la app"],recep:["Recepción digital","Inspección y registro de ingreso del vehículo"],board:["Órdenes de taller","Tablero en vivo por estado"],hist:["Trabajos realizados","Historial de servicios completados"],citas:["Citas","Solicitudes y agenda del taller"],cotiza:["Cotizaciones","Presupuestos para clientes"],veh:["Vehículos","Estado actual de la flota"],cli:["Clientes","Cartera registrada"],mec:["Técnicos","Equipo técnico y desempeño"],usuarios:["Usuarios y accesos","Cuentas y roles del sistema"],fact:["Facturación","Pagos y facturas del servicio"],talleres:["Talleres","Gestión de talleres y asignación de administradores"],config:["Configuración","Moneda, documentos y seguros — Venezuela"],audit:["Auditoría","Registro de acciones: quién, cuándo, IP y dispositivo"]};
+const WTITLES={dash:["Dashboard","Todo se actualiza al instante desde la app"],recep:["Recepción digital","Inspección y registro de ingreso del vehículo"],board:["Órdenes de taller","Tablero en vivo por estado"],avances:["Avances","Revisa y notifica al cliente los avances de los técnicos"],hist:["Trabajos realizados","Historial de servicios completados"],citas:["Citas","Solicitudes y agenda del taller"],cotiza:["Cotizaciones","Presupuestos para clientes"],veh:["Vehículos","Estado actual de la flota"],cli:["Clientes","Cartera registrada"],mec:["Técnicos","Equipo técnico y desempeño"],usuarios:["Usuarios y accesos","Cuentas y roles del sistema"],fact:["Facturación","Pagos y facturas del servicio"],talleres:["Talleres","Gestión de talleres y asignación de administradores"],config:["Configuración","Moneda, documentos y seguros — Venezuela"],audit:["Auditoría","Registro de acciones: quién, cuándo, IP y dispositivo"]};
 document.querySelectorAll('.wside a[data-w]').forEach(a=>a.addEventListener('click',()=>{document.querySelectorAll('.wside a').forEach(x=>x.classList.remove('on'));a.classList.add('on');const w=a.dataset.w;document.querySelectorAll('.wview').forEach(s=>s.classList.remove('on'));document.getElementById('w-'+w).classList.add('on');document.getElementById('wTitle').textContent=WTITLES[w][0];document.getElementById('wSub').textContent=WTITLES[w][1];if(w==='talleres'){renderSuperPanel();setTimeout(idxCargar,300);}if(w==='usuarios')renderUsuariosView();if(w==='fact')renderFacturacion();if(w==='audit')renderAuditoria();}));
 function cnt(s){return store.vehicles.filter(v=>v.status===s).length;}
 const DINCOME=[28,31,27,35,33,38,41,39,44,42,46,48],DMONTHS=["E","F","M","A","M","J","J","A","S","O","N","D"];
@@ -1198,6 +1253,9 @@ function renderWeb(){
   document.getElementById('w-dash').innerHTML=dashHTML();
   const cols=[["espera","En espera"],["rep","En reparación"],["term","Terminado"]];
   document.getElementById('w-board').innerHTML=`<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px"><button class="wbtn wbtn-g" onclick="verResumenEspera()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Ver Resumen</button><button class="wbtn" style="background:#25D366;color:#0b3d20" onclick="compartirComoPDF(API+'/api/resumen-espera/'+CURRENT_TALLER,'Resumen_espera.pdf','Resumen de espera — '+(CURRENT_TALLER_NAME||'TallerOS'),'📋 Resumen de vehículos en espera — '+(CURRENT_TALLER_NAME||'TallerOS'))"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2z"/></svg> Compartir resumen (PDF)</button></div><div class="searchbar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="qBoard" value="${(BUSCA.board||'').replace(/"/g,'&quot;')}" placeholder="Buscar por N° de orden, vehículo, placa, cliente, técnico o trabajo…" oninput="BUSCA.board=this.value;renderBoardOnly()">${BUSCA.board?`<button onclick="BUSCA.board='';renderBoardOnly()">✕</button>`:''}</div><div class="board">${cols.map(([k,l])=>{const items=store.vehicles.filter(v=>v.activo!==false&&v.recepcion&&!v.cerrada&&coincideVeh(v,BUSCA.board)&&(k==='espera'?(!v.status||v.status==='espera'||v.status==='reprog'):k==='rep'?(v.status==='rep'||v.status==='wait'):k==='term'?(v.status==='term'||v.status==='ent'):v.status===k));return `<div class="col"><h3>${l}<span class="cnt">${items.length}</span></h3>${items.map(v=>{const st=STATUS[v.status]||{c:'espera',l:'Sin estado'};const d=dias(v.ingreso);return `<div class="ocard" style="cursor:pointer" onclick="openOrder(${v.id})"><div class="ot">${v.model.split(' ').slice(0,2).join(' ')}<span class="plate">${v.plate}</span></div><div class="om">${v.motivo}</div><span class="pill s-${st.c}"><span class="pd"></span>${st.l}</span><div style="font-size:11px;color:var(--muted);margin-top:7px">👤 ${v.owner}${v.mech?` · 🔧 ${v.mech}`:''}</div>${(()=>{const cl=store.clients.find(c=>c.n===v.owner);const me=store.mecanicos.find(m=>m.n===v.mech);const tel=cl&&cl.tel;const telM=me&&me.tel;return (tel||telM)?`<div style="display:flex;gap:6px;margin-top:7px;flex-wrap:wrap" onclick="event.stopPropagation()">${tel?`<a href="tel:${tel}" class="telchip">📞 ${tel}</a><a href="https://wa.me/${(tel||'').replace(/[^0-9]/g,'')}" target="_blank" class="telchip wa">💬 Cliente</a>`:''}${telM?`<a href="https://wa.me/${(telM||'').replace(/[^0-9]/g,'')}" target="_blank" class="telchip wa">💬 Técnico</a>`:''}</div>`:'';})()}<div style="font-size:10.5px;color:var(--muted);margin-top:6px;display:flex;align-items:center;gap:5px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Ingresó ${fmtDate(v.ingreso)} · <b style="color:${d>5?'var(--red)':'var(--amber)'}">${d} día${d===1?'':'s'}</b> en taller</div>${v.status!=='espera'&&v.status!=='reprog'?`<div class="opr"><div class="pbar"><i style="width:${v.progress}%"></i></div>${v.progress}%</div>`:''}</div>`;}).join('')||'<div class="empty">Vacío</div>'}</div>`;}).join('')}</div>`;
+  renderAvancesWeb();
+  const _avPend=store.vehicles.reduce((a,v)=>a+(v.advances||[]).filter(x=>x.pendienteRevision).length,0);
+  const _avNb=document.getElementById('avancesNb');if(_avNb){_avNb.textContent=_avPend||'';_avNb.style.display=_avPend?'':'none';}
   // HISTORIAL
   document.getElementById('w-hist').innerHTML=`<div class="searchbar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="qHist" value="${(BUSCA.hist||'').replace(/"/g,'&quot;')}" placeholder="Buscar por placa, cliente, técnico, trabajo…" oninput="BUSCA.hist=this.value;renderHistOnly()">${BUSCA.hist?`<button onclick="BUSCA.hist='';renderHistOnly()">✕</button>`:''}</div>
    <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
@@ -1348,7 +1406,7 @@ function renderWebRecep(){
         <input id="wrCliBusca" placeholder="Buscar por nombre, cédula o teléfono…" autocomplete="off" oninput="wrFiltrarSelectClientes(this.value)" style="margin-bottom:8px">
         <select id="wrCli" style="width:100%" onchange="wrClient(this.value)"></select>
       </div>`}
-      <div class="fld"><label>Vehículo</label><select id="wrVeh"></select></div>
+      <div class="fld"><label>Vehículo</label><div id="wrVehWrap"><select id="wrVeh"></select></div></div>
       <div class="fld"><label style="display:flex;align-items:center;justify-content:space-between">¿Por qué ingresa el vehículo? <button class="wbtn wbtn-g" style="padding:3px 9px;font-size:11px" onclick="addOptionModal('motivo','web')">＋ Nuevo</button></label><select id="wSelMotivo" onchange="wrec.motivo=this.value">${store.config.motivos.map(m=>`<option ${m===wrec.motivo?'selected':''}>${m}</option>`).join('')}</select></div>
       <div class="fld"><label style="display:flex;align-items:center;justify-content:space-between">Trabajo a realizar <button class="wbtn wbtn-g" style="padding:3px 9px;font-size:11px" onclick="addOptionModal('trabajo','web')">＋ Nuevo</button></label><select id="wSelTrabajo" onchange="wrec.trabajo=this.value">${store.config.trabajos.map(t=>`<option ${t===wrec.trabajo?'selected':''}>${t}</option>`).join('')}</select></div>
       <div class="fld"><label>Técnico asignado</label><select onchange="wrec.mech=this.value">${['(Por asignar)'].concat(store.mecanicos.filter(m=>m.activo!==false).map(m=>m.n)).map(n=>`<option ${n===wrec.mech||(n==='(Por asignar)'&&!wrec.mech)?'selected':''}>${n}</option>`).join('')}</select></div>
@@ -1419,7 +1477,29 @@ function wrClient(n){
     }
   }
 }
-function wrVehOptions(){const cvs=store.vehicles.filter(v=>v.owner===wrec.client&&v.activo!==false);wrec.vehId=cvs[0]?cvs[0].id:null;wCargarVehDatos();document.getElementById('wrVeh').innerHTML=cvs.map(v=>`<option value="${v.id}">${v.model} — ${v.plate}</option>`).join('')||'<option value="">Este cliente no tiene vehículo registrado</option>';document.getElementById('wrVeh').onchange=function(){wrec.vehId=+this.value||null;wCargarVehDatos();};}
+function wrVehOptions(){
+  const cvs=store.vehicles.filter(v=>v.owner===wrec.client&&v.activo!==false);
+  wrec.vehId=cvs[0]?cvs[0].id:null;wCargarVehDatos();
+  const cont=document.getElementById('wrVehWrap');
+  if(!cont)return;
+  if(cvs.length<=1){
+    cont.innerHTML=cvs.length?`<div style="background:#f7f8fa;border-radius:10px;padding:10px 12px;font-weight:700">${cvs[0].model} — ${cvs[0].plate}</div>`:'<div style="color:var(--muted);font-size:12.5px">Este cliente no tiene vehículo registrado</div>';
+  }else{
+    cont.innerHTML=`<input id="wrVehBusca" placeholder="Buscar por placa…" autocomplete="off" oninput="wrFiltrarVehSelect(this.value)" style="margin-bottom:8px"><select id="wrVeh" style="width:100%"></select>`;
+    wrFiltrarVehSelect('');
+  }
+}
+function wrFiltrarVehSelect(q){
+  const sel=document.getElementById('wrVeh');if(!sel)return;
+  const cvs=store.vehicles.filter(v=>v.owner===wrec.client&&v.activo!==false);
+  const norm=t=>(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const qq=norm(q);
+  const res=qq?cvs.filter(v=>norm(v.plate+' '+v.model).includes(qq)):cvs;
+  const actual=wrec.vehId;
+  sel.innerHTML=res.length?res.map(v=>`<option value="${v.id}" ${v.id===actual?'selected':''}>${v.model} — ${v.plate}</option>`).join(''):'<option value="">Sin resultados</option>';
+  if(!res.some(v=>v.id===actual)&&res.length){wrec.vehId=res[0].id;wCargarVehDatos();}
+  sel.onchange=function(){wrec.vehId=+this.value||null;wCargarVehDatos();};
+}
 function wCargarVehDatos(){const v=wrec.vehId?veh(wrec.vehId):null;if(v){if(v.tipoVeh)wrec.tipoVeh=v.tipoVeh;if(v.color)wrec.color=v.color;}}
 function wView(k,b){document.querySelectorAll('#wViews button').forEach(x=>x.classList.remove('on'));b.classList.add('on');wrec.view=k;wDrawCar();wPins();}
 function wType(b,t){const i=wrec.types.indexOf(t);if(i>=0){wrec.types.splice(i,1);b.classList.remove('on');}else{wrec.types.push(t);b.classList.add('on');}}
@@ -1735,7 +1815,7 @@ async function saveClient(id){const n=val('clN').trim();if(!n){toast('Ingresa el
       catch(e){toast(e.message||'No se pudo actualizar el acceso');return;}
       data.usuario=u;if(p)data.claveActual=p;
     }
-    Object.assign(c,data);closeModal();renderWeb();renderWebRecep();store.emit(u?'Cliente y acceso actualizados ✓':'Cliente actualizado con éxito');return;}
+    Object.assign(c,data);closeModal();renderWeb();renderWebRecep();store.emit(u?'✅ Datos actualizados con éxito'+(p?' (incluye nueva contraseña)':''):'✅ Datos actualizados con éxito');return;}
   if(data.doc&&store.clients.some(c=>c.doc&&c.doc.toLowerCase()===data.doc.toLowerCase())){toast('Ya existe un cliente con ese documento');return;}
   const usuario=val('clU').trim(),pass=val('clP'),pass2=val('clP2'),correo=(val('clE')||'').trim();
   if(!usuario||!pass){toast('Ingresa usuario y contraseña de acceso');return;}
@@ -1746,7 +1826,7 @@ async function saveClient(id){const n=val('clN').trim();if(!n){toast('Ingresa el
   try{await apiReq('/api/talleres/'+CURRENT_TALLER+'/cuenta',{method:'POST',body:JSON.stringify({nombre:n,usuario,correo,password:pass,rol:'cliente',telefono:data.tel})});}
   catch(e){toast(e.message||'No se pudo crear la cuenta de acceso');return;}
   store.clients.push(Object.assign({id:Date.now(),gas:0,usuario,claveActual:pass},data));
-  closeModal();renderWeb();renderWebRecep();store.emit('Cliente registrado con acceso a la app');
+  closeModal();renderWeb();renderWebRecep();store.emit('✅ Cliente registrado con éxito');
   setTimeout(()=>{compartirCredenciales({n,usuario,clave:pass,rol:'cliente',tel:data.tel});},300);}
 function toggleClient(id){const c=store.clients.find(x=>x.id===id);c.activo=c.activo===false;renderWeb();renderWebRecep();store.emit(c.activo?'Cliente activado':'Cliente inactivado');}
 // Técnicos
@@ -1766,11 +1846,15 @@ function openMechForm(id){const m=id?store.mecanicos.find(x=>x.id===id):null;con
    </div>
    <div style="border-top:1px solid var(--line);margin:6px 0 10px;padding-top:10px"><div style="font-weight:700;font-size:13px;margin-bottom:8px">Acceso del técnico a la app</div><div class="fld"><label>Correo</label><input id="meE" placeholder="correo@ejemplo.com" value="${m?(m.correo||''):''}"></div><div class="fld"><label>Usuario de acceso</label><input id="meU" autocomplete="off" placeholder="ej. jlopez" value="${m?(m.usuario||''):''}"></div><div style="display:flex;gap:10px"><div class="fld" style="flex:1"><label>${m?'Nueva contraseña':'Contraseña'}</label>${campoClaveHTML('meP',m?'Dejar vacío para no cambiar':'mínimo 6 caracteres')}</div><div class="fld" style="flex:1"><label>Confirmar</label>${campoClaveHTML('meP2','')}</div></div></div>
    <div class="fld"><label>Estado</label>${estadoSel('meA',act)}</div>
-   <button class="wbtn wbtn-d" style="width:100%;justify-content:center" onclick="saveMech(${id||0})">${m?'Guardar cambios':'Registrar técnico'}</button>`;
+   <div class="fld" style="background:#f7f8fa;border-radius:10px;padding:12px;display:flex;gap:10px;align-items:flex-start;cursor:pointer" onclick="document.getElementById('meNotif').click()">
+     <input type="checkbox" id="meNotif" ${m&&m.notificarCliente?'checked':''} style="width:20px;height:20px;margin-top:1px;accent-color:#F5B700">
+     <div><b style="font-size:13.5px">Notificar al cliente</b><div style="font-size:11.5px;color:var(--muted);margin-top:2px">Si lo marcas, cada avance que el técnico suba desde la app le llega directo al cliente. Si lo dejas sin marcar, los avances quedan para que tú los revises y decidas cuáles enviar, en el módulo "Avances".</div></div>
+   </div>
+   <button class="wbtn wbtn-d" style="width:100%;justify-content:center;margin-top:10px" onclick="saveMech(${id||0})">${m?'Guardar cambios':'Registrar técnico'}</button>`;
   document.getElementById('modal').classList.add('on');
   paisHint('mePais','meThint');
 }
-async function saveMech(id){const n=val('meN').trim();if(!n){toast('Ingresa el nombre');return;}const paisCod=val('mePais')||'+58';const telNum=(val('meTnum')||'').trim();const tel=telNum?paisCod+' '+telNum:'';const data={n,ini:inits(n),sp:val('meS')||'General',doc:val('meD'),tel,paisCod,telNum,activo:val('meA')==='1'};
+async function saveMech(id){const n=val('meN').trim();if(!n){toast('Ingresa el nombre');return;}const paisCod=val('mePais')||'+58';const telNum=(val('meTnum')||'').trim();const tel=telNum?paisCod+' '+telNum:'';const notificarCliente=!!(document.getElementById('meNotif')&&document.getElementById('meNotif').checked);const data={n,ini:inits(n),sp:val('meS')||'General',doc:val('meD'),tel,paisCod,telNum,activo:val('meA')==='1',notificarCliente};
   if(id){const m=store.mecanicos.find(x=>x.id===id);const u=val('meU').trim(),p=val('meP'),p2=val('meP2'),co=(val('meE')||'').trim();
     if(u){
       if(p&&p!==p2){toast('Las contraseñas no coinciden');return;}
@@ -1783,7 +1867,7 @@ async function saveMech(id){const n=val('meN').trim();if(!n){toast('Ingresa el n
       catch(e){toast(e.message||'No se pudo actualizar el acceso');return;}
       data.usuario=u;data.correo=co;if(p)data.claveActual=p;
     }
-    Object.assign(m,data);closeModal();renderWeb();renderWebRecep();store.emit(u?'Técnico y acceso actualizados ✓':'Técnico actualizado con éxito');return;}
+    Object.assign(m,data);closeModal();renderWeb();renderWebRecep();store.emit(u?'✅ Datos actualizados con éxito'+(p?' (incluye nueva contraseña)':''):'✅ Datos actualizados con éxito');return;}
   if(data.doc&&store.mecanicos.some(m=>m.doc&&m.doc.toLowerCase()===data.doc.toLowerCase())){toast('Ya existe un técnico con ese documento');return;}
   const usuario=val('meU').trim(),pass=val('meP'),pass2=val('meP2'),correo=(val('meE')||'').trim();
   if(!usuario||!pass){toast('Ingresa usuario y contraseña de acceso');return;}
@@ -1794,7 +1878,7 @@ async function saveMech(id){const n=val('meN').trim();if(!n){toast('Ingresa el n
   try{await apiReq('/api/talleres/'+CURRENT_TALLER+'/cuenta',{method:'POST',body:JSON.stringify({nombre:n,usuario,correo,password:pass,rol:'mecanico',telefono:data.tel})});}
   catch(e){toast(e.message||'No se pudo crear la cuenta de acceso');return;}
   store.mecanicos.push(Object.assign({id:Date.now(),c:AVCOLORS[store.mecanicos.length%AVCOLORS.length],rat:5,base:0,usuario,claveActual:pass},data));
-  closeModal();renderWeb();renderWebRecep();store.emit('Técnico registrado con acceso a la app');
+  closeModal();renderWeb();renderWebRecep();store.emit('✅ Técnico registrado con éxito');
   setTimeout(()=>{compartirCredenciales({n,usuario,clave:pass,rol:'técnico',tel:data.tel});},300);}
 function toggleMech(id){const m=store.mecanicos.find(x=>x.id===id);m.activo=m.activo===false;renderWeb();renderWebRecep();store.emit(m.activo?'Técnico activado':'Técnico inactivado');}
 function addEspecialidad(){const w=document.getElementById('meNewWrap');if(!w)return;w.style.display='block';const i=document.getElementById('meNewSp');if(i)i.focus();}

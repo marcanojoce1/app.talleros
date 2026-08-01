@@ -35,7 +35,15 @@ router.get('/cotizacion/:tallerId/:cotId', async (req, res) => {
     const st = (await query('SELECT data FROM app_state WHERE taller_id=$1', [tallerId])).rows[0];
     let d = st ? st.data : {}; if (typeof d === 'string') { try { d = JSON.parse(d); } catch { d = {}; } }
 
-    const cot = (d.cotizaciones || []).find((c) => String(c.id) === String(cotId));
+    let cot;
+    if (String(cotId).startsWith('cita-')) {
+      const citaId = Number(String(cotId).slice(5));
+      const cita = (d.citas || []).find((c) => c.id === citaId);
+      if (!cita) return res.status(404).send('<h3>Cotización no encontrada</h3>');
+      cot = { id: cotId, num: null, cliente: cita.cliente, vehiculo: cita.vehiculo, placa: cita.placa, items: cita.repuestos || [], monto: cita.monto || 0, descuento: cita.descuento || 0, fecha: cita.fecha };
+    } else {
+      cot = (d.cotizaciones || []).find((c) => String(c.id) === String(cotId));
+    }
     if (!cot) return res.status(404).send('<h3>Cotización no encontrada</h3>');
     const cli = (d.clients || []).find((c) => c.n === cot.cliente) || { n: cot.cliente };
     const veh = (d.vehicles || []).find((v) => v.model === cot.vehiculo && v.plate === cot.placa) || null;

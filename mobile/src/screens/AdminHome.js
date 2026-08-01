@@ -259,10 +259,12 @@ export default function AdminHomeScreen({ navigation, route }) {
     guardar({ ...data, vehicles: vs });
   };
 
+  const avancesPendientes = vehicles.reduce((a, v) => a + (v.advances || []).filter((ad) => ad.pendienteRevision).length, 0);
   const MODULOS = [
     { k: 'dash', ic: '📊', c: '#2563EB', t: 'Dashboard', s: 'Resumen del taller' },
     { k: 'recep', ic: '📋', c: '#0891b2', t: 'Recepción', s: 'Recibir vehículo' },
     { k: 'ordenes', ic: '🔧', c: '#D97706', t: 'Órdenes', s: V.length + ' activas' },
+    { k: 'avances', ic: '📶', c: avancesPendientes ? '#dc2626' : '#16A34A', t: 'Avances', s: avancesPendientes ? '⚠ ' + avancesPendientes + ' por revisar' : 'Al día' },
     { k: 'hist', ic: '✅', c: '#16A34A', t: 'Trabajos', s: (data.history || []).length + ' realizados' },
     { k: 'mant', ic: '🔔', c: '#ca8a04', t: 'Mantenimientos', s: vehicles.filter((v) => v.proximoMant).length + ' programados' },
     { k: 'sos', ic: '🚨', c: (data.sos || []).some((x) => x.estado === 'abierto') ? '#dc2626' : '#16A34A', t: 'Auxilio vial',
@@ -331,6 +333,7 @@ export default function AdminHomeScreen({ navigation, route }) {
 
       {tab === 'dash' && taller && <Dashboard data={data} cur={cur} kpis={kpis} V={V} loading={loading} recargar={recargar} />}
       {tab === 'recep' && taller && <Recepcion data={data} guardar={guardar} onListo={() => setTab('ordenes')} />}
+      {tab === 'avances' && taller && <Avances data={data} guardar={guardar} cur={cur} />}
 
       {tab === 'ordenes' && taller && (() => {
         const grupos = [
@@ -656,7 +659,6 @@ function Dashboard({ data, cur, kpis, V, loading, recargar }) {
         <K label="En reparación" value={kpis.rep} /><K label="Terminados" value={kpis.term} /><K label="En espera" value={kpis.espera} />
         <K label="Clientes" value={kpis.clientes} /><K label="Técnicos" value={kpis.mecanicos} /><K label="Facturado mes" value={cur + ' ' + (factMes >= 1000 ? (factMes / 1000).toFixed(1) + 'k' : factMes)} />
       </View>
-      <View style={s.income}><Text style={s.incomeL}>Ingresos acumulados</Text><Text style={s.incomeV}>{cur} {kpis.ingresos.toLocaleString('es-VE')}</Text></View>
       <View style={s.card}>
         <Text style={s.h}>Ingresos por mes</Text>
         <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 130, gap: 8, marginTop: 10 }}>
@@ -1034,6 +1036,60 @@ function Recepcion({ data, guardar, onListo }) {
   );
 }
 
+/* =================== AVANCES (revisión del administrador) =================== */
+function Avances({ data, guardar, cur }) {
+  const vehicles = data.vehicles || [];
+  // Vehículos con al menos un avance (para mostrar el histórico completo en orden, resaltando lo pendiente)
+  const conAvances = vehicles.filter((v) => (v.advances || []).length).sort((a, b) => {
+    const pa = (a.advances || []).some((x) => x.pendienteRevision) ? 0 : 1;
+    const pb = (b.advances || []).some((x) => x.pendienteRevision) ? 0 : 1;
+    return pa - pb;
+  });
+
+  const notificar = (v, idx) => {
+    const adv = (v.advances || [])[idx];
+    if (!adv) return;
+    const vehicles2 = (data.vehicles || []).map((x) => {
+      if (x.id !== v.id) return x;
+      const advances = (x.advances || []).map((a, i) => (i === idx ? { ...a, pendienteRevision: false, notificadoCliente: true } : a));
+      return { ...x, advances };
+    });
+    const notifs = [...(data.notifs || []), { owner: v.owner, veh: v.model, text: '🔧 ' + adv.t + (adv.m ? ' — ' + adv.m : ''), time: 'ahora', read: false }];
+    guardar({ ...data, vehicles: vehicles2, notifs });
+    Alert.alert('✅ Notificado', 'El cliente ya puede ver este avance.');
+  };
+
+  return (
+    <ScrollView contentContainerStyle={{ padding: 14 }}>
+      <Text style={{ fontSize: 12.5, color: '#6b7480', marginBottom: 14, lineHeight: 18 }}>
+        Aquí llegan los avances de los técnicos que <Text style={{ fontWeight: '700' }}>no</Text> tienen activado "Notificar al cliente". Revísalos en orden y decide cuáles enviarle al cliente.
+      </Text>
+      {!conAvances.length ? <Text style={s.muted}>Aún no hay avances registrados.</Text> : null}
+      {conAvances.map((v) => (
+        <View key={v.id} style={s.card}>
+          <Text style={{ fontWeight: '800', color: '#16191d', fontSize: 14.5 }}>{v.model} <Text style={{ color: '#6b7480', fontWeight: '600' }}>{v.plate}</Text></Text>
+          <Text style={s.muted}>{v.owner} · {v.mech || 'sin técnico asignado'}</Text>
+          {(v.advances || []).map((a, i) => (
+            <View key={i} style={{ marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderColor: '#f0f2f5' }}>
+              <Text style={{ fontWeight: '700', color: '#16191d', fontSize: 13 }}>{i + 1}. {a.t}</Text>
+              {a.m ? <Text style={s.muted}>{a.m}</Text> : null}
+              {a.pendienteRevision ? (
+                <TouchableOpacity style={[s.act, { backgroundColor: '#fdf3e0', marginTop: 6, alignSelf: 'flex-start' }]} onPress={() => notificar(v, i)}>
+                  <Text style={[s.actT, { color: '#b45309' }]}>🔔 Notificar al cliente</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={{ backgroundColor: '#e8f6ec', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start', marginTop: 6 }}>
+                  <Text style={{ color: '#0F6E56', fontWeight: '700', fontSize: 11 }}>✅ {a.notificadoCliente ? 'Visible para el cliente' : 'Registro interno'}</Text>
+                </View>
+              )}
+            </View>
+          ))}
+        </View>
+      ))}
+    </ScrollView>
+  );
+}
+
 /* =================== HISTORIAL =================== */
 /* =================== AUXILIO VIAL =================== */
 function AuxilioVial({ data, loading, recargar, taller }) {
@@ -1209,7 +1265,8 @@ function Cotizaciones({ data, guardar, cur, loading, recargar, taller, onNav }) 
   const vehiculos = data.vehicles || [];
   const cotsCitas = (data.citas || []).filter((c) => c.estado === 'cotizada' || c.estado === 'aceptada').map((c) => ({
     id: 'cita-' + c.id, num: null, cliente: c.cliente, vehiculo: c.vehiculo, placa: c.placa,
-    items: c.repuestos || [], monto: c.monto || 0, estado: c.estado === 'aceptada' ? 'aceptada' : 'enviada',
+    items: c.repuestos || [], monto: c.monto || 0, estado: c.estado === 'aceptada' ? 'aprobada' : 'enviada',
+    aprobadoPor: c.aprobadoPor, fechaAprobacion: c.fechaAprobacion,
     origen: 'cita', fecha: c.fecha,
   }));
   const cotsPropias = data.cotizaciones || [];
@@ -1283,9 +1340,14 @@ function Cotizaciones({ data, guardar, cur, loading, recargar, taller, onNav }) 
     Alert.alert('Aprobar cotización', '¿Aprobar esta cotización sin la autorización del cliente?', [
       { text: 'Cancelar', style: 'cancel' },
       {
-        text: 'Aprobar', onPress: () => guardar({
-          ...data, cotizaciones: (data.cotizaciones || []).map((x) => (x.id === c.id ? { ...x, estado: 'aprobada', aprobadoPor: 'admin', fechaAprobacion: new Date().toLocaleDateString('es-VE') } : x)),
-        }),
+        text: 'Aprobar', onPress: () => {
+          if (c.origen === 'cita') {
+            const citaId = +String(c.id).slice(5);
+            guardar({ ...data, citas: (data.citas || []).map((x) => (x.id === citaId ? { ...x, estado: 'aceptada', aprobadoPor: 'admin', fechaAprobacion: new Date().toLocaleDateString('es-VE') } : x)) });
+          } else {
+            guardar({ ...data, cotizaciones: (data.cotizaciones || []).map((x) => (x.id === c.id ? { ...x, estado: 'aprobada', aprobadoPor: 'admin', fechaAprobacion: new Date().toLocaleDateString('es-VE') } : x)) });
+          }
+        },
       },
     ]);
   };
@@ -1324,8 +1386,8 @@ function Cotizaciones({ data, guardar, cur, loading, recargar, taller, onNav }) 
           <Text style={s.muted}>{(c.items || []).length} ítem(s){c.origen === 'cita' ? ' · desde cita' : ''}{c.estado === 'aceptada' ? ' · aceptada ✓' : ''}</Text>
           <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
             <TouchableOpacity style={[s.act, { flex: 1, backgroundColor: '#e8f6ec' }]} onPress={() => compartirCotiza(c)}><Text style={[s.actT, { color: '#0F6E56' }]}>💬 Compartir</Text></TouchableOpacity>
-            {c.origen !== 'cita' ? <TouchableOpacity style={[s.act, { flex: 1, backgroundColor: '#fdf3e0' }]} onPress={() => taller && compartirCotizacionPDF(taller.id, c)}><Text style={[s.actT, { color: '#b45309' }]}>📄 PDF</Text></TouchableOpacity> : null}
-            {c.origen !== 'cita' ? <TouchableOpacity style={[s.act, { backgroundColor: '#e8f6ec' }]} onPress={() => aprobarCotizacionAdmin(c)}><Text style={[s.actT, { color: '#0F6E56' }]}>✅ Aprobar</Text></TouchableOpacity> : null}
+            <TouchableOpacity style={[s.act, { flex: 1, backgroundColor: '#fdf3e0' }]} onPress={() => taller && compartirCotizacionPDF(taller.id, c)}><Text style={[s.actT, { color: '#b45309' }]}>📄 PDF</Text></TouchableOpacity>
+            <TouchableOpacity style={[s.act, { backgroundColor: '#e8f6ec' }]} onPress={() => aprobarCotizacionAdmin(c)}><Text style={[s.actT, { color: '#0F6E56' }]}>✅ Aprobar</Text></TouchableOpacity>
             {c.origen !== 'cita' ? <TouchableOpacity style={[s.act, { flex: 1 }]} onPress={() => abrirEditar(c)}><Text style={s.actT}>✏️ Editar</Text></TouchableOpacity> : null}
             {c.origen !== 'cita' ? <TouchableOpacity style={[s.act, { backgroundColor: '#fdecec', paddingHorizontal: 14 }]} onPress={() => inactivar(c)}><Text style={[s.actT, { color: '#dc2626' }]}>Inactivar</Text></TouchableOpacity> : null}
           </View>
@@ -2137,7 +2199,7 @@ function FormModal({ modal, close, data, guardar, cur, pickFoto, taller }) {
   const [f, setF] = useState(() => {
     if (tipo === 'cliente') return item ? { ...item, telNum: item.telNum || '', paisCod: item.paisCod || '+58', paisEt: item.paisEt || '🇻🇪 Venezuela +58', password: '', password2: '' } : { n: '', tipoDoc: 'Cédula V', doc: '', tel: '', telNum: '', paisCod: '+58', paisEt: '🇻🇪 Venezuela +58', correo: '', dir: '', usuario: '', password: '', password2: '', activo: true };
     if (tipo === 'vehiculo') return item ? { ...item } : { marca: '', modelo: '', anio: '', plate: '', owner: '', color: '', activo: true };
-    if (tipo === 'mecanico') return item ? { ...item, telNum: item.telNum || '', paisCod: item.paisCod || '+58', paisEt: item.paisEt || '🇻🇪 Venezuela +58', password: '', password2: '' } : { n: '', sp: 'General', doc: '', tel: '', telNum: '', paisCod: '+58', paisEt: '🇻🇪 Venezuela +58', correo: '', usuario: '', password: '', password2: '', activo: true };
+    if (tipo === 'mecanico') return item ? { ...item, telNum: item.telNum || '', paisCod: item.paisCod || '+58', paisEt: item.paisEt || '🇻🇪 Venezuela +58', password: '', password2: '', notificarCliente: !!item.notificarCliente } : { n: '', sp: 'General', doc: '', tel: '', telNum: '', paisCod: '+58', paisEt: '🇻🇪 Venezuela +58', correo: '', usuario: '', password: '', password2: '', activo: true, notificarCliente: false };
     if (tipo === 'pago') return { modo: 'completo', codigo: '', monto: '', total: '', ahora: '', partes: '3', prox: '', foto: null };
     return {};
   });
@@ -2145,17 +2207,25 @@ function FormModal({ modal, close, data, guardar, cur, pickFoto, taller }) {
   const cfgMerge = { ...cfg, especialidades: espOpts, marcas: marOpts };
 
   const crearCuenta = async (rol) => {
-    // Crea o actualiza las credenciales de acceso en el backend
-    if (!f.usuario || !f.password) return true; // sin credenciales, solo guarda el registro
+    // Crea (POST) o actualiza (PUT) las credenciales de acceso en el backend, según si es una
+    // cuenta nueva o se está editando una que ya existe — antes siempre usaba "crear", así que
+    // al editar la contraseña de un cliente/técnico existente el servidor rechazaba el cambio
+    // (usuario ya existe) y la app lo ignoraba mostrando éxito por error.
+    if (!f.usuario || !f.password) return true; // sin contraseña nueva, solo guarda el registro
     if (f.password !== f.password2) { Alert.alert('Error', 'Las contraseñas no coinciden.'); return false; }
     if (f.password.length < 6) { Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres.'); return false; }
-    if (!f.correo) { Alert.alert('Falta', 'El correo es necesario para el acceso.'); return false; }
+    const editando = !!(item && item.usuario);
+    if (!editando && !f.correo) { Alert.alert('Falta', 'El correo es necesario para el acceso.'); return false; }
     try {
-      await api('/api/talleres/' + taller.id + '/cuenta', { method: 'POST', body: JSON.stringify({ nombre: f.n, usuario: f.usuario, correo: f.correo, password: f.password, rol, telefono: f.tel }) });
+      if (editando) {
+        await api('/api/talleres/' + taller.id + '/cuenta', { method: 'PUT', body: JSON.stringify({ nombre: f.n, usuario: f.usuario, correo: f.correo, password: f.password, rol, telefono: f.tel, usuarioAnterior: item.usuario }) });
+      } else {
+        await api('/api/talleres/' + taller.id + '/cuenta', { method: 'POST', body: JSON.stringify({ nombre: f.n, usuario: f.usuario, correo: f.correo, password: f.password, rol, telefono: f.tel }) });
+      }
       return true;
     } catch (e) {
-      if ((e.message || '').includes('ya existe')) { Alert.alert('Aviso', 'Ese usuario ya tiene cuenta; se guardaron los demás datos.'); return true; }
-      Alert.alert('Error al crear acceso', e.message); return false;
+      if (!editando && (e.message || '').includes('ya existe')) { Alert.alert('Aviso', 'Ese usuario ya tiene cuenta; se guardaron los demás datos.'); return true; }
+      Alert.alert('Error al ' + (editando ? 'actualizar' : 'crear') + ' el acceso', e.message); return false;
     }
   };
 
@@ -2181,6 +2251,8 @@ function FormModal({ modal, close, data, guardar, cur, pickFoto, taller }) {
       if (item) arr = arr.map((c) => (c.id === item.id ? { ...c, ...limpio } : c));
       else arr = [...arr, { ...limpio, id: nid(arr), ini: inits(f.n), gas: 0 }];
       guardar({ ...data, clients: arr }); close();
+      if (item) Alert.alert('✅ Datos actualizados con éxito', claveCliNueva ? 'Se guardaron los cambios y la nueva contraseña.' : 'Se guardaron los cambios.');
+      else if (!claveCliNueva) Alert.alert('✅ Cliente registrado con éxito');
       if (!item && claveCliNueva) setTimeout(() => ofrecerCompartir(f.n, f.usuario, claveCliNueva, 'cliente', f.tel), 350);
     } else if (tipo === 'vehiculo') {
       if (!f.marca || !f.plate) { Alert.alert('Falta', 'Marca y placa.'); return; }
@@ -2190,6 +2262,7 @@ function FormModal({ modal, close, data, guardar, cur, pickFoto, taller }) {
       if (item) arr = arr.map((v) => (v.id === item.id ? { ...v, ...f, model } : v));
       else arr = [...arr, { ...f, id: nid(arr), model, ini: inits(f.marca + ' ' + f.modelo), status: 'espera', progress: 0, mech: null, motivo: 'Por definir', cost: 0, recepcion: null, cerrada: false, recepDamages: [], advances: [] }];
       guardar({ ...data, vehicles: arr, config: cfgMerge }); close();
+      Alert.alert(item ? '✅ Datos actualizados con éxito' : '✅ Vehículo registrado con éxito');
     } else if (tipo === 'mecanico') {
       if (!f.n) { Alert.alert('Falta', 'Nombre del técnico.'); return; }
       const ok = await crearCuenta('mecanico'); if (!ok) return;
@@ -2199,6 +2272,8 @@ function FormModal({ modal, close, data, guardar, cur, pickFoto, taller }) {
       if (item) arr = arr.map((m) => (m.id === item.id ? { ...m, ...limpio } : m));
       else arr = [...arr, { ...limpio, id: nid(arr), ini: inits(f.n), c: '#2563EB', rat: 5, base: 0 }];
       guardar({ ...data, mecanicos: arr, config: cfgMerge }); close();
+      if (item) Alert.alert('✅ Datos actualizados con éxito', limpioMecClave ? 'Se guardaron los cambios y la nueva contraseña.' : 'Se guardaron los cambios.');
+      else if (!limpioMecClave) Alert.alert('✅ Técnico registrado con éxito');
       if (!item && limpioMecClave) setTimeout(() => ofrecerCompartir(f.n, f.usuario, limpioMecClave, 'técnico', f.tel), 350);
     }
   };
@@ -2291,6 +2366,15 @@ function FormModal({ modal, close, data, guardar, cur, pickFoto, taller }) {
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 {[[true, 'Activo'], [false, 'Inactivo']].map(([k, l]) => (<TouchableOpacity key={String(k)} style={[s.pillBtn, f.activo === k && s.pillBtnOn]} onPress={() => set('activo', k)}><Text style={[s.pillBtnT, f.activo === k && { color: '#16191d' }]}>{l}</Text></TouchableOpacity>))}
               </View>
+              <TouchableOpacity onPress={() => set('notificarCliente', !f.notificarCliente)} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 16, backgroundColor: '#f7f8fa', borderRadius: 12, padding: 12 }}>
+                <View style={{ width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: f.notificarCliente ? '#F5B700' : '#c7ccd2', backgroundColor: f.notificarCliente ? '#F5B700' : 'transparent', alignItems: 'center', justifyContent: 'center', marginTop: 1 }}>
+                  {f.notificarCliente ? <Text style={{ fontWeight: '900', color: '#16191d' }}>✓</Text> : null}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontWeight: '700', color: '#16191d', fontSize: 13.5 }}>Notificar al cliente</Text>
+                  <Text style={{ color: '#6b7480', fontSize: 12, marginTop: 2 }}>Si lo marcas, cada avance que el técnico suba le llega directo al cliente. Si lo dejas sin marcar, los avances quedan para que tú los revises y decidas cuáles enviar, en el módulo "Avances".</Text>
+                </View>
+              </TouchableOpacity>
             </>)}
             {tipo === 'pago' && (<>
               <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
@@ -2342,8 +2426,8 @@ const s = StyleSheet.create({
   dashAdmin: { color: '#9aa3ad', fontSize: 12, marginTop: 2 },
   dashFecha: { color: '#6b7480', fontSize: 11, marginTop: 10, textTransform: 'capitalize' },
   factMes: { backgroundColor: '#F5B700', borderRadius: 16, padding: 16, marginBottom: 14, flexDirection: 'row', alignItems: 'center' },
-  factMesL: { color: '#5b4a00', fontSize: 12, fontWeight: '700' },
-  factMesV: { color: '#16191d', fontSize: 26, fontWeight: '800', marginTop: 2 },
+  factMesL: { color: 'rgba(255,255,255,.85)', fontSize: 12, fontWeight: '700' },
+  factMesV: { color: '#fff', fontSize: 26, fontWeight: '800', marginTop: 2 },
   ojo: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(0,0,0,.08)', justifyContent: 'center', alignItems: 'center' },
   cardsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   modCard: { width: '31%', backgroundColor: '#fff', borderRadius: 14, borderWidth: 1, borderColor: '#e7e9ec', padding: 12 },

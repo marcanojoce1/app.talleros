@@ -314,15 +314,18 @@ router.put('/:id/cuenta', async (req, res) => {
     return res.json({ ok: true, id: ins.rows[0].id, creado: true });
   }
 
-  // Actualiza los datos; la contraseña solo si se indicó una nueva
+  // Actualiza los datos; la contraseña solo si se indicó una nueva.
+  // Si no mandan correo (cadena vacía), se conserva el que ya tenía — antes un correo
+  // vacío borraba el correo guardado porque COALESCE solo cubre NULL, no ''.
+  const correoFinal = correo ? correo : null;
   if (password) {
     if (String(password).length < 6) return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
     const hash = await hashPassword(password);
     await query('UPDATE usuarios SET nombre=$2, usuario=$3, correo=COALESCE($4,correo), telefono=$5, password=$6, must_change=1 WHERE id=$1',
-      [existente.id, nombre, usuario, correo || null, telefono || null, hash]);
+      [existente.id, nombre, usuario, correoFinal, telefono || null, hash]);
   } else {
     await query('UPDATE usuarios SET nombre=$2, usuario=$3, correo=COALESCE($4,correo), telefono=$5 WHERE id=$1',
-      [existente.id, nombre, usuario, correo || null, telefono || null]);
+      [existente.id, nombre, usuario, correoFinal, telefono || null]);
   }
   registrar({ req, accion: 'Actualizó cuenta ' + rol, modulo: 'usuarios', detalle: usuario, taller_id: tallerId });
   res.json({ ok: true, id: existente.id, actualizado: true });

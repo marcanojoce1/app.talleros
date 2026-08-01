@@ -827,15 +827,17 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
   };
 
   // Actualiza el vehículo y (opcional) agrega un aviso para el cliente
+  const miMecanico = (data.mecanicos || []).find((m) => m.n === me.nombre);
+  const notificaDirecto = !!(miMecanico && miMecanico.notificarCliente);
   const aplicar = (cambios, avance, notif) => {
     const vehicles = (data.vehicles || []).map((x) => {
       if (x.id !== v.id) return x;
       const nv = { ...x, ...cambios };
-      if (avance) nv.advances = [...(x.advances || []), avance];
+      if (avance) nv.advances = [...(x.advances || []), { ...avance, notificadoCliente: notif ? notificaDirecto : true, pendienteRevision: !!(notif && !notificaDirecto) }];
       return nv;
     });
     let notifs = data.notifs || [];
-    if (notif) notifs = [...notifs, { owner: v.owner, veh: v.model, text: notif.text, time: 'ahora', read: false, atencion: !!notif.atencion, listo: !!notif.listo }];
+    if (notif && notificaDirecto) notifs = [...notifs, { owner: v.owner, veh: v.model, text: notif.text, time: 'ahora', read: false, atencion: !!notif.atencion, listo: !!notif.listo }];
     guardar({ ...data, vehicles, notifs });
   };
 
