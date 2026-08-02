@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Alert, ScrollView, TextInput, Image, Modal, Pressable, Linking, BackHandler } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Alert, ScrollView, TextInput, Image, Modal, Pressable, Linking, BackHandler, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { api, getState, putState, clearSession, getApiUrl } from '../api';
 import { compartirActaPDF, abrirEnNavegador, compartirCotizacionPDF, compartirResumenEsperaPDF } from '../acta';
@@ -145,7 +145,7 @@ export default function AdminHomeScreen({ navigation, route }) {
   useEffect(() => {
     (async () => {
       let list = talleres;
-      if (esSuper) { try { const ts = await api('/api/talleres'); list = ts.filter((t) => t.activo); setTalleres(list); } catch (e) {} }
+      if (esSuper) { try { const ts = await api('/api/talleres'); list = ts.filter((t) => t.activo); setTalleres(list); } catch (e) { setError(e.message); } }
       const primero = (list || []).find((t) => t.activo !== 0 && t.activo !== false) || (list || [])[0];
       if (primero) seleccionar(primero);
     })();
@@ -318,6 +318,13 @@ export default function AdminHomeScreen({ navigation, route }) {
         </ScrollView>
       )}
 
+      {loading && !taller && !error && (
+        <View style={{ padding: 30, alignItems: 'center' }}>
+          <ActivityIndicator color="#F5B700" size="large" />
+          <Text style={{ color: '#16191d', fontWeight: '700', marginTop: 14, textAlign: 'center' }}>Conectando con el servidor…</Text>
+          <Text style={{ color: '#6b7480', fontSize: 12.5, marginTop: 6, textAlign: 'center', lineHeight: 18 }}>Si es la primera vez que entras en un rato, el servidor puede tardar hasta un minuto en despertar. Espera un momento.</Text>
+        </View>
+      )}
       {!!error && (
         <View style={{ padding: 16, alignItems: 'center' }}>
           <Text style={s.err}>{error}</Text>
@@ -326,14 +333,14 @@ export default function AdminHomeScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
       )}
-      {!taller && !error && <Text style={s.muted2}>Selecciona un taller para comenzar.</Text>}
+      {!taller && !error && !loading && <Text style={s.muted2}>Selecciona un taller para comenzar.</Text>}
 
       {/* ---------- INICIO: tarjetas por módulo ---------- */}
       {tab === 'inicio' && taller && <Inicio data={data} cur={cur} kpis={kpis} taller={taller} me={me} modulos={MODULOS} onNav={setTab} loading={loading} recargar={recargar} />}
 
       {tab === 'dash' && taller && <Dashboard data={data} cur={cur} kpis={kpis} V={V} loading={loading} recargar={recargar} />}
       {tab === 'recep' && taller && <Recepcion data={data} guardar={guardar} onListo={() => setTab('ordenes')} />}
-      {tab === 'avances' && taller && <Avances data={data} guardar={guardar} cur={cur} />}
+      {tab === 'avances' && taller && <Avances data={data} guardar={guardar} cur={cur} taller={taller} />}
 
       {tab === 'ordenes' && taller && (() => {
         const grupos = [
@@ -514,7 +521,7 @@ export default function AdminHomeScreen({ navigation, route }) {
       {tab === 'talleres' && esSuper && <Talleres />}
 
       {modal && modal.tipo === 'acta' && <Acta item={modal.item} close={() => setModal(null)} />}
-      {modal && modal.tipo === 'avances' && <AvancesModal item={modal.item} close={() => setModal(null)} taller={taller} />}
+      {modal && modal.tipo === 'avances' && <AvancesModal item={modal.item} close={() => setModal(null)} taller={taller} data={data} guardar={guardar} />}
       {modal && modal.tipo !== 'acta' && modal.tipo !== 'avances' && <FormModal modal={modal} close={() => setModal(null)} data={data} guardar={guardar} cur={cur} pickFoto={pickFoto} taller={taller} />}
 
       <Modal visible={!!passPrompt} transparent animationType="fade" onRequestClose={() => setPassPrompt(null)}>
@@ -1037,55 +1044,43 @@ function Recepcion({ data, guardar, onListo }) {
 }
 
 /* =================== AVANCES (revisión del administrador) =================== */
-function Avances({ data, guardar, cur }) {
+function Avances({ data, guardar, cur, taller }) {
   const vehicles = data.vehicles || [];
-  // Vehículos con al menos un avance (para mostrar el histórico completo en orden, resaltando lo pendiente)
-  const conAvances = vehicles.filter((v) => (v.advances || []).length).sort((a, b) => {
-    const pa = (a.advances || []).some((x) => x.pendienteRevision) ? 0 : 1;
-    const pb = (b.advances || []).some((x) => x.pendienteRevision) ? 0 : 1;
-    return pa - pb;
-  });
-
-  const notificar = (v, idx) => {
-    const adv = (v.advances || [])[idx];
-    if (!adv) return;
-    const vehicles2 = (data.vehicles || []).map((x) => {
-      if (x.id !== v.id) return x;
-      const advances = (x.advances || []).map((a, i) => (i === idx ? { ...a, pendienteRevision: false, notificadoCliente: true } : a));
-      return { ...x, advances };
+  const [busq, setBusq] = useState('');
+  const [verItem, setVerItem] = useState(null);
+  // Solo órdenes activas (en proceso / espera / devolución) — las cobradas y entregadas no aplican aquí
+  const conAvances = vehicles.filter((v) => v.activo !== false && !v.cerrada && (v.advances || []).length)
+    .filter((v) => !busq.trim() || norm(v.model + ' ' + v.plate + ' ' + v.owner + ' ' + (v.mech || '')).includes(norm(busq)))
+    .sort((a, b) => {
+      const pa = (a.advances || []).some((x) => x.pendienteRevision) ? 0 : 1;
+      const pb = (b.advances || []).some((x) => x.pendienteRevision) ? 0 : 1;
+      return pa - pb;
     });
-    const notifs = [...(data.notifs || []), { owner: v.owner, veh: v.model, text: '🔧 ' + adv.t + (adv.m ? ' — ' + adv.m : ''), time: 'ahora', read: false }];
-    guardar({ ...data, vehicles: vehicles2, notifs });
-    Alert.alert('✅ Notificado', 'El cliente ya puede ver este avance.');
-  };
 
   return (
     <ScrollView contentContainerStyle={{ padding: 14 }}>
-      <Text style={{ fontSize: 12.5, color: '#6b7480', marginBottom: 14, lineHeight: 18 }}>
-        Aquí llegan los avances de los técnicos que <Text style={{ fontWeight: '700' }}>no</Text> tienen activado "Notificar al cliente". Revísalos en orden y decide cuáles enviarle al cliente.
+      <Text style={{ fontSize: 12.5, color: '#6b7480', marginBottom: 12, lineHeight: 18 }}>
+        Órdenes en proceso con avances de técnicos. Toca una para ver el detalle completo con el acta y decidir cuáles notificarle al cliente.
       </Text>
-      {!conAvances.length ? <Text style={s.muted}>Aún no hay avances registrados.</Text> : null}
-      {conAvances.map((v) => (
-        <View key={v.id} style={s.card}>
-          <Text style={{ fontWeight: '800', color: '#16191d', fontSize: 14.5 }}>{v.model} <Text style={{ color: '#6b7480', fontWeight: '600' }}>{v.plate}</Text></Text>
-          <Text style={s.muted}>{v.owner} · {v.mech || 'sin técnico asignado'}</Text>
-          {(v.advances || []).map((a, i) => (
-            <View key={i} style={{ marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderColor: '#f0f2f5' }}>
-              <Text style={{ fontWeight: '700', color: '#16191d', fontSize: 13 }}>{i + 1}. {a.t}</Text>
-              {a.m ? <Text style={s.muted}>{a.m}</Text> : null}
-              {a.pendienteRevision ? (
-                <TouchableOpacity style={[s.act, { backgroundColor: '#fdf3e0', marginTop: 6, alignSelf: 'flex-start' }]} onPress={() => notificar(v, i)}>
-                  <Text style={[s.actT, { color: '#b45309' }]}>🔔 Notificar al cliente</Text>
-                </TouchableOpacity>
+      <TextInput style={[s.input, { marginBottom: 12 }]} value={busq} onChangeText={setBusq} placeholder="Buscar por vehículo, placa, cliente o técnico…" placeholderTextColor="#9aa3ad" />
+      {!conAvances.length ? <Text style={s.muted}>No hay órdenes en proceso con avances registrados.</Text> : null}
+      {conAvances.map((v) => {
+        const pend = (v.advances || []).filter((x) => x.pendienteRevision).length;
+        return (
+          <TouchableOpacity key={v.id} style={s.card} onPress={() => setVerItem(v)}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={{ fontWeight: '800', color: '#16191d', fontSize: 14.5 }}>{v.model} <Text style={{ color: '#6b7480', fontWeight: '600' }}>{v.plate}</Text></Text>
+              {pend ? (
+                <View style={{ backgroundColor: '#fdf3e0', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}><Text style={{ color: '#b45309', fontWeight: '700', fontSize: 11 }}>⚠ {pend} por revisar</Text></View>
               ) : (
-                <View style={{ backgroundColor: '#e8f6ec', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start', marginTop: 6 }}>
-                  <Text style={{ color: '#0F6E56', fontWeight: '700', fontSize: 11 }}>✅ {a.notificadoCliente ? 'Visible para el cliente' : 'Registro interno'}</Text>
-                </View>
+                <View style={{ backgroundColor: '#e8f6ec', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}><Text style={{ color: '#0F6E56', fontWeight: '700', fontSize: 11 }}>Al día</Text></View>
               )}
             </View>
-          ))}
-        </View>
-      ))}
+            <Text style={s.muted}>{v.owner} · {v.mech || 'sin técnico asignado'} · {(v.advances || []).length} avance(s)</Text>
+          </TouchableOpacity>
+        );
+      })}
+      {verItem ? <AvancesModal item={verItem} close={() => setVerItem(null)} taller={taller} data={data} guardar={guardar} /> : null}
     </ScrollView>
   );
 }
@@ -1263,14 +1258,13 @@ function AuxilioVial({ data, loading, recargar, taller }) {
 function Cotizaciones({ data, guardar, cur, loading, recargar, taller, onNav }) {
   const clientes = data.clients || [];
   const vehiculos = data.vehicles || [];
-  const cotsCitas = (data.citas || []).filter((c) => c.estado === 'cotizada' || c.estado === 'aceptada').map((c) => ({
+  const cotsCitas = (data.citas || []).filter((c) => c.estado === 'cotizada').map((c) => ({
     id: 'cita-' + c.id, num: null, cliente: c.cliente, vehiculo: c.vehiculo, placa: c.placa,
-    items: c.repuestos || [], monto: c.monto || 0, estado: c.estado === 'aceptada' ? 'aprobada' : 'enviada',
-    aprobadoPor: c.aprobadoPor, fechaAprobacion: c.fechaAprobacion,
+    items: c.repuestos || [], monto: c.monto || 0, estado: 'enviada',
     origen: 'cita', fecha: c.fecha,
   }));
   const cotsPropias = data.cotizaciones || [];
-  const todas = [...cotsPropias.filter((c) => c.estado !== 'inactiva'), ...cotsCitas];
+  const todas = [...cotsPropias.filter((c) => c.estado !== 'inactiva' && c.estado !== 'rechazada'), ...cotsCitas];
   const [crear, setCrear] = React.useState(false);
   const [editar, setEditar] = React.useState(null);
   const [q, setQ] = React.useState('');
@@ -1295,6 +1289,9 @@ function Cotizaciones({ data, guardar, cur, loading, recargar, taller, onNav }) 
     : todas;
   const pendientesFiltradas = todasFiltradas.filter((c) => c.estado !== 'aprobada');
   const aprobadasFiltradas = todasFiltradas.filter((c) => c.estado === 'aprobada');
+  const rechazadasFiltradas = (buscar.trim()
+    ? cotsPropias.filter((c) => c.estado === 'rechazada' && norm((c.num ? 'P-' + String(c.num).padStart(6, '0') : '') + ' ' + (c.cliente || '') + ' ' + (c.doc || '')).includes(norm(buscar)))
+    : cotsPropias.filter((c) => c.estado === 'rechazada'));
 
   const abrirCrear = () => { setCli(null); setVeh(null); setItems([]); setItN(''); setItP(''); setItTipo('servicio'); setItDetalle(''); setDescuento(''); setQ(''); setEditar(null); setCrear(true); };
   const abrirEditar = (c) => {
@@ -1343,7 +1340,21 @@ function Cotizaciones({ data, guardar, cur, loading, recargar, taller, onNav }) 
         text: 'Aprobar', onPress: () => {
           if (c.origen === 'cita') {
             const citaId = +String(c.id).slice(5);
-            guardar({ ...data, citas: (data.citas || []).map((x) => (x.id === citaId ? { ...x, estado: 'aceptada', aprobadoPor: 'admin', fechaAprobacion: new Date().toLocaleDateString('es-VE') } : x)) });
+            const cita = (data.citas || []).find((x) => x.id === citaId);
+            const num = ((data.config && data.config.ultimoNumCotiza) || 0) + 1;
+            const nuevaCot = {
+              id: Date.now(), num, cliente: c.cliente, doc: '', tel: '',
+              vehiculo: c.vehiculo || '', placa: c.placa || '', items: c.items || [], monto: c.monto || 0,
+              descuento: (cita && cita.descuento) || 0, estado: 'aprobada', aprobadoPor: 'admin',
+              fechaAprobacion: new Date().toLocaleDateString('es-VE'), origen: 'cita', origenCitaId: citaId,
+              fecha: new Date().toLocaleDateString('es-VE'),
+            };
+            guardar({
+              ...data,
+              citas: (data.citas || []).map((x) => (x.id === citaId ? { ...x, estado: 'aceptada' } : x)),
+              cotizaciones: [...(data.cotizaciones || []), nuevaCot],
+              config: { ...(data.config || {}), ultimoNumCotiza: num },
+            });
           } else {
             guardar({ ...data, cotizaciones: (data.cotizaciones || []).map((x) => (x.id === c.id ? { ...x, estado: 'aprobada', aprobadoPor: 'admin', fechaAprobacion: new Date().toLocaleDateString('es-VE') } : x)) });
           }
@@ -1409,6 +1420,20 @@ function Cotizaciones({ data, guardar, cur, loading, recargar, taller, onNav }) 
             <TouchableOpacity style={[s.act, { flex: 1, backgroundColor: '#e8f6ec' }]} onPress={() => compartirCotiza(c)}><Text style={[s.actT, { color: '#0F6E56' }]}>💬 Compartir</Text></TouchableOpacity>
             <TouchableOpacity style={[s.act, { flex: 1, backgroundColor: '#fdf3e0' }]} onPress={() => taller && compartirCotizacionPDF(taller.id, c)}><Text style={[s.actT, { color: '#b45309' }]}>📄 PDF</Text></TouchableOpacity>
           </View>
+        </View>
+      ))}
+
+      <Text style={[s.label, { marginTop: 18, marginBottom: 10, fontSize: 14, fontWeight: '800', color: '#dc2626' }]}>Rechazadas por el cliente</Text>
+      {!rechazadasFiltradas.length ? <Text style={s.muted}>Ninguna cotización rechazada.</Text> : null}
+      {rechazadasFiltradas.map((c) => (
+        <View key={c.id} style={s.card}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={{ fontSize: 15, fontWeight: '800', color: '#dc2626' }}>🧾 {c.num ? 'P-' + String(c.num).padStart(6, '0') : ''}</Text>
+            <Text style={{ fontWeight: '800', color: '#16191d' }}>{cur} {(+c.monto || 0).toLocaleString('es-VE')}</Text>
+          </View>
+          <Text style={s.muted}>👤 {c.cliente}</Text>
+          {c.vehiculo ? <Text style={s.muted}>🚗 {c.vehiculo}{c.placa ? ' · ' + c.placa : ''}</Text> : null}
+          <Text style={s.muted}>Rechazada{c.fechaAprobacion ? ' el ' + c.fechaAprobacion : ''}</Text>
         </View>
       ))}
 
@@ -1978,10 +2003,22 @@ function Historial({ data, guardar, cur, loading, recargar, pickFoto, taller }) 
   );
 }
 /* =================== AVANCES DEL TÉCNICO =================== */
-function AvancesModal({ item, close, taller }) {
+function AvancesModal({ item, close, taller, data, guardar }) {
   const [foto, setFoto] = useState(null);
-  const avs = [...(item.advances || [])].reverse();
+  const avsOriginal = item.advances || [];
+  const avs = avsOriginal.map((a, i) => ({ ...a, _idx: i })).reverse();
   const ico = { nota: '📝', atencion: '⚠️', recep: '🔧', check: '✅', term: '✅' };
+  const notificar = (idx) => {
+    if (!data || !guardar) return;
+    const vehicles = (data.vehicles || []).map((v) => {
+      if (v.id !== item.id) return v;
+      const advances = (v.advances || []).map((a, i) => (i === idx ? { ...a, pendienteRevision: false, notificadoCliente: true } : a));
+      return { ...v, advances };
+    });
+    const notifs = [...(data.notifs || []), { owner: item.owner, veh: item.model, text: '🔧 ' + avsOriginal[idx].t + (avsOriginal[idx].m ? ' — ' + avsOriginal[idx].m : ''), time: 'ahora', read: false }];
+    guardar({ ...data, vehicles, notifs });
+    Alert.alert('✅ Notificado', 'El cliente ya puede ver este avance.');
+  };
   return (
     <Modal visible transparent animationType="slide" onRequestClose={close}>
       <View style={s.modalWrap}><View style={s.modalCard}>
@@ -2007,6 +2044,15 @@ function AvancesModal({ item, close, taller }) {
                     <Text style={{ fontSize: 12, fontWeight: '700', marginTop: 4, color: a.autorizado ? '#16A34A' : '#dc2626' }}>
                       {a.autorizado ? '✓ Autorizado por el cliente' : '✕ Denegado por el cliente'}
                     </Text>
+                  ) : null}
+                  {a.pendienteRevision ? (
+                    <TouchableOpacity style={[s.act, { backgroundColor: '#fdf3e0', marginTop: 6, alignSelf: 'flex-start' }]} onPress={() => notificar(a._idx)}>
+                      <Text style={[s.actT, { color: '#b45309' }]}>🔔 Notificar al cliente</Text>
+                    </TouchableOpacity>
+                  ) : a.notificadoCliente ? (
+                    <View style={{ backgroundColor: '#e8f6ec', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, alignSelf: 'flex-start', marginTop: 6 }}>
+                      <Text style={{ color: '#0F6E56', fontWeight: '700', fontSize: 11 }}>✅ Visible para el cliente</Text>
+                    </View>
                   ) : null}
                 </View>
               </View>

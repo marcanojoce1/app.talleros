@@ -296,6 +296,24 @@ router.post('/cita-responder', async (req, res) => {
   if (!cita) return res.status(404).json({ error: 'Cita no encontrada' });
   d.citas = (d.citas || []).map((x) => (x.id === id && x.cliente === nombre ? { ...x, estado: aceptada ? 'aceptada' : 'rechazada', respondidoEn: new Date().toISOString() } : x));
 
+  // Convertimos la cotización de la cita en una cotización real (con su propio código
+  // P-000XXX), para que aparezca igual que cualquier otra en el historial, en la búsqueda
+  // de "Recepción por Cotización", etc. — antes se quedaba "virtual" y no aparecía ahí.
+  if (!d.config) d.config = {};
+  const num = (d.config.ultimoNumCotiza || 0) + 1;
+  d.config.ultimoNumCotiza = num;
+  d.cotizaciones = [...(d.cotizaciones || []), {
+    id: Date.now(), num,
+    cliente: cita.cliente, doc: '', tel: '',
+    vehiculo: cita.vehiculo || '', placa: cita.placa || '',
+    items: cita.repuestos || [], monto: cita.monto || 0, descuento: cita.descuento || 0,
+    estado: aceptada ? 'aprobada' : 'rechazada',
+    aprobadoPor: aceptada ? 'cliente' : undefined,
+    fechaAprobacion: new Date().toLocaleDateString('es-VE'),
+    origen: 'cita', origenCitaId: cita.id,
+    fecha: new Date().toLocaleDateString('es-VE'),
+  }];
+
   // Si acepta, crear un mantenimiento programado para esa fecha
   if (aceptada) {
     d.mantenimientos = [...(d.mantenimientos || []), {

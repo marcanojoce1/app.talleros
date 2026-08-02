@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, RefreshControl, Alert, ScrollView, TextInput, Image, Modal, Linking, Share } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, RefreshControl, Alert, ScrollView, TextInput, Image, Modal, Linking, Share, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { api, getState, putState, clearSession, getApiUrl } from '../api';
 import { compartirActaPDF, abrirEnNavegador, urlDocumento } from '../acta';
@@ -193,6 +193,16 @@ export default function HomeScreen({ navigation, route }) {
       <View style={[s.wrap, { backgroundColor: fondo }]}><Header titulo={me.nombre || 'Bienvenido'} />
         <Text style={s.err}>{error}</Text>
         <TouchableOpacity style={s.retry} onPress={cargar}><Text style={{ fontWeight: '800' }}>Reintentar</Text></TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (loading && !data.vehicles) {
+    return (
+      <View style={[s.wrap, { backgroundColor: fondo, justifyContent: 'center', alignItems: 'center', padding: 30 }]}>
+        <ActivityIndicator color="#F5B700" size="large" />
+        <Text style={{ color: esTécnico ? '#16191d' : '#fff', fontWeight: '700', marginTop: 14, textAlign: 'center' }}>Conectando con el servidor…</Text>
+        <Text style={{ color: esTécnico ? '#6b7480' : 'rgba(255,255,255,.7)', fontSize: 12.5, marginTop: 6, textAlign: 'center', lineHeight: 18 }}>Si es la primera vez que entras en un rato, puede tardar hasta un minuto en despertar. Espera un momento.</Text>
       </View>
     );
   }
