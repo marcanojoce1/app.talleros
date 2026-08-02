@@ -163,6 +163,8 @@ function generarActaHTML(o = {}) {
       </div>
     </div>
 
+    ${r.editada ? `<div style="background:#fff3cd;color:#7a5c00;padding:6px 12px;font-size:10.5px;font-weight:bold;border-bottom:1.5px solid #111">✎ ACTA EDITADA — última modificación: ${esc(r.editadaFecha || '')}</div>` : ''}
+
     <div class="row">
       <div class="col">
         <h3>Datos del Cliente</h3>
