@@ -87,12 +87,10 @@ function generarActaHTML(o = {}) {
       const col = COLOR_SEV[d.sev] || COLOR_SEV.leve;
       return `<span class="pin" style="left:${left};top:${top};transform:translate(-50%,-50%);background:${col}">${d.n || i + 1}</span>`;
     }).join('');
-    // En la vista frontal se muestra el distintivo de la marca
-    const emblema = (k === 'front' && marcaDe(veh)) ? `<span style="position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:16px;padding:0 5px;border-radius:9px;background:${colorMarca(marcaDe(veh))};color:#fff;font-size:8px;font-weight:bold;letter-spacing:.3px;box-shadow:0 1px 3px rgba(0,0,0,.35)">${esc(marcaDe(veh).toUpperCase())}</span>` : '';
     return `<div class="carbox">
       <div class="carlbl">${esc(v.label)}</div>
       <div class="carimg">${baseUrl ? `<img src="${baseUrl}/img/${v.img}" style="${mirror}max-width:100%;max-height:150px"/>` : `<div style="color:#999;padding:30px">${esc(v.label)}</div>`}
-        ${emblema}<div class="pins">${pins}</div></div>
+        <div class="pins">${pins}</div></div>
     </div>`;
   }).join('');
 
@@ -175,7 +173,7 @@ function generarActaHTML(o = {}) {
       </div>
       <div class="col">
         <h3>Datos del Vehículo</h3>
-        <div class="fld"><span>Marca / Modelo:</span> ${badgeMarca(veh)} ${esc(veh.model || '')}</div>
+        <div class="fld"><span>Marca / Modelo:</span> ${esc(veh.model || '')}</div>
         <div class="fld"><span>Placa:</span> ${esc(veh.plate || '')}</div>
         <div class="fld"><span>Tipo:</span> ${esc(r.tipoVeh || veh.tipoVeh || '')} &nbsp; <span>Color:</span> ${esc(r.color || veh.color || '')}</div>
         <div class="fld"><span>Kilometraje:</span> ${esc(r.km || '')} &nbsp; <span>Técnico:</span> ${esc(veh.mech || '')}</div>
