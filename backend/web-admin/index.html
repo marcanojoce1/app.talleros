@@ -280,7 +280,8 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover{background:var(--surface-2)}
 .lpanel-dots{display:flex;gap:8px;margin-top:22px}
 .lpanel-dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.4);transition:all .3s;cursor:pointer}
 .lpanel-dots i.on{background:#fff;width:22px;border-radius:5px}
-@media(max-width:820px){.lpanel{display:none}.lsplit{max-width:420px;min-height:auto}}
+@media(max-width:820px){.lpanel{display:none}.lsplit{max-width:420px;min-height:auto;width:100%}.lcard{width:100%;max-width:100%;padding:30px 24px}}
+@media(max-width:480px){#login{padding:14px}.lsplit{border-radius:16px}.lcard{padding:26px 18px}}
 .lhead{padding:0 0 20px;display:flex;align-items:center;gap:11px}
 .lhead .mk{width:36px;height:36px;border-radius:9px;background:var(--signal);display:grid;place-items:center;flex:none}.lhead .mk svg{width:20px;height:20px}
 .lhead b{font-family:'Space Grotesk';font-size:19px;font-weight:700;color:#fff}.lhead b span{color:var(--signal)}
@@ -387,7 +388,7 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover{background:var(--surface-2)}
 
   <div class="web-wrap"><div class="web">
     <div class="wside">
-      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v119</span></div>
+      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v123</span></div>
       <div class="wlbl op-item">Operación</div>
       <a class="on op-item" data-w="dash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
       <a class="op-item" data-w="recep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-6 0v4"/><rect x="2" y="9" width="20" height="11" rx="2"/></svg>Recepción digital</a>
@@ -1408,7 +1409,7 @@ const WCARS={
 };
 const WTYPES=["Rayón","Abolladura","Golpe","Pintura dañada","Vidrio roto","Espejo","Luz","Llanta","Parachoques","Capó","Puerta","Guardafango"];
 const WCARVB={sup:'0 0 872 335',front:'0 0 466 293',post:'0 0 483 341',izq:'0 0 884 291',der:'0 0 884 291'};
-let wrec={view:'sup',types:['Rayón'],sev:'leve',seq:0,client:'',vehId:null,mech:null,tipoVeh:'Automóvil',color:'',motivo:RMOTIVOS[0],trabajo:TIPOS[0],prioridad:'Media',combustible:3,km:'',accesorios:['Llave principal'],documentos:['Tarjeta de propiedad','SOAT'],obs:'',dmg:{sup:[],front:[],post:[],izq:[],der:[]},tipoIngreso:'nuevo',cotizacionId:null,montoCotizacion:0,cotizacionItems:[],editandoVehId:null};
+let wrec={view:'sup',types:['Rayón'],sev:'leve',seq:0,client:'',vehId:null,mech:null,tipoVeh:'Automóvil',color:'',motivo:RMOTIVOS[0],trabajo:TIPOS[0],prioridad:'Media',combustible:3,km:'',accesorios:['Llave principal'],documentos:['Tarjeta de propiedad','SOAT'],obs:'',dmg:{sup:[],front:[],post:[],izq:[],der:[]},tipoIngreso:'nuevo',cotizacionId:null,montoCotizacion:0,cotizacionItems:[],editandoVehId:null,bateria:false,bateriaMarca:'',bateriaAmperaje:'',bateriaColor:'',bateriaObs:''};
 
 function renderWebRecep(){
   if(!wrec.client){const _c=store.clients.find(c=>c.activo!==false)||store.clients[0];wrec.client=_c?_c.n:'';}
@@ -1440,6 +1441,18 @@ function renderWebRecep(){
       <div class="fld"><label>Documentos entregados</label><div class="wchips" id="wrDoc">${RDOC.map(d=>`<button class="${wrec.documentos.includes(d)?'on':''}" onclick="toggleArr(this,wrec.documentos,'${d}')">${d}</button>`).join('')}${wrec.documentos.filter(d=>!RDOC.includes(d)).map(d=>`<button class="on" onclick="toggleArr(this,wrec.documentos,'${d}')">${d}</button>`).join('')}</div>
         <div style="display:flex;gap:8px;margin-top:8px"><input id="wrDocNew" placeholder="¿Falta uno? Escríbelo aquí…" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();wrecAgregarExtra('documentos','wrDoc','wrDocNew');}"><button type="button" class="wbtn wbtn-g" onclick="wrecAgregarExtra('documentos','wrDoc','wrDocNew')">＋ Agregar</button></div></div>
     </div></div>
+    <div class="fld" style="margin-top:18px;background:#f7f8fa;border-radius:10px;padding:12px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" ${wrec.bateria?'checked':''} style="width:18px;height:18px" onchange="wrec.bateria=this.checked;renderWebRecep()">
+        🔋 Batería
+      </label>
+      ${wrec.bateria?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+        <div class="fld" style="margin:0"><label style="font-size:11px">Marca</label><input value="${wrec.bateriaMarca||''}" oninput="wrec.bateriaMarca=this.value"></div>
+        <div class="fld" style="margin:0"><label style="font-size:11px">Amperaje</label><input value="${wrec.bateriaAmperaje||''}" oninput="wrec.bateriaAmperaje=this.value" placeholder="ej. 650"></div>
+        <div class="fld" style="margin:0"><label style="font-size:11px">Color</label><input value="${wrec.bateriaColor||''}" oninput="wrec.bateriaColor=this.value"></div>
+        <div class="fld" style="margin:0;grid-column:1/-1"><label style="font-size:11px">Observación${(!wrec.bateriaMarca&&!wrec.bateriaAmperaje&&!wrec.bateriaColor)?' (obligatoria si no llenas los demás datos)':''}</label><input value="${wrec.bateriaObs||''}" oninput="wrec.bateriaObs=this.value" placeholder="ej. batería ubicada bajo el asiento trasero"></div>
+      </div>`:''}
+    </div>
     <div class="fld" style="margin-top:18px"><label>Observaciones</label><textarea style="width:100%;min-height:140px;resize:vertical" oninput="wrec.obs=this.value" placeholder="Estado general del vehículo, detalles, daños previos, comentarios del cliente…">${wrec.obs}</textarea></div>
     <div class="fld"><label>Firmas</label><div class="sigwrap"><div class="sigbox"><div class="sighd"><span>Cliente</span><button onclick="clearSig('wSigCli')">Borrar</button></div><canvas id="wSigCli" class="sigcv"></canvas></div><div class="sigbox"><div class="sighd"><span>Recepcionista</span><button onclick="clearSig('wSigRec')">Borrar</button></div><canvas id="wSigRec" class="sigcv"></canvas></div></div></div>
     ${wrec.editandoVehId?`<div style="background:#fdf3e0;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12.5px;color:#b45309"><b>✎ Editando el acta de un vehículo ya recibido.</b> Los cambios se guardan sobre la orden existente, no se crea una nueva.</div>`:''}
@@ -1598,6 +1611,7 @@ async function wConfirm(){if(!wrec.vehId){toast('Selecciona un vehículo');retur
   const camposObligatorios=[['cliente',wrec.client,'Cliente'],['vehículo',wrec.vehId,'Vehículo'],['motivo',wrec.motivo,'Motivo de ingreso'],['trabajo',wrec.trabajo,'Trabajo a realizar'],['color',wrec.color,'Color'],['combustible',wrec.combustible,'Combustible'],['km',wrec.km,'Kilometraje']];
   const faltante=camposObligatorios.find(([,val])=>val===''||val===null||val===undefined);
   if(faltante){toast('⚠️ Falta un dato obligatorio: '+faltante[2]);return;}
+  if(wrec.bateria&&!wrec.bateriaMarca&&!wrec.bateriaAmperaje&&!wrec.bateriaColor&&!wrec.bateriaObs){toast('⚠️ Marcaste "Batería" — indica al menos la observación (ej. dónde está ubicada) si no vas a llenar marca/amperaje/color');return;}
   if(wrec.editandoVehId){
     const ve=veh(wrec.vehId);if(!ve){wrec.editandoVehId=null;toast('No se encontró el vehículo a editar');return;}
     ve.owner=wrec.client;
@@ -1607,22 +1621,23 @@ async function wConfirm(){if(!wrec.vehId){toast('Selecciona un vehículo');retur
     const r=ve.recepcion||mkRecep({});
     r.motivo=wrec.motivo;r.trabajo=wrec.trabajo;r.tipoVeh=wrec.tipoVeh;r.color=wrec.color;r.prioridad=wrec.prioridad;
     r.combustible=FUELLBL[wrec.combustible];r.km=wrec.km;r.accesorios=wrec.accesorios;r.documentos=wrec.documentos;r.obs=wrec.obs;
+    r.bateria=!!wrec.bateria;r.bateriaMarca=wrec.bateria?(wrec.bateriaMarca||''):'';r.bateriaAmperaje=wrec.bateria?(wrec.bateriaAmperaje||''):'';r.bateriaColor=wrec.bateria?(wrec.bateriaColor||''):'';r.bateriaObs=wrec.bateria?(wrec.bateriaObs||''):'';
     const cvCli=document.getElementById('wSigCli'),cvRec=document.getElementById('wSigRec');
     if(cvCli&&cvCli._inked){r.firmaCli=true;r.firmaCliImg=cvCli._data||r.firmaCliImg;}
     if(cvRec&&cvRec._inked){r.firmaRec=true;r.firmaRecImg=cvRec._data||r.firmaRecImg;}
     r.editada=true;r.editadaFecha=new Date().toLocaleString('es-VE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
     ve.recepcion=r;
     ve.advances=ve.advances||[];ve.advances.push({t:'Acta de recepción editada',m:'Administración · '+dmgs.length+' daño(s)',type:'nota',ago:'ahora'});
-    wrec.editandoVehId=null;wrec.seq=0;wrec.dmg={sup:[],front:[],post:[],izq:[],der:[]};wrec.types=['Rayón'];wrec.client='';wrec.vehId=null;
+    wrec.editandoVehId=null;wrec.seq=0;wrec.dmg={sup:[],front:[],post:[],izq:[],der:[]};wrec.types=['Rayón'];wrec.client='';wrec.vehId=null;wrec.bateria=false;wrec.bateriaMarca='';wrec.bateriaAmperaje='';wrec.bateriaColor='';wrec.bateriaObs='';
     renderWebRecep();renderWeb();renderPhone();store.emit('✅ Acta actualizada con éxito');persistNow();
     return;
   }
   if(!store.config)store.config={};const nOrden=(store.config.ultimoNumOrden||0)+1;store.config.ultimoNumOrden=nOrden;v.numOrden=nOrden;v.motivo=wrec.trabajo;v.color=wrec.color||v.color;v.tipoVeh=wrec.tipoVeh;v.ingreso=new Date().toISOString().slice(0,10);v.recepDamages=dmgs;v.recepLados=['sup','front','izq','der','post'].filter(k=>(wrec.dmg[k]||[]).length).map(k=>LADOS[k]);v.status='espera';v.progress=0;v.cerrada=false;v.cost=wrec.cotizacionId?(+wrec.montoCotizacion||0):0;v.pending=null;v.advances=[];v.entregado=false;v.fechaEntrega='';
-  v.recepcion=mkRecep({numOrden:nOrden,motivo:wrec.motivo,trabajo:wrec.trabajo,tipoVeh:wrec.tipoVeh,color:wrec.color,prioridad:wrec.prioridad,combustible:FUELLBL[wrec.combustible],km:wrec.km,accesorios:wrec.accesorios,documentos:wrec.documentos,obs:wrec.obs,via:'Web 2D',firmaCli:!!(document.getElementById('wSigCli')||{})._inked,firmaRec:!!(document.getElementById('wSigRec')||{})._inked,firmaCliImg:(document.getElementById('wSigCli')||{})._data||'',firmaRecImg:(document.getElementById('wSigRec')||{})._data||'',cotizacionId:wrec.cotizacionId||null,cotizacionNum:wrec.cotizacionNum||null,montoCotizacion:wrec.cotizacionId?(+wrec.montoCotizacion||0):0,cotizacionItems:wrec.cotizacionId?(wrec.cotizacionItems||[]):[]});
+  v.recepcion=mkRecep({numOrden:nOrden,motivo:wrec.motivo,trabajo:wrec.trabajo,tipoVeh:wrec.tipoVeh,color:wrec.color,prioridad:wrec.prioridad,combustible:FUELLBL[wrec.combustible],km:wrec.km,accesorios:wrec.accesorios,documentos:wrec.documentos,obs:wrec.obs,via:'Web 2D',firmaCli:!!(document.getElementById('wSigCli')||{})._inked,firmaRec:!!(document.getElementById('wSigRec')||{})._inked,firmaCliImg:(document.getElementById('wSigCli')||{})._data||'',firmaRecImg:(document.getElementById('wSigRec')||{})._data||'',cotizacionId:wrec.cotizacionId||null,cotizacionNum:wrec.cotizacionNum||null,montoCotizacion:wrec.cotizacionId?(+wrec.montoCotizacion||0):0,cotizacionItems:wrec.cotizacionId?(wrec.cotizacionItems||[]):[],bateria:!!wrec.bateria,bateriaMarca:wrec.bateria?(wrec.bateriaMarca||''):'',bateriaAmperaje:wrec.bateria?(wrec.bateriaAmperaje||''):'',bateriaColor:wrec.bateria?(wrec.bateriaColor||''):'',bateriaObs:wrec.bateria?(wrec.bateriaObs||''):''});
   v.status='espera';v.progress=v.progress||0;
   if(wrec.mech&&wrec.mech!=='(Por asignar)')v.mech=wrec.mech;v.advances.push({t:'Vehículo recibido — recepción digital (web)',m:`${wrec.motivo} · ${dmgs.length} daño(s)${wrec.cotizacionId?' · cobre por cotización P-'+String(wrec.cotizacionNum||0).padStart(6,'0'):''}`,type:'recep',ago:'ahora'});
   if(wrec.cotizacionId){const c=(store.cotizaciones||[]).find(x=>x.id===wrec.cotizacionId);if(c){c.usadaRecepcion=true;c.vehIdRecepcion=v.id;}}
-  wrec.seq=0;wrec.dmg={sup:[],front:[],post:[],izq:[],der:[]};wrec.types=['Rayón'];wrec.tipoIngreso='nuevo';wrec.cotizacionId=null;wrec.cotizacionNum=null;wrec.montoCotizacion=0;wrec.cotizacionItems=[];wrec.client='';renderWebRecep();renderWeb();renderPhone();notify(v,`Tu ${v.model} fue recibido. Motivo: ${wrec.motivo}. Trabajo: ${wrec.trabajo}.`);toast('Recepción registrada ✓ · el vehículo ya está en Órdenes');persistNow();}
+  wrec.seq=0;wrec.dmg={sup:[],front:[],post:[],izq:[],der:[]};wrec.types=['Rayón'];wrec.tipoIngreso='nuevo';wrec.cotizacionId=null;wrec.cotizacionNum=null;wrec.montoCotizacion=0;wrec.cotizacionItems=[];wrec.client='';wrec.bateria=false;wrec.bateriaMarca='';wrec.bateriaAmperaje='';wrec.bateriaColor='';wrec.bateriaObs='';renderWebRecep();renderWeb();renderPhone();notify(v,`Tu ${v.model} fue recibido. Motivo: ${wrec.motivo}. Trabajo: ${wrec.trabajo}.`);toast('Recepción registrada ✓ · el vehículo ya está en Órdenes');persistNow();}
 function woptAdd(kind){const inp=document.getElementById('wNew_'+kind);if(!inp)return;const val=inp.value.trim();if(!val)return;const key=kind==='motivo'?'motivos':'trabajos';if(!store.config[key].includes(val))store.config[key].push(val);const sel=document.getElementById(kind==='motivo'?'wSelMotivo':'wSelTrabajo');const o=document.createElement('option');o.textContent=val;sel.appendChild(o);sel.value=val;if(kind==='motivo')wrec.motivo=val;else wrec.trabajo=val;inp.value='';toast(`Agregado: ${val}`);}
 
 /* ===== CONFIGURACIÓN ===== */
@@ -1738,13 +1753,15 @@ async function renderConfig(){persistData();const c=store.config;let _t=(window.
   document.getElementById('w-config').innerHTML=`
    <div class="dcard" style="margin-bottom:14px"><h3 style="font-size:14px;margin-bottom:12px">🏷️ Versión del taller</h3>
      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Versión actual: <b style="text-transform:uppercase">${_plan}</b>. La versión LITE no permite subir video en los avances; PRO y PREMIUM sí, con un límite de minutos por vehículo.</div>
-     ${ME&&ME.rol==='superadmin'?`<div class="fld"><label>Cambiar versión (solo Super Administrador)</label><select id="cfgPlan" onchange="store.config.plan=this.value;renderConfig();persistNow();toast('Versión actualizada ✓')">
-       <option value="lite" ${_plan==='lite'?'selected':''}>Lite (sin video)</option>
-       <option value="pro" ${_plan==='pro'?'selected':''}>Pro</option>
-       <option value="premium" ${_plan==='premium'?'selected':''}>Premium</option>
-     </select></div>`:''}
-     ${_plan!=='lite'?`<div class="fld"><label>Minutos de video permitidos por vehículo${_puedeEditarLimite?'':' (solo lo puede ampliar el Super Administrador en la versión Pro)'}</label>
-       <input id="cfgVidMin" type="number" min="1" value="${_limiteMin}" ${_puedeEditarLimite?'':'disabled style="background:#f7f8fa;color:var(--muted)"'}>
+     ${ME&&ME.rol==='superadmin'?`<div class="fld"><label>Cambiar versión (solo Super Administrador)</label>
+       <div style="display:flex;gap:8px">
+         <button type="button" class="wbtn ${_plan==='lite'?'wbtn-d':'wbtn-g'}" onclick="store.config.plan='lite';renderConfig();persistNow();toast('Versión actualizada ✓')" style="flex:1;justify-content:center">Lite (solo fotos)</button>
+         <button type="button" class="wbtn ${_plan==='pro'?'wbtn-d':'wbtn-g'}" onclick="store.config.plan='pro';renderConfig();persistNow();toast('Versión actualizada ✓')" style="flex:1;justify-content:center">Pro</button>
+         <button type="button" class="wbtn ${_plan==='premium'?'wbtn-d':'wbtn-g'}" onclick="store.config.plan='premium';renderConfig();persistNow();toast('Versión actualizada ✓')" style="flex:1;justify-content:center">Premium</button>
+       </div>
+     </div>`:''}
+     ${_plan!=='lite'?`<div class="fld"><label>Minutos de video permitidos por vehículo${_puedeEditarLimite?': <b id="cfgVidVal">'+_limiteMin+'</b> min':' (solo lo puede ampliar el Super Administrador en la versión Pro)'}</label>
+       <input type="range" id="cfgVidMin" min="1" max="60" value="${_limiteMin}" style="width:100%" ${_puedeEditarLimite?`oninput="document.getElementById('cfgVidVal').textContent=this.value"`:'disabled'}>
        ${_puedeEditarLimite?`<button class="wbtn wbtn-d" style="margin-top:8px" onclick="const v=+val('cfgVidMin')||1;store.config.videoMinutosPorVehiculo=v;persistNow();toast('Límite de video actualizado ✓')">Guardar límite</button>`:''}
      </div>`:''}
    </div>
@@ -2223,6 +2240,7 @@ function editRecep(id){
   wrec.color=r.color||v.color||'';wrec.prioridad=r.prioridad||'Media';
   wrec.combustible=(FUELLBL.indexOf(r.combustible)>=0)?FUELLBL.indexOf(r.combustible):3;
   wrec.km=(r.km&&r.km!=='—')?r.km:'';wrec.accesorios=[...(r.accesorios||[])];wrec.documentos=[...(r.documentos||[])];wrec.obs=(r.obs&&r.obs!=='—')?r.obs:'';
+  wrec.bateria=!!r.bateria;wrec.bateriaMarca=r.bateriaMarca||'';wrec.bateriaAmperaje=r.bateriaAmperaje||'';wrec.bateriaColor=r.bateriaColor||'';wrec.bateriaObs=r.bateriaObs||'';
   wrec.mech=v.mech||null;
   // Trae también los daños ya registrados, agrupados por lado, para poder editarlos
   const LADOMAP={'Superior':'sup','Frontal':'front','Lat. Izq.':'izq','Lat. Der.':'der','Posterior':'post'};
@@ -2616,10 +2634,32 @@ async function resetTotal(){
   try{const r=await apiReq('/api/state/reset-total',{method:'POST'});toast(r.mensaje||'Datos borrados');setTimeout(()=>location.reload(),1200);}catch(e){toast(e.message);}
 }
 function spTallerCard(t){const nm=(t.nombre||'').replace(/'/g,'');const inactivo=!t.activo;return `<div class="dcard" style="margin-bottom:12px;${inactivo?'opacity:.72':''}"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><div class="av" style="background:var(--sidebar);color:#fff">${inits(t.nombre)}</div><div style="flex:1;min-width:140px"><div style="font-weight:700">${t.nombre} ${inactivo?'<span style="color:var(--red);font-size:11px">(inactivo)</span>':''}</div><div style="font-size:12px;color:var(--muted)">${t.rif||''} ${t.telefono||''}${inactivo&&t.motivo_inactivo?' · Motivo: '+t.motivo_inactivo:''}</div></div><button class="wbtn wbtn-g" onclick="spAdmins(${t.id},'${nm}')">Administradores</button> <button class="wbtn wbtn-g" onclick="spEditarTaller(${t.id})">Editar</button> ${t.activo?`<button class="wbtn wbtn-g" onclick="spInactivar(${t.id},'${nm}')">Inactivar</button>`:`<button class="wbtn wbtn-d" onclick="spReactivar(${t.id})">Reactivar</button>`}</div><div id="spEd_${t.id}" style="display:none"></div><div id="spAdmins_${t.id}"></div></div>`;}
-function spEditarTaller(id){const box=document.getElementById('spEd_'+id);if(!box)return;if(box.style.display!=='none'){box.style.display='none';return;}box.style.display='';const t=(window._talleresCache||[]).find(x=>x.id===id)||{};box.innerHTML=`<div style="border-top:1px solid var(--line);margin-top:10px;padding-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end"><div class="fld" style="margin:0;min-width:140px"><label>Nombre</label><input id="etN_${id}" value="${(t.nombre||'').replace(/"/g,'&quot;')}"></div><div class="fld" style="margin:0;min-width:120px"><label>RIF</label><input id="etR_${id}" value="${(t.rif||'').replace(/"/g,'&quot;')}"></div><div class="fld" style="margin:0;min-width:130px"><label>Teléfono</label><input id="etT_${id}" value="${(t.telefono||'').replace(/"/g,'&quot;')}"></div><div class="fld" style="margin:0;min-width:180px"><label>Dirección</label><input id="etD_${id}" value="${(t.direccion||'').replace(/"/g,'&quot;')}"></div><div class="fld" style="margin:0;min-width:140px"><label>Rubro (subtítulo)</label><input id="etU_${id}" placeholder="TALLER AUTOMOTRIZ" value="${(t.rubro||'').replace(/"/g,'&quot;')}"></div><div class="fld" style="margin:0;min-width:170px"><label>Logo / foto del taller</label><input id="etL_${id}" type="file" accept="image/*" onchange="spLeerLogo(${id})"></div><div class="fld" style="margin:0;flex:1;min-width:240px"><label>Condiciones del servicio (acta)</label><textarea id="etC_${id}" rows="2" style="width:100%;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:8px">${(t.condiciones||'')}</textarea></div><div class="fld" style="margin:0;flex:1;min-width:240px"><label>Pie de página (acta)</label><input id="etP_${id}" placeholder="Ej. Gracias por su preferencia" value="${(t.pie||'').replace(/"/g,'&quot;')}"></div><button class="wbtn wbtn-d" onclick="spGuardarTaller(${id})">Guardar</button></div><div id="etPrev_${id}" style="font-size:11px;color:var(--muted);margin-top:6px">${t.logo?'Logo actual cargado ✓':''}</div>`;}
+async function spEditarTaller(id){const box=document.getElementById('spEd_'+id);if(!box)return;if(box.style.display!=='none'){box.style.display='none';return;}box.style.display='';const t=(window._talleresCache||[]).find(x=>x.id===id)||{};
+  let cfg={};try{const st=await apiReq('/api/state?taller='+id);cfg=(st&&st.data&&st.data.config)||{};}catch(e){}
+  const plan=cfg.plan||'lite';const vidMin=cfg.videoMinutosPorVehiculo||10;
+  box.innerHTML=`<div style="border-top:1px solid var(--line);margin-top:10px;padding-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end"><div class="fld" style="margin:0;min-width:140px"><label>Nombre</label><input id="etN_${id}" value="${(t.nombre||'').replace(/"/g,'&quot;')}"></div><div class="fld" style="margin:0;min-width:120px"><label>RIF</label><input id="etR_${id}" value="${(t.rif||'').replace(/"/g,'&quot;')}"></div><div class="fld" style="margin:0;min-width:130px"><label>Teléfono</label><input id="etT_${id}" value="${(t.telefono||'').replace(/"/g,'&quot;')}"></div><div class="fld" style="margin:0;min-width:180px"><label>Dirección</label><input id="etD_${id}" value="${(t.direccion||'').replace(/"/g,'&quot;')}"></div><div class="fld" style="margin:0;min-width:140px"><label>Rubro (subtítulo)</label><input id="etU_${id}" placeholder="TALLER AUTOMOTRIZ" value="${(t.rubro||'').replace(/"/g,'&quot;')}"></div><div class="fld" style="margin:0;min-width:170px"><label>Logo / foto del taller</label><input id="etL_${id}" type="file" accept="image/*" onchange="spLeerLogo(${id})"></div><div class="fld" style="margin:0;flex:1;min-width:240px"><label>Condiciones del servicio (acta)</label><textarea id="etC_${id}" rows="2" style="width:100%;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:8px">${(t.condiciones||'')}</textarea></div><div class="fld" style="margin:0;flex:1;min-width:240px"><label>Pie de página (acta)</label><input id="etP_${id}" placeholder="Ej. Gracias por su preferencia" value="${(t.pie||'').replace(/"/g,'&quot;')}"></div></div>
+  <div class="fld" style="margin-top:10px"><label>Versión del taller</label><div style="display:flex;gap:8px">
+    <button type="button" class="wbtn ${plan==='lite'?'wbtn-d':'wbtn-g'}" id="etPlanBtn_lite_${id}" onclick="spEtElegirPlan(${id},'lite')" style="flex:1;justify-content:center">Lite (solo fotos)</button>
+    <button type="button" class="wbtn ${plan==='pro'?'wbtn-d':'wbtn-g'}" id="etPlanBtn_pro_${id}" onclick="spEtElegirPlan(${id},'pro')" style="flex:1;justify-content:center">Pro</button>
+    <button type="button" class="wbtn ${plan==='premium'?'wbtn-d':'wbtn-g'}" id="etPlanBtn_premium_${id}" onclick="spEtElegirPlan(${id},'premium')" style="flex:1;justify-content:center">Premium</button>
+  </div></div>
+  <div class="fld" id="etVidWrap_${id}" style="${plan==='lite'?'display:none':''}"><label>Minutos de video por vehículo: <b id="etVidVal_${id}">${vidMin}</b> min</label>
+    <input type="range" id="etVidMin_${id}" min="1" max="60" value="${vidMin}" style="width:100%" oninput="document.getElementById('etVidVal_${id}').textContent=this.value"></div>
+  <button class="wbtn wbtn-d" style="margin-top:10px" onclick="spGuardarTaller(${id})">Guardar</button>
+  <div id="etPrev_${id}" style="font-size:11px;color:var(--muted);margin-top:6px">${t.logo?'Logo actual cargado ✓':''}</div>`;
+  box.dataset.plan=plan;}
+function spEtElegirPlan(id,p){const box=document.getElementById('spEd_'+id);if(box)box.dataset.plan=p;
+  ['lite','pro','premium'].forEach(k=>{const b=document.getElementById('etPlanBtn_'+k+'_'+id);if(b)b.className=k===p?'wbtn wbtn-d':'wbtn wbtn-g';});
+  const wrap=document.getElementById('etVidWrap_'+id);if(wrap)wrap.style.display=(p==='lite')?'none':'';}
 let _logoTmp={};
 function spLeerLogo(id){const f=document.getElementById('etL_'+id).files[0];if(!f)return;if(f.size>1500000){toast('La imagen es muy grande (máx 1.5MB)');return;}const r=new FileReader();r.onload=()=>{_logoTmp[id]=r.result;document.getElementById('etPrev_'+id).innerHTML='<img src="'+r.result+'" style="width:46px;height:46px;border-radius:8px;object-fit:cover;vertical-align:middle"> Logo listo para guardar';};r.readAsDataURL(f);}
-async function spGuardarTaller(id){const g=x=>(document.getElementById(x+id).value||'').trim();const body={nombre:g('etN_')||undefined,rif:g('etR_')||undefined,telefono:g('etT_')||undefined,direccion:g('etD_')||undefined,rubro:g('etU_')||undefined,condiciones:g('etC_')||undefined,pie:g('etP_')||undefined};if(_logoTmp[id])body.logo=_logoTmp[id];try{await apiReq('/api/talleres/'+id,{method:'PUT',body:JSON.stringify(body)});delete _logoTmp[id];toast('Taller actualizado ✓');renderSuperPanel();}catch(e){toast(e.message);}}
+async function spGuardarTaller(id){const g=x=>(document.getElementById(x+id).value||'').trim();const body={nombre:g('etN_')||undefined,rif:g('etR_')||undefined,telefono:g('etT_')||undefined,direccion:g('etD_')||undefined,rubro:g('etU_')||undefined,condiciones:g('etC_')||undefined,pie:g('etP_')||undefined};if(_logoTmp[id])body.logo=_logoTmp[id];
+  const box=document.getElementById('spEd_'+id);const plan=(box&&box.dataset.plan)||'lite';const vidMin=+val('etVidMin_'+id)||10;
+  try{
+    await apiReq('/api/talleres/'+id,{method:'PUT',body:JSON.stringify(body)});
+    await apiReq('/api/state?taller='+id,{method:'PUT',body:JSON.stringify({data:{config:{plan,videoMinutosPorVehiculo:plan==='lite'?0:vidMin}}})});
+    delete _logoTmp[id];toast('Taller actualizado ✓');renderSuperPanel();
+  }catch(e){toast(e.message);}}
 async function spInactivar(id,nombre){const motivo=prompt('Motivo de la desactivación de '+nombre+':','');if(motivo===null)return;try{await apiReq('/api/talleres/'+id,{method:'PUT',body:JSON.stringify({activo:false,motivo_inactivo:motivo||'Taller desactivado'})});toast('Taller desactivado');renderSuperPanel();}catch(e){toast(e.message);}}
 async function spReactivar(id){try{await apiReq('/api/talleres/'+id,{method:'PUT',body:JSON.stringify({activo:true})});toast('Taller reactivado ✓');renderSuperPanel();}catch(e){toast(e.message);}}
 function spAdminEditCard(a,talleres){return `<div class="dcard" style="margin-bottom:12px"><div style="font-weight:700">${a.nombre} <span style="color:var(--muted);font-size:12px;font-weight:400">(${a.usuario} · ${a.correo})</span></div><div style="margin:8px 0">${talleres.map(t=>`<label style="display:inline-flex;align-items:center;gap:6px;margin:0 14px 6px 0;font-size:13px"><input type="checkbox" class="edT_${a.id}" value="${t.id}" ${a.talleres.includes(t.id)?'checked':''} style="width:auto"> ${t.nombre}${t.activo?'':' (inactivo)'}</label>`).join('')}</div><button class="wbtn wbtn-d" onclick="spGuardarAdminTalleres(${a.id})">Guardar talleres</button></div>`;}

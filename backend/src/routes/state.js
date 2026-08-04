@@ -99,7 +99,10 @@ router.put('/', async (req, res) => {
 
   const fusionado = { ...actual, ...entrante };
   COLECCIONES_POR_ID.forEach((k) => { fusionado[k] = fusionarPorId(actual[k], entrante[k]); });
-  fusionado.config = entrante.config || actual.config;
+  // config se fusiona por clave (no se reemplaza completo) — si no, guardar solo el plan
+  // desde "Editar taller" borraría en silencio los motivos, marcas, moneda, etc. que el
+  // taller ya tenía configurados.
+  fusionado.config = { ...(actual.config || {}), ...(entrante.config || {}) };
   fusionado.diasBloqueados = entrante.diasBloqueados || actual.diasBloqueados || [];
 
   const data = JSON.stringify(fusionado);

@@ -253,6 +253,26 @@ function generarActaHTML(o = {}) {
       ${(r.cotizacionItems && r.cotizacionItems.length) ? `<div style="margin-top:6px;font-size:9.5px"><b>Servicios y repuestos de la cotización:</b><br/>${r.cotizacionItems.map((it) => `${it.tipo === 'repuesto' ? '🔩' : '🔧'} ${esc(it.n || '')}${it.p ? ' — ' + esc(mon || 'Bs.') + ' ' + Number(it.p).toLocaleString('es-VE') : ''}`).join('<br/>')}</div>` : ''}
       ${pago ? `<div style="margin-top:4px"><b>TOTAL GENERAL (servicio + cotización): ${esc(mon || 'Bs.')} ${(Number(pago.total || 0) + Number(r.montoCotizacion || 0)).toLocaleString('es-VE')}</b></div>` : ''}
     </div>` : ''}
+    ${r.bateria ? (() => {
+      const coloresMap = { negro: '#26282b', gris: '#5b5f66', azul: '#1e4d8f', rojo: '#8f1e1e', verde: '#1e6b3a', blanco: '#d8dadd', amarillo: '#c9a227', plateado: '#9aa0a6', plata: '#9aa0a6' };
+      const colorTxt = (r.bateriaColor || '').toLowerCase().trim();
+      const bodyColor = coloresMap[colorTxt] || '#2b2d31';
+      const textColor = ['#d8dadd', '#9aa0a6', '#c9a227'].includes(bodyColor) ? '#111' : '#fff';
+      return `<div style="padding:8px 10px;border-bottom:1.5px solid #111;display:flex;align-items:center;gap:12px">
+      <svg width="66" height="50" viewBox="0 0 80 60" style="flex-shrink:0">
+        <rect x="10" y="10" width="10" height="8" rx="2" fill="#8a8d91"/><rect x="60" y="10" width="10" height="8" rx="2" fill="#8a8d91"/>
+        <circle cx="15" cy="9" r="4" fill="#a9adb3"/><circle cx="65" cy="9" r="4" fill="#a9adb3"/>
+        <rect x="4" y="16" width="72" height="40" rx="5" fill="${bodyColor}" stroke="#111" stroke-width="1.5"/>
+        <circle cx="16" cy="23" r="2" fill="#00000030"/><circle cx="30" cy="23" r="2" fill="#00000030"/><circle cx="44" cy="23" r="2" fill="#00000030"/><circle cx="58" cy="23" r="2" fill="#00000030"/>
+        <text x="40" y="42" text-anchor="middle" font-size="10" font-weight="bold" font-family="Arial" fill="${textColor}">${esc(r.bateriaAmperaje||'')}${r.bateriaAmperaje?'A':''}</text>
+        <text x="15" y="14" font-size="10" font-weight="bold" fill="#16a34a">+</text><text x="63" y="14" font-size="12" font-weight="bold" fill="#dc2626">−</text>
+      </svg>
+      <div style="flex:1">
+        <b>🔋 Batería${r.bateriaMarca?': '+esc(r.bateriaMarca):''}</b>${r.bateriaColor?` <span style="font-size:9px;color:#666">(${esc(r.bateriaColor)})</span>`:''}
+        ${r.bateriaObs?`<div style="font-size:9.5px;color:#444;margin-top:2px">${esc(r.bateriaObs)}</div>`:''}
+      </div>
+    </div>`;
+    })() : ''}
     ${r.obs && r.obs !== '—' ? `<div style="padding:8px 10px;border-bottom:1.5px solid #111"><b>Observaciones:</b> ${esc(r.obs)}</div>` : ''}
 
     <div class="cond">
