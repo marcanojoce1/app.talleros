@@ -303,6 +303,7 @@ function generarTrabajoHTML(o = {}) {
       <div class="bit-t">${esc(a.t || 'Avance')}</div>
       <div class="bit-m">${esc(a.m || '')}${a.ago ? ' · ' + esc(a.ago) : ''}</div>
       ${a.foto ? `<img src="${esc(a.foto)}" class="bit-foto"/>` : ''}
+      ${a.video ? `<div style="position:relative;display:inline-block;margin-top:6px">${a.videoThumb ? `<img src="${esc(a.videoThumb)}" class="bit-foto"/>` : ''}<div style="font-size:9px;color:#666;margin-top:2px">🎥 Video — <a href="${esc(a.video)}">ver aquí</a></div></div>` : ''}
     </div>`).join('') : '<div style="color:#888;padding:10px">Sin avances registrados.</div>';
 
   const extra = `
