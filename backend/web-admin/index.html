@@ -387,7 +387,7 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover{background:var(--surface-2)}
 
   <div class="web-wrap"><div class="web">
     <div class="wside">
-      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v113</span></div>
+      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v116</span></div>
       <div class="wlbl op-item">Operación</div>
       <a class="on op-item" data-w="dash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
       <a class="op-item" data-w="recep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-6 0v4"/><rect x="2" y="9" width="20" height="11" rx="2"/></svg>Recepción digital</a>
@@ -1170,7 +1170,7 @@ function avanceDetail(vehId){
       <b style="font-size:13px">${i+1}. ${a.t}</b>
       ${a.m?`<div style="font-size:12px;color:var(--muted);margin-top:2px">${a.m}</div>`:''}
       ${a.foto?`<img src="${a.foto}" style="max-width:100%;border-radius:8px;margin-top:8px;max-height:220px;object-fit:cover">`:''}
-      ${a.video?`<video src="${a.video}" controls poster="${a.videoThumb||''}" style="max-width:100%;border-radius:8px;margin-top:8px;max-height:260px"></video>`:''}
+      ${a.video?`<video src="${a.video}" controls poster="${a.videoThumb||''}" style="width:100%;border-radius:8px;margin-top:8px;max-height:340px;background:#000"></video><div style="text-align:right;margin-top:4px"><a href="${a.video}" target="_blank" style="font-size:11px;color:#2563EB">🔍 Ver en tamaño completo (pestaña nueva)</a></div>`:''}
       ${a.pendienteRevision?`<button class="wbtn" style="background:#fdf3e0;color:#b45309;margin-top:6px" onclick="notificarAvanceWeb(${v.id},${i})">🔔 Notificar al cliente</button>`
         :`<div style="background:#e8f6ec;border-radius:8px;padding:3px 8px;display:inline-block;margin-top:6px"><span style="color:#0F6E56;font-weight:700;font-size:11px">✅ ${a.notificadoCliente?'Visible para el cliente':'Registro interno'}</span></div>`}
     </div>`).join('')||'<div class="dt2">Sin avances registrados.</div>'}
@@ -2431,18 +2431,77 @@ function setWho(){const av=document.getElementById('whoAv'),nm=document.getEleme
 function renderTallerSelector(){const c=document.getElementById('tallerSel');if(!c)return;const isSuper=ME&&ME.rol==='superadmin';if(TALLERES.length>1||isSuper){const ph=(isSuper&&!CURRENT_TALLER)?'<option value="">— Entrar a un taller —</option>':'';c.innerHTML=`<select onchange="if(this.value)switchTaller(+this.value)" style="border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:13px;font-weight:600;background:#fff">${ph}${TALLERES.map(t=>`<option value="${t.id}" ${t.id===CURRENT_TALLER?'selected':''}>🏭 ${t.nombre}</option>`).join('')}</select>`;}else{c.innerHTML='';}}
 async function renderUsuariosView(){const cont=document.getElementById('w-usuarios');if(!cont)return;
   if(ME&&ME.rol==='superadmin'){
-    let users=[];try{users=await apiReq('/api/talleres/users/all');}catch(e){}
-    window._USERS=users;
-    const rb={superadmin:'Super Admin',administrador:'Administrador',mecanico:'Técnico',cliente:'Cliente'};
-    const rows=users.map(u=>{const act=!!u.activo;return `<tr><td>${u.nombre}</td><td class="mono" style="font-size:12px">${u.usuario}</td><td style="font-size:12px">${u.correo}</td><td><span class="pill ${u.rol==='superadmin'?'s-dev':u.rol==='administrador'?'s-rep':u.rol==='mecanico'?'s-wait':'s-ent'}"><span class="pd"></span>${rb[u.rol]||u.rol}</span></td><td>${act?'Activo':'Inactivo'}</td><td style="white-space:nowrap"><button class="wbtn wbtn-g" onclick="suEdit(${u.id})">Modificar</button> <button class="wbtn wbtn-g" onclick="suToggle(${u.id},${act})">${act?'Inactivar':'Activar'}</button> <button class="wbtn wbtn-g" onclick="suPermisos(${u.id})">Permisos</button></td></tr><tr id="suPm_${u.id}" style="display:none"><td colspan="6"></td></tr><tr id="suEd_${u.id}" style="display:none"><td colspan="6"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;padding:6px 0"><div class="fld" style="margin:0;min-width:120px"><label>Nombre</label><input id="seN_${u.id}" value="${u.nombre}"></div><div class="fld" style="margin:0;min-width:150px"><label>Correo</label><input id="seE_${u.id}" value="${u.correo}"></div><div class="fld" style="margin:0;min-width:130px"><label>Rol</label><select id="seR_${u.id}">${['superadmin','administrador','mecanico','cliente'].map(r=>`<option value="${r}" ${r===u.rol?'selected':''}>${rb[r]}</option>`).join('')}</select></div><div class="fld" style="margin:0;min-width:140px"><label>Nueva contraseña (opcional)</label><input id="seP_${u.id}" type="password"></div><button class="wbtn wbtn-d" onclick="suGuardar(${u.id})">Guardar</button></div></td></tr>`;}).join('');
-    cont.innerHTML=`<div class="dcard"><h3 style="font-size:15px;margin-bottom:10px">Crear usuario</h3><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end"><div class="fld" style="margin:0;flex:1;min-width:120px"><label>Nombre</label><input id="nuN"></div><div class="fld" style="margin:0;min-width:100px"><label>Usuario</label><input id="nuU"></div><div class="fld" style="margin:0;min-width:140px"><label>Correo</label><input id="nuE"></div><div class="fld" style="margin:0;min-width:100px"><label>Contraseña</label><input id="nuP" type="password"></div><div class="fld" style="margin:0;min-width:130px"><label>Rol</label><select id="nuR"><option value="superadmin">Super Admin</option><option value="administrador">Administrador</option><option value="mecanico">Técnico</option><option value="cliente">Cliente</option></select></div><button class="wbtn wbtn-d" onclick="suCrearUsuario()">Crear</button></div><div id="nuErr" style="color:var(--red);font-size:12px;margin-top:6px"></div><div style="font-size:11px;color:var(--muted);margin-top:6px">Los administradores se asignan a talleres desde el menú <b>Talleres</b>.</div></div><div class="tablecard" style="margin-top:14px"><table><thead><tr><th>Nombre</th><th>Usuario</th><th>Correo</th><th>Rol</th><th>Estado</th><th></th></tr></thead><tbody>${rows||'<tr><td colspan="6" style="color:var(--muted)">Sin usuarios.</td></tr>'}</tbody></table></div>`;
+    let talleresList=[];try{talleresList=await apiReq('/api/talleres');}catch(e){}
+    window._TALLERES_SU=talleresList;
+    const q=(BUSCA.suTaller||'').trim();
+    const norm=t=>(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    const filtrados=q?talleresList.filter(t=>norm(t.nombre).includes(norm(q))):talleresList;
+    cont.innerHTML=`<div class="dcard">
+      <h3 style="font-size:15px;margin-bottom:4px">Administradores por taller</h3>
+      <div style="font-size:11.5px;color:var(--muted);margin-bottom:12px">Busca y selecciona un taller para crear, modificar o eliminar sus administradores. Los técnicos y clientes los gestiona cada administrador desde su propio taller.</div>
+      <div class="searchbar" style="margin-bottom:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input value="${q.replace(/"/g,'&quot;')}" placeholder="Buscar taller por nombre…" oninput="BUSCA.suTaller=this.value;renderUsuariosView()"></div>
+    </div>
+    <div class="tablecard" style="margin-top:14px"><table><thead><tr><th>Taller</th><th>Administradores</th><th></th></tr></thead><tbody>${filtrados.length?filtrados.map(t=>`<tr><td><b>${t.nombre}</b></td><td style="color:var(--muted);font-size:12px">${t.activo===false?'Inactivo':'Activo'}</td><td><button class="wbtn wbtn-d" onclick="suAbrirTaller(${t.id})">Gestionar administradores</button></td></tr>`).join(''):'<tr><td colspan="3" style="color:var(--muted)">Ningún taller coincide con la búsqueda.</td></tr>'}</tbody></table></div>`;
   }else{
     if(!CURRENT_TALLER){cont.innerHTML='<div class="dcard" style="color:var(--muted)">Selecciona un taller para gestionar sus accesos.</div>';return;}
     let admins=[];try{admins=await apiReq('/api/talleres/'+CURRENT_TALLER+'/admins');}catch(e){}
     const list=admins.map(a=>{const act=!!a.activo;return `<div style="padding:8px 0;border-bottom:1px solid var(--line)"><div style="display:flex;align-items:center;gap:10px"><div style="flex:1;font-size:13px">${a.nombre} <span style="color:var(--muted)">(${a.usuario} · ${a.correo})</span> ${act?'':'<span style="color:var(--red);font-size:11px">(inactivo)</span>'}</div><button class="wbtn wbtn-g" onclick="admEdit(${a.id})">Modificar</button> <button class="wbtn wbtn-g" onclick="admToggle(${a.id},${act})">${act?'Inactivar':'Activar'}</button></div><div id="admEd_${a.id}" style="display:none;margin-top:8px"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end"><div class="fld" style="margin:0;min-width:120px"><label>Nombre</label><input id="aeN_${a.id}" value="${a.nombre}"></div><div class="fld" style="margin:0;min-width:150px"><label>Correo</label><input id="aeE_${a.id}" value="${a.correo}"></div><div class="fld" style="margin:0;min-width:140px"><label>Nueva contraseña (opcional)</label><input id="aeP_${a.id}" type="password"></div><button class="wbtn wbtn-d" onclick="admGuardar(${a.id})">Guardar</button></div></div></div>`;}).join('');
     cont.innerHTML=`<div class="dcard"><h3 style="font-size:15px;margin-bottom:4px">Administradores de ${CURRENT_TALLER_NAME}</h3><div style="font-size:11px;color:var(--muted);margin-bottom:10px">Puedes crear, modificar o inactivar administradores de este taller. La asignación a otros talleres la hace el Super Administrador.</div>${list||'<div style="font-size:12px;color:var(--muted)">Aún no hay administradores.</div>'}<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:12px"><div class="fld" style="margin:0;flex:1;min-width:120px"><label>Nombre</label><input id="auN"></div><div class="fld" style="margin:0;min-width:100px"><label>Usuario</label><input id="auU"></div><div class="fld" style="margin:0;min-width:140px"><label>Correo</label><input id="auE"></div><div class="fld" style="margin:0;min-width:100px"><label>Contraseña</label><input id="auP" type="password"></div><button class="wbtn wbtn-d" onclick="admCrearAdmin()">Agregar administrador</button></div><div id="auErr" style="color:var(--red);font-size:12px;margin-top:6px"></div></div>`;
   }}
-function suEdit(id){const e=document.getElementById('suEd_'+id);if(e)e.style.display=e.style.display==='none'?'':'none';}
+async function suAbrirTaller(tallerId){
+  const t=(window._TALLERES_SU||[]).find(x=>x.id===tallerId);if(!t)return;
+  window._suTallerActual=tallerId;
+  let admins=[];try{admins=await apiReq('/api/talleres/'+tallerId+'/admins');}catch(e){toast(e.message);return;}
+  window._suAdmins=admins;
+  document.getElementById('modalH').innerHTML=`<h2>Administradores de ${t.nombre}</h2>`;
+  document.getElementById('modalB').innerHTML=suAdminsListaHTML();
+  document.getElementById('modal').classList.add('on');
+}
+function suAdminsListaHTML(){
+  const admins=window._suAdmins||[];
+  return `<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="wbtn wbtn-d" onclick="suFormAdmin(null)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Nuevo administrador</button></div>
+  ${admins.length?admins.map(a=>`<div style="padding:10px 0;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px">
+    <div style="flex:1"><b>${a.nombre}</b> ${a.activo?'':'<span style="color:var(--red);font-size:11px">(inactivo)</span>'}<div style="font-size:12px;color:var(--muted)">${a.usuario} · ${a.correo}${a.telefono?' · '+a.telefono:''}</div></div>
+    <button class="wbtn wbtn-g" onclick="suFormAdmin(${a.id})">Editar</button>
+    <button class="wbtn ${a.activo?'wbtn-gr':'wbtn-g'}" onclick="suToggleAdmin(${a.id},${!!a.activo})">${a.activo?'Inactivar':'Activar'}</button>
+    <button class="wbtn wbtn-gr" style="color:var(--red)" onclick="suEliminarAdmin(${a.id},'${(a.nombre||'').replace(/'/g,"\\'")}')">🗑 Eliminar</button>
+  </div>`).join(''):'<div style="color:var(--muted);font-size:13px">Este taller aún no tiene administradores.</div>'}`;
+}
+function suFormAdmin(uid){
+  const a=uid?(window._suAdmins||[]).find(x=>x.id===uid):null;
+  document.getElementById('modalB').innerHTML=`
+    <div class="fld"><label>Nombre</label><input id="saN" value="${a?a.nombre:''}"></div>
+    <div class="fld"><label>Usuario (nick de acceso)</label><input id="saU" value="${a?a.usuario:''}" autocomplete="off"></div>
+    <div class="fld"><label>Correo</label><input id="saE" value="${a?a.correo:''}"></div>
+    <div class="fld"><label>Teléfono</label><input id="saT" value="${a?(a.telefono||''):''}"></div>
+    <div style="display:flex;gap:10px"><div class="fld" style="flex:1"><label>${a?'Nueva contraseña':'Contraseña'}</label>${campoClaveHTML('saP',a?'Dejar vacío para no cambiar':'mínimo 6 caracteres')}</div><div class="fld" style="flex:1"><label>Confirmar</label>${campoClaveHTML('saP2','')}</div></div>
+    <div id="saErr" style="color:var(--red);font-size:12px;margin-bottom:8px"></div>
+    <button class="wbtn wbtn-d" style="width:100%;justify-content:center" onclick="suGuardarAdmin(${uid||0})">${a?'Guardar cambios':'Crear administrador'}</button>
+    <button class="wbtn wbtn-g" style="width:100%;justify-content:center;margin-top:8px" onclick="suAbrirTaller(window._suTallerActual)">← Volver a la lista</button>`;
+}
+async function suGuardarAdmin(uid){
+  const n=val('saN').trim(),u=val('saU').trim(),e=val('saE').trim(),tel=val('saT').trim(),p=val('saP'),p2=val('saP2');
+  const err=document.getElementById('saErr');err.textContent='';
+  if(!n||!u||!e){err.textContent='Nombre, usuario y correo son obligatorios';return;}
+  if(!uid&&!p){err.textContent='La contraseña es obligatoria al crear';return;}
+  if(p&&p!==p2){err.textContent='Las contraseñas no coinciden';return;}
+  if(p&&p.length<6){err.textContent='La contraseña debe tener al menos 6 caracteres';return;}
+  try{
+    if(uid){
+      await apiReq('/api/talleres/'+window._suTallerActual+'/admins/'+uid,{method:'PUT',body:JSON.stringify({nombre:n,usuario:u,correo:e,telefono:tel,password:p||undefined})});
+      toast('✅ Administrador actualizado con éxito');
+    }else{
+      await apiReq('/api/talleres/'+window._suTallerActual+'/admins',{method:'POST',body:JSON.stringify({nombre:n,usuario:u,correo:e,telefono:tel,password:p})});
+      toast('✅ Administrador creado con éxito');
+    }
+  }catch(ex){err.textContent=ex.message;return;}
+  await suAbrirTaller(window._suTallerActual);
+}
+async function suToggleAdmin(uid,act){try{await apiReq('/api/talleres/'+window._suTallerActual+'/admins/'+uid+'/estado',{method:'PUT',body:JSON.stringify({activo:!act})});toast('Actualizado ✓');await suAbrirTaller(window._suTallerActual);}catch(e){toast(e.message);}}
+async function suEliminarAdmin(uid,nombre){
+  if(!confirm('¿Eliminar por completo la cuenta de "'+nombre+'"? Esta acción no se puede deshacer — perderá el acceso a todos los talleres, no solo a este.'))return;
+  try{await apiReq('/api/talleres/users/'+uid,{method:'DELETE'});toast('Administrador eliminado');await suAbrirTaller(window._suTallerActual);}catch(e){toast(e.message);}
+}
 function suPermisos(id){const row=document.getElementById('suPm_'+id);if(!row)return;if(row.style.display!=='none'){row.style.display='none';return;}
   const u=(window._USERS||[]).find(x=>x.id===id);if(!u){toast('No se encontró el usuario');return;}
   const P=u.permisos||{};
@@ -2458,14 +2517,9 @@ async function renderAuditoria(){const cont=document.getElementById('w-audit');i
   const disp=s=>{s=s||'';if(/Android/i.test(s))return'Android';if(/iPhone|iPad|iOS/i.test(s))return'iPhone/iPad';if(/Windows/i.test(s))return'Windows';if(/Mac/i.test(s))return'Mac';if(/Linux/i.test(s))return'Linux';return s.slice(0,24)||'—';};
   const body=rows.map(r=>`<tr><td style="font-size:12px;white-space:nowrap">${fmt(r.fecha)}</td><td style="font-size:12px">${r.usuario_nombre||''} <span style="color:var(--muted)">(${r.rol||''})</span></td><td style="font-size:12px">${r.accion||''}</td><td style="font-size:12px">${r.modulo||''}</td><td style="font-size:12px;color:var(--muted)">${r.detalle||''}</td><td style="font-size:11px;color:var(--muted)">${r.ip||''}</td><td style="font-size:11px;color:var(--muted)">${disp(r.dispositivo)}</td></tr>`).join('');
   cont.innerHTML=`<div class="tablecard"><table><thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Módulo</th><th>Detalle</th><th>IP</th><th>Dispositivo</th></tr></thead><tbody>${body||'<tr><td colspan="7" style="color:var(--muted)">Sin registros todavía.</td></tr>'}</tbody></table></div>`;}
-async function suToggle(id,act){try{await apiReq('/api/talleres/users/'+id+'/estado',{method:'PUT',body:JSON.stringify({activo:!act})});toast('Usuario actualizado ✓');renderUsuariosView();}catch(e){toast(e.message);}}
-async function suGuardar(id){const g=x=>document.getElementById(x+id).value;try{await apiReq('/api/talleres/users/'+id,{method:'PUT',body:JSON.stringify({nombre:g('seN_'),correo:g('seE_'),rol:g('seR_'),password:document.getElementById('seP_'+id).value||undefined})});toast('Usuario modificado ✓');renderUsuariosView();}catch(e){toast(e.message);}}
 function admEdit(id){const e=document.getElementById('admEd_'+id);if(e)e.style.display=e.style.display==='none'?'':'none';}
 async function admToggle(id,act){try{await apiReq('/api/talleres/'+CURRENT_TALLER+'/admins/'+id+'/estado',{method:'PUT',body:JSON.stringify({activo:!act})});toast('Administrador actualizado ✓');renderUsuariosView();}catch(e){toast(e.message);}}
 async function admGuardar(id){const g=x=>document.getElementById(x+id).value;try{await apiReq('/api/talleres/'+CURRENT_TALLER+'/admins/'+id,{method:'PUT',body:JSON.stringify({nombre:g('aeN_'),correo:g('aeE_'),password:document.getElementById('aeP_'+id).value||undefined})});toast('Administrador modificado ✓');renderUsuariosView();}catch(e){toast(e.message);}}
-async function suCrearUsuario(){const g=x=>(document.getElementById(x).value||'').trim();const nombre=g('nuN'),usuario=g('nuU'),correo=g('nuE'),rol=document.getElementById('nuR').value;const password=document.getElementById('nuP').value;const err=document.getElementById('nuErr');
-  if(!nombre||!usuario||!correo||!password){err.textContent='Completa todos los campos';return;}
-  try{await apiReq('/api/talleres/users/new',{method:'POST',body:JSON.stringify({nombre,usuario,correo,password,rol})});toast('Usuario creado ✓');renderUsuariosView();}catch(e){err.textContent=e.message;}}
 async function admCrearAdmin(){const g=x=>(document.getElementById(x).value||'').trim();const nombre=g('auN'),usuario=g('auU'),correo=g('auE');const password=document.getElementById('auP').value;const err=document.getElementById('auErr');
   if(!nombre||!usuario||!correo||!password){err.textContent='Completa todos los campos';return;}
   try{await apiReq('/api/talleres/'+CURRENT_TALLER+'/admins',{method:'POST',body:JSON.stringify({nombre,usuario,correo,password})});toast('Administrador creado para este taller ✓');renderUsuariosView();}catch(e){err.textContent=e.message;}}

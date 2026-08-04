@@ -76,7 +76,7 @@ router.get('/:id/admins', async (req, res) => {
     if (req.user.rol !== 'administrador' || !own) return res.status(403).json({ error: 'Sin permiso para este taller' });
   }
   const { rows } = await query(
-    `SELECT u.id,u.nombre,u.usuario,u.correo,u.activo FROM usuarios u
+    `SELECT u.id,u.nombre,u.usuario,u.correo,u.telefono,u.activo FROM usuarios u
      JOIN taller_admins ta ON ta.usuario_id=u.id
      WHERE ta.taller_id=$1 ORDER BY u.nombre`, [req.params.id]);
   res.json(rows);
@@ -96,7 +96,7 @@ router.post('/:id/admins', async (req, res) => {
   let usuarioId = req.body.usuario_id;
 
   if (!usuarioId) {
-    const { nombre, usuario, correo, password } = req.body;
+    const { nombre, usuario, correo, telefono, password } = req.body;
     if (!nombre || !usuario || !correo || !password)
       return res.status(400).json({ error: 'Faltan datos del administrador (nombre, usuario, correo, contraseña)' });
     // VALIDACIÓN DE DUPLICADOS
@@ -107,8 +107,8 @@ router.post('/:id/admins', async (req, res) => {
     }
     const hash = await hashPassword(password);
     const ins = await query(
-      'INSERT INTO usuarios (nombre,usuario,correo,password,rol) VALUES ($1,$2,$3,$4,$5) RETURNING id',
-      [nombre, usuario, correo, hash, 'administrador']);
+      'INSERT INTO usuarios (nombre,usuario,correo,telefono,password,rol) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
+      [nombre, usuario, correo, telefono || null, hash, 'administrador']);
     usuarioId = ins.rows[0].id;
   } else {
     const u = (await query('SELECT id FROM usuarios WHERE id=$1', [usuarioId])).rows[0];
@@ -224,12 +224,17 @@ router.put('/:id/admins/:uid', async (req, res) => {
     const own = (await query('SELECT 1 FROM taller_admins WHERE taller_id=$1 AND usuario_id=$2', [req.params.id, req.user.id])).rows[0];
     if (req.user.rol !== 'administrador' || !own) return res.status(403).json({ error: 'Sin permiso' });
   }
-  const { nombre, correo, password } = req.body;
+  const { nombre, usuario, correo, telefono, password } = req.body;
   if (correo) {
     const dup = (await query('SELECT id FROM usuarios WHERE correo=$1 AND id<>$2', [correo, req.params.uid])).rows[0];
     if (dup) return res.status(409).json({ error: 'Ya existe otro usuario con ese correo' });
   }
-  await query('UPDATE usuarios SET nombre=COALESCE($2,nombre), correo=COALESCE($3,correo) WHERE id=$1', [req.params.uid, nombre || null, correo || null]);
+  if (usuario) {
+    const dup = (await query('SELECT id FROM usuarios WHERE usuario=$1 AND id<>$2', [usuario, req.params.uid])).rows[0];
+    if (dup) return res.status(409).json({ error: 'Ya existe otro usuario con ese nombre de usuario' });
+  }
+  await query('UPDATE usuarios SET nombre=COALESCE($2,nombre), usuario=COALESCE($3,usuario), correo=COALESCE($4,correo), telefono=COALESCE($5,telefono) WHERE id=$1',
+    [req.params.uid, nombre || null, usuario || null, correo || null, telefono || null]);
   if (password) await query('UPDATE usuarios SET password=$2, must_change=1 WHERE id=$1', [req.params.uid, await hashPassword(password)]);
   res.json({ ok: true });
 });
@@ -241,6 +246,17 @@ router.put('/:id/admins/:uid/estado', async (req, res) => {
     if (req.user.rol !== 'administrador' || !own) return res.status(403).json({ error: 'Sin permiso' });
   }
   await query('UPDATE usuarios SET activo=$2 WHERE id=$1', [req.params.uid, req.body.activo ? 1 : 0]);
+  res.json({ ok: true });
+});
+
+// Eliminar por completo la cuenta de un administrador (solo Super Admin).
+// Distinto de quitar-de-un-taller: esto borra el usuario del sistema entero.
+router.delete('/users/:uid', requireRole('superadmin'), async (req, res) => {
+  const u = (await query('SELECT rol FROM usuarios WHERE id=$1', [req.params.uid])).rows[0];
+  if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
+  if (u.rol === 'superadmin') return res.status(400).json({ error: 'No se puede eliminar una cuenta de Super Administrador desde aquí.' });
+  await query('DELETE FROM taller_admins WHERE usuario_id=$1', [req.params.uid]);
+  await query('DELETE FROM usuarios WHERE id=$1', [req.params.uid]);
   res.json({ ok: true });
 });
 
