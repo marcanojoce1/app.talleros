@@ -78,14 +78,37 @@ router.get('/', async (req, res) => {
 // Ahora se fusiona por "id" en cada colección: se agregan/actualizan los elementos que
 // llegan, pero nunca se pierde uno que ya existía en el servidor y que el cliente que
 // guarda no conocía todavía.
-function fusionarPorId(actual, entrante) {
+function fusionarPorId(actual, entrante, fusionarItem) {
   if (!Array.isArray(entrante)) return Array.isArray(actual) ? actual : [];
   if (!Array.isArray(actual)) return entrante;
   const mapa = new Map(actual.map((x) => [x && x.id, x]));
-  entrante.forEach((x) => { if (x && x.id != null) mapa.set(x.id, x); });
+  entrante.forEach((x) => {
+    if (x && x.id != null) {
+      const previo = mapa.get(x.id);
+      mapa.set(x.id, (previo && fusionarItem) ? fusionarItem(previo, x) : x);
+    }
+  });
   return Array.from(mapa.values());
 }
+// Los vehículos guardan su historial de avances (fotos, videos, notas del técnico) DENTRO
+// del propio objeto. Si dos dispositivos guardan casi al mismo tiempo con copias del
+// vehículo ligeramente distintas (uno no se enteró todavía del último avance del otro),
+// reemplazar el vehículo completo borraba en silencio esos avances. Aquí se fusiona el
+// arreglo de avances en vez de reemplazarlo — nunca se pierde uno que un lado no conocía.
+function fusionarVehiculo(actualV, entranteV) {
+  const merged = { ...actualV, ...entranteV };
+  const advA = actualV.advances || [];
+  const advE = entranteV.advances || [];
+  if (advA.length || advE.length) {
+    const base = advE.length >= advA.length ? [...advE] : [...advA];
+    const otro = advE.length >= advA.length ? advA : advE;
+    otro.forEach((a) => { if (!base.some((b) => JSON.stringify(a) === JSON.stringify(b))) base.push(a); });
+    merged.advances = base;
+  }
+  return merged;
+}
 const COLECCIONES_POR_ID = ['clients', 'vehicles', 'mecanicos', 'usuarios', 'history', 'citas', 'cotizaciones', 'notifs', 'facturas', 'sos'];
+const FUSIONES_ITEM = { vehicles: fusionarVehiculo };
 
 router.put('/', async (req, res) => {
   const tallerId = Number(req.query.taller);
@@ -98,7 +121,7 @@ router.put('/', async (req, res) => {
   if (filaActual && filaActual.data) { try { actual = JSON.parse(filaActual.data); } catch { actual = {}; } }
 
   const fusionado = { ...actual, ...entrante };
-  COLECCIONES_POR_ID.forEach((k) => { fusionado[k] = fusionarPorId(actual[k], entrante[k]); });
+  COLECCIONES_POR_ID.forEach((k) => { fusionado[k] = fusionarPorId(actual[k], entrante[k], FUSIONES_ITEM[k]); });
   // config se fusiona por clave (no se reemplaza completo) — si no, guardar solo el plan
   // desde "Editar taller" borraría en silencio los motivos, marcas, moneda, etc. que el
   // taller ya tenía configurados.

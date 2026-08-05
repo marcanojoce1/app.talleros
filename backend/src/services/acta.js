@@ -99,7 +99,8 @@ function generarActaHTML(o = {}) {
 <title>Acta de Inspección — ${esc(veh.plate || '')}</title>
 <style>
   * { box-sizing: border-box; }
-  body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; margin: 0; padding: 14px; font-size: 12px; background: #fff; }
+  @page { size: A4; margin: 8mm; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; margin: 0; padding: 14px; font-size: 12px; background: #fff; word-wrap: break-word; overflow-wrap: break-word; }
   .sheet { max-width: 780px; margin: 0 auto; border: 2px solid #111; }
   .head { display: flex; border-bottom: 2px solid #111; }
   .brand { padding: 12px 14px; border-right: 2px solid #111; min-width: 190px; }
@@ -204,8 +205,9 @@ function generarActaHTML(o = {}) {
           const colorTxt = (r.bateriaColor || '').toLowerCase().trim();
           const bodyColor = coloresMap[colorTxt] || '#2b2d31';
           const textColor = ['#d8dadd', '#9aa0a6', '#c9a227'].includes(bodyColor) ? '#111' : '#fff';
-          return `<div style="margin-top:14px"><b>🔋 Batería</b>${r.bateriaMarca ? ': ' + esc(r.bateriaMarca) : ''}
-          <svg width="66" height="50" viewBox="0 0 80 60" style="display:block;margin-top:6px">
+          return `<div style="margin-top:14px;padding-top:12px;border-top:1.5px solid #111;text-align:center">
+          <b>🔋 Batería</b>${r.bateriaMarca ? ': ' + esc(r.bateriaMarca) : ''}
+          <svg width="66" height="50" viewBox="0 0 80 60" style="display:block;margin:6px auto 0">
             <rect x="10" y="10" width="10" height="8" rx="2" fill="#8a8d91"/><rect x="60" y="10" width="10" height="8" rx="2" fill="#8a8d91"/>
             <circle cx="15" cy="9" r="4" fill="#a9adb3"/><circle cx="65" cy="9" r="4" fill="#a9adb3"/>
             <rect x="4" y="16" width="72" height="40" rx="5" fill="${bodyColor}" stroke="#111" stroke-width="1.5"/>
@@ -213,7 +215,7 @@ function generarActaHTML(o = {}) {
             <text x="40" y="42" text-anchor="middle" font-size="10" font-weight="bold" font-family="Arial" fill="${textColor}">${esc(r.bateriaAmperaje || '')}${r.bateriaAmperaje ? 'A' : ''}</text>
             <text x="15" y="14" font-size="10" font-weight="bold" fill="#16a34a">+</text><text x="63" y="14" font-size="12" font-weight="bold" fill="#dc2626">−</text>
           </svg>
-          ${r.bateriaObs ? `<div style="font-size:8.5px;color:#444;margin-top:4px">${esc(r.bateriaObs)}</div>` : ''}
+          ${r.bateriaObs ? `<div style="font-size:8.5px;color:#444;margin-top:4px;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;text-align:left">${esc(r.bateriaObs)}</div>` : ''}
           </div>`;
         })() : ''}
       </div>
@@ -270,7 +272,7 @@ function generarActaHTML(o = {}) {
       ${(r.cotizacionItems && r.cotizacionItems.length) ? `<div style="margin-top:6px;font-size:9.5px"><b>Servicios y repuestos de la cotización:</b><br/>${r.cotizacionItems.map((it) => `${it.tipo === 'repuesto' ? '🔩' : '🔧'} ${esc(it.n || '')}${it.p ? ' — ' + esc(mon || 'Bs.') + ' ' + Number(it.p).toLocaleString('es-VE') : ''}`).join('<br/>')}</div>` : ''}
       ${pago ? `<div style="margin-top:4px"><b>TOTAL GENERAL (servicio + cotización): ${esc(mon || 'Bs.')} ${(Number(pago.total || 0) + Number(r.montoCotizacion || 0)).toLocaleString('es-VE')}</b></div>` : ''}
     </div>` : ''}
-    ${r.obs && r.obs !== '—' ? `<div style="padding:8px 10px;border-bottom:1.5px solid #111"><b>Observaciones:</b> ${esc(r.obs)}</div>` : ''}
+    ${r.obs && r.obs !== '—' ? `<div style="padding:8px 10px;border-bottom:1.5px solid #111;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word"><b>Observaciones:</b> ${esc(r.obs)}</div>` : ''}
 
     <div class="cond">
       <b>Condiciones del Servicio:</b><br/>
@@ -372,7 +374,8 @@ function generarCotizacionHTML(o = {}) {
 <title>Cotización ${esc(numTxt)}</title>
 <style>
   * { box-sizing: border-box; }
-  body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; margin: 0; padding: 14px; font-size: 12px; background: #fff; }
+  @page { size: A4; margin: 8mm; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; margin: 0; padding: 14px; font-size: 12px; background: #fff; word-wrap: break-word; overflow-wrap: break-word; }
   .sheet { max-width: 780px; margin: 0 auto; border: 2px solid #16406b; border-radius: 6px; overflow: hidden; }
   .head { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #16406b; padding: 14px 16px; }
   .brand h1 { margin: 0; font-size: 20px; color: #16406b; }
@@ -495,7 +498,8 @@ function generarResumenEsperaHTML(o = {}) {
 <title>Resumen de espera</title>
 <style>
   * { box-sizing: border-box; }
-  body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; margin: 0; padding: 16px; font-size: 12px; background: #fff; }
+  @page { size: A4; margin: 8mm; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; margin: 0; padding: 16px; font-size: 12px; background: #fff; word-wrap: break-word; overflow-wrap: break-word; }
   .sheet { max-width: 780px; margin: 0 auto; }
   .head { border-bottom: 2px solid #16406b; padding-bottom: 10px; margin-bottom: 14px; }
   .head h1 { margin: 0; font-size: 19px; color: #16406b; }
