@@ -196,18 +196,18 @@ function generarActaHTML(o = {}) {
       </div>
       <div class="col fuel" style="max-width:150px">
         <h3>Combustible</h3>
-        <div style="margin-top:14px;font-size:22px;font-weight:bold">${esc(r.combustible || '½')}</div>
-        <div style="height:8px;background:#eee;border-radius:4px;margin-top:8px;overflow:hidden"><div style="height:8px;width:${combPct}%;background:#F5B700"></div></div>
-        <div style="display:flex;justify-content:space-between;font-size:9px;margin-top:3px"><span>E</span><span>F</span></div>
-        ${r.prioridad ? `<div style="margin-top:14px"><b>Prioridad</b><br/>${esc(r.prioridad)}</div>` : ''}
+        <div style="margin-top:8px;font-size:20px;font-weight:bold">${esc(r.combustible || '½')}</div>
+        <div style="height:7px;background:#eee;border-radius:4px;margin-top:6px;overflow:hidden"><div style="height:7px;width:${combPct}%;background:#F5B700"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:9px;margin-top:2px"><span>E</span><span>F</span></div>
+        ${r.prioridad ? `<div style="margin-top:8px"><b>Prioridad</b><br/>${esc(r.prioridad)}</div>` : ''}
         ${r.bateria ? (() => {
           const coloresMap = { negro: '#26282b', gris: '#5b5f66', azul: '#1e4d8f', rojo: '#8f1e1e', verde: '#1e6b3a', blanco: '#d8dadd', amarillo: '#c9a227', plateado: '#9aa0a6', plata: '#9aa0a6' };
           const colorTxt = (r.bateriaColor || '').toLowerCase().trim();
           const bodyColor = coloresMap[colorTxt] || '#2b2d31';
           const textColor = ['#d8dadd', '#9aa0a6', '#c9a227'].includes(bodyColor) ? '#111' : '#fff';
-          return `<div style="margin-top:14px;padding-top:12px;border-top:1.5px solid #111;text-align:center">
+          return `<div style="margin-top:8px;padding-top:6px;border-top:1.5px solid #111;text-align:center">
           <b>🔋 Batería</b>${r.bateriaMarca ? ': ' + esc(r.bateriaMarca) : ''}
-          <svg width="66" height="50" viewBox="0 0 80 60" style="display:block;margin:6px auto 0">
+          <svg width="54" height="40" viewBox="0 0 80 60" style="display:block;margin:4px auto 0">
             <rect x="10" y="10" width="10" height="8" rx="2" fill="#8a8d91"/><rect x="60" y="10" width="10" height="8" rx="2" fill="#8a8d91"/>
             <circle cx="15" cy="9" r="4" fill="#a9adb3"/><circle cx="65" cy="9" r="4" fill="#a9adb3"/>
             <rect x="4" y="16" width="72" height="40" rx="5" fill="${bodyColor}" stroke="#111" stroke-width="1.5"/>
@@ -215,7 +215,7 @@ function generarActaHTML(o = {}) {
             <text x="40" y="42" text-anchor="middle" font-size="10" font-weight="bold" font-family="Arial" fill="${textColor}">${esc(r.bateriaAmperaje || '')}${r.bateriaAmperaje ? 'A' : ''}</text>
             <text x="15" y="14" font-size="10" font-weight="bold" fill="#16a34a">+</text><text x="63" y="14" font-size="12" font-weight="bold" fill="#dc2626">−</text>
           </svg>
-          ${r.bateriaObs ? `<div style="font-size:8.5px;color:#444;margin-top:4px;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;text-align:left">${esc(r.bateriaObs)}</div>` : ''}
+          ${r.bateriaObs ? `<div style="font-size:8.5px;color:#444;margin-top:3px;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;text-align:left">${esc(r.bateriaObs)}</div>` : ''}
           </div>`;
         })() : ''}
       </div>

@@ -34,6 +34,7 @@ async function init() {
   await pool.query('ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS taller_id INTEGER');
   await pool.query('ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS permisos TEXT');
   await pool.query('ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS must_change INTEGER DEFAULT 0');
+  await pool.query('ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS documento TEXT');
   await pool.query('ALTER TABLE talleres ADD COLUMN IF NOT EXISTS rubro TEXT');
   await pool.query('ALTER TABLE talleres ADD COLUMN IF NOT EXISTS condiciones TEXT');
   await pool.query('ALTER TABLE talleres ADD COLUMN IF NOT EXISTS pie TEXT');

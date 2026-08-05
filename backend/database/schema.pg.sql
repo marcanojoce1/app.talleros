@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
   password  TEXT NOT NULL,
   rol       TEXT NOT NULL CHECK (rol IN ('superadmin','administrador','mecanico','cliente')),
   telefono  TEXT,
+  documento TEXT,
   activo    INTEGER NOT NULL DEFAULT 1,
   twofa     INTEGER NOT NULL DEFAULT 0,
   taller_id INTEGER,

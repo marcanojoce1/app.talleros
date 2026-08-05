@@ -52,9 +52,13 @@ router.put('/:id', requireRole('superadmin'), async (req, res) => {
 
 // Lista de TODOS los administradores con los talleres que tiene cada uno (superadmin)
 router.get('/admins/all', requireRole('superadmin'), async (req, res) => {
-  const us = (await query("SELECT id,nombre,usuario,correo,activo FROM usuarios WHERE rol='administrador' ORDER BY nombre")).rows;
+  const us = (await query("SELECT id,nombre,usuario,correo,telefono,documento,activo FROM usuarios WHERE rol='administrador' ORDER BY nombre")).rows;
   const rels = (await query('SELECT taller_id, usuario_id FROM taller_admins')).rows;
-  res.json(us.map(u => ({ ...u, talleres: rels.filter(r => r.usuario_id === u.id).map(r => r.taller_id) })));
+  const talleres = (await query('SELECT id, nombre FROM talleres')).rows;
+  res.json(us.map(u => {
+    const tIds = rels.filter(r => r.usuario_id === u.id).map(r => r.taller_id);
+    return { ...u, talleres: tIds, talleresNombres: tIds.map(id => (talleres.find(t => t.id === id) || {}).nombre).filter(Boolean) };
+  }));
 });
 
 // Reemplazar los talleres de un administrador (marcar/desmarcar)
@@ -76,7 +80,7 @@ router.get('/:id/admins', async (req, res) => {
     if (req.user.rol !== 'administrador' || !own) return res.status(403).json({ error: 'Sin permiso para este taller' });
   }
   const { rows } = await query(
-    `SELECT u.id,u.nombre,u.usuario,u.correo,u.telefono,u.activo FROM usuarios u
+    `SELECT u.id,u.nombre,u.usuario,u.correo,u.telefono,u.documento,u.activo FROM usuarios u
      JOIN taller_admins ta ON ta.usuario_id=u.id
      WHERE ta.taller_id=$1 ORDER BY u.nombre`, [req.params.id]);
   res.json(rows);
@@ -96,7 +100,7 @@ router.post('/:id/admins', async (req, res) => {
   let usuarioId = req.body.usuario_id;
 
   if (!usuarioId) {
-    const { nombre, usuario, correo, telefono, password } = req.body;
+    const { nombre, usuario, correo, telefono, documento, password } = req.body;
     if (!nombre || !usuario || !correo || !password)
       return res.status(400).json({ error: 'Faltan datos del administrador (nombre, usuario, correo, contraseña)' });
     // VALIDACIÓN DE DUPLICADOS
@@ -107,8 +111,8 @@ router.post('/:id/admins', async (req, res) => {
     }
     const hash = await hashPassword(password);
     const ins = await query(
-      'INSERT INTO usuarios (nombre,usuario,correo,telefono,password,rol) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
-      [nombre, usuario, correo, telefono || null, hash, 'administrador']);
+      'INSERT INTO usuarios (nombre,usuario,correo,telefono,documento,password,rol) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id',
+      [nombre, usuario, correo, telefono || null, documento || null, hash, 'administrador']);
     usuarioId = ins.rows[0].id;
   } else {
     const u = (await query('SELECT id FROM usuarios WHERE id=$1', [usuarioId])).rows[0];
@@ -224,7 +228,7 @@ router.put('/:id/admins/:uid', async (req, res) => {
     const own = (await query('SELECT 1 FROM taller_admins WHERE taller_id=$1 AND usuario_id=$2', [req.params.id, req.user.id])).rows[0];
     if (req.user.rol !== 'administrador' || !own) return res.status(403).json({ error: 'Sin permiso' });
   }
-  const { nombre, usuario, correo, telefono, password } = req.body;
+  const { nombre, usuario, correo, telefono, documento, password } = req.body;
   if (correo) {
     const dup = (await query('SELECT id FROM usuarios WHERE correo=$1 AND id<>$2', [correo, req.params.uid])).rows[0];
     if (dup) return res.status(409).json({ error: 'Ya existe otro usuario con ese correo' });
@@ -233,8 +237,8 @@ router.put('/:id/admins/:uid', async (req, res) => {
     const dup = (await query('SELECT id FROM usuarios WHERE usuario=$1 AND id<>$2', [usuario, req.params.uid])).rows[0];
     if (dup) return res.status(409).json({ error: 'Ya existe otro usuario con ese nombre de usuario' });
   }
-  await query('UPDATE usuarios SET nombre=COALESCE($2,nombre), usuario=COALESCE($3,usuario), correo=COALESCE($4,correo), telefono=COALESCE($5,telefono) WHERE id=$1',
-    [req.params.uid, nombre || null, usuario || null, correo || null, telefono || null]);
+  await query('UPDATE usuarios SET nombre=COALESCE($2,nombre), usuario=COALESCE($3,usuario), correo=COALESCE($4,correo), telefono=COALESCE($5,telefono), documento=COALESCE($6,documento) WHERE id=$1',
+    [req.params.uid, nombre || null, usuario || null, correo || null, telefono || null, documento || null]);
   if (password) await query('UPDATE usuarios SET password=$2, must_change=1 WHERE id=$1', [req.params.uid, await hashPassword(password)]);
   res.json({ ok: true });
 });
