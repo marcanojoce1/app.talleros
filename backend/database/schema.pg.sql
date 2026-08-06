@@ -149,6 +149,16 @@ CREATE TABLE IF NOT EXISTS config_catalogo (
   extra TEXT DEFAULT '{}'
 );
 
+-- Configuración global de la app (una sola fila) — mensaje de contacto que se muestra
+-- en la pantalla de login del celular cuando alguien sin cuenta abre la app.
+CREATE TABLE IF NOT EXISTS config_global (
+  id        INTEGER PRIMARY KEY DEFAULT 1,
+  mensaje   TEXT,
+  correo    TEXT,
+  telefono  TEXT,
+  CONSTRAINT solo_una_fila CHECK (id = 1)
+);
+
 CREATE TABLE IF NOT EXISTS talleres (
   id        SERIAL PRIMARY KEY,
   nombre    TEXT NOT NULL,

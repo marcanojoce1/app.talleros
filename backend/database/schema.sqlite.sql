@@ -162,6 +162,13 @@ CREATE TABLE config_catalogo (
   extra TEXT DEFAULT '{}'
 );
 
+CREATE TABLE IF NOT EXISTS config_global (
+  id        INTEGER PRIMARY KEY CHECK (id = 1),
+  mensaje   TEXT,
+  correo    TEXT,
+  telefono  TEXT
+);
+
 CREATE TABLE IF NOT EXISTS talleres (
   id        INTEGER PRIMARY KEY AUTOINCREMENT,
   nombre    TEXT NOT NULL,

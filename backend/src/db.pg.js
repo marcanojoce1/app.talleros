@@ -39,6 +39,10 @@ async function init() {
   await pool.query('ALTER TABLE talleres ADD COLUMN IF NOT EXISTS condiciones TEXT');
   await pool.query('ALTER TABLE talleres ADD COLUMN IF NOT EXISTS pie TEXT');
   await pool.query('ALTER TABLE talleres ADD COLUMN IF NOT EXISTS logo_tam INTEGER DEFAULT 100');
+  await pool.query(`CREATE TABLE IF NOT EXISTS config_global (
+    id INTEGER PRIMARY KEY DEFAULT 1, mensaje TEXT, correo TEXT, telefono TEXT,
+    CONSTRAINT solo_una_fila CHECK (id = 1))`);
+  await pool.query('INSERT INTO config_global (id) VALUES (1) ON CONFLICT (id) DO NOTHING');
   const r = await pool.query('SELECT 1 FROM usuarios LIMIT 1');
   if (r.rows.length) { console.log('Base PostgreSQL lista (ya tenía datos).'); return; }
   const hash = await bcrypt.hash('super1234', 10);
