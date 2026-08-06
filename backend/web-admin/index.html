@@ -413,7 +413,7 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover{background:var(--surface-2)}
   <div class="web-wrap"><div class="web">
     <div class="wsideBackdrop" id="wSideBackdrop" onclick="toggleWSide(false)"></div>
     <div class="wside">
-      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v128</span></div>
+      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v129</span></div>
       <div class="wlbl op-item">Operación</div>
       <a class="on op-item" data-w="dash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
       <a class="op-item" data-w="recep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-6 0v4"/><rect x="2" y="9" width="20" height="11" rx="2"/></svg>Recepción digital</a>
@@ -1827,16 +1827,17 @@ async function renderConfig(){persistData();const c=store.config;let _t=(window.
    <div class="dcard" style="margin-bottom:14px"><h3 style="font-size:14px;margin-bottom:12px">📄 Encabezado y pie del acta</h3>
      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Esto aparece en la parte de arriba y abajo del acta que se imprime o comparte.</div>
      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-       <div class="fld"><label>Nombre del taller</label><input id="acN" value="${(_t.nombre||'').replace(/"/g,'&quot;')}"></div>
+       <div class="fld"><label>Nombre del taller${ME&&ME.rol!=='superadmin'?' (solo lo cambia el Super Administrador)':''}</label><input id="acN" value="${(_t.nombre||'').replace(/"/g,'&quot;')}" ${ME&&ME.rol!=='superadmin'?'disabled style="background:#f7f8fa;color:var(--muted)"':''}></div>
        <div class="fld"><label>Rubro / subtítulo</label><input id="acU" value="${(_t.rubro||'').replace(/"/g,'&quot;')}" placeholder="TALLER AUTOMOTRIZ"></div>
        <div class="fld"><label>Teléfono</label><input id="acT" value="${(_t.telefono||'').replace(/"/g,'&quot;')}"></div>
        <div class="fld"><label>Dirección</label><input id="acD" value="${(_t.direccion||'').replace(/"/g,'&quot;')}"></div>
        <div class="fld"><label>RIF</label><input id="acR" value="${(_t.rif||'').replace(/"/g,'&quot;')}"></div>
        <div class="fld"><label>Logo del taller</label><input id="acL" type="file" accept="image/*" onchange="acLeerLogo()"><span id="acLprev" style="font-size:11px;color:var(--muted)">${_t.logo?'Logo cargado ✓':''}</span></div>
      </div>
-     <div class="fld"><label>Condiciones del servicio (pie del acta)</label><textarea id="acC" rows="3" style="width:100%;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:8px">${(_t.condiciones||'')}</textarea></div>
-     <div class="fld"><label>Pie de página (texto final)</label><input id="acP" value="${(_t.pie||'').replace(/"/g,'&quot;')}" placeholder="Ej. Gracias por su preferencia"></div>
-     <button class="wbtn wbtn-d" onclick="guardarEncabezado()">Guardar encabezado y pie</button>
+     <div class="fld"><label>Condiciones del servicio (pie del acta)</label><textarea id="acC" rows="3" style="width:100%;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:8px" oninput="document.getElementById('acPreview').innerHTML=previewActaHTML(this.value,val('acP'))">${(_t.condiciones||'')}</textarea></div>
+     <div class="fld"><label>Pie de página (texto final)</label><input id="acP" value="${(_t.pie||'').replace(/"/g,'&quot;')}" placeholder="Ej. Gracias por su preferencia" oninput="document.getElementById('acPreview').innerHTML=previewActaHTML(val('acC'),this.value)"></div>
+     <div id="acPreview">${previewActaHTML(_t.condiciones||'',_t.pie||'')}</div>
+     <button class="wbtn wbtn-d" style="margin-top:10px" onclick="guardarEncabezado()">Guardar encabezado y pie</button>
    </div>
    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start">
      <div class="dcard"><h3 style="font-size:14px;margin-bottom:12px">Moneda</h3>
@@ -2583,7 +2584,10 @@ function suAdminsListaHTML(){
 }
 function suFormAdmin(uid){
   const a=uid?(window._suAdmins||[]).find(x=>x.id===uid):null;
+  const tallerActualId=a?(a.talleres&&a.talleres[0]):(window._suTallerActual||'');
+  const talleresList=window._TALLERES_SU||[];
   document.getElementById('modalB').innerHTML=`
+    <div class="fld"><label>Taller</label><select id="saTaller">${talleresList.map(t=>`<option value="${t.id}" ${t.id===tallerActualId?'selected':''}>${t.nombre}</option>`).join('')}</select></div>
     <div class="fld"><label>Nombre</label><input id="saN" value="${a?a.nombre:''}"></div>
     <div class="fld"><label>Documento</label><input id="saD" value="${a?(a.documento||''):''}"></div>
     <div class="fld"><label>Usuario (nick de acceso)</label><input id="saU" value="${a?a.usuario:''}" autocomplete="off"></div>
@@ -2596,9 +2600,8 @@ function suFormAdmin(uid){
   document.getElementById('modal').classList.add('on');
 }
 function suNuevoAdminDesdeFiltros(){
-  const tId=BUSCA.suFiltroTaller;
-  if(!tId){toast('⚠️ Primero selecciona un taller en el filtro "Empresa / Taller"');return;}
-  window._suTallerActual=+tId;window._suAdmins=[];window._suVolverALista=false;
+  window._suTallerActual=BUSCA.suFiltroTaller?+BUSCA.suFiltroTaller:((window._TALLERES_SU||[])[0]||{}).id;
+  window._suAdmins=[];window._suVolverALista=false;
   document.getElementById('modalH').innerHTML=`<h2>Nuevo administrador</h2>`;
   suFormAdmin(null);
 }
@@ -2609,18 +2612,21 @@ function suEditarAdminGlobal(uid){
   suFormAdmin(uid);
 }
 async function suGuardarAdmin(uid){
+  const tallerSel=+val('saTaller');
   const n=val('saN').trim(),d=val('saD').trim(),u=val('saU').trim(),e=val('saE').trim(),tel=val('saT').trim(),p=val('saP'),p2=val('saP2');
   const err=document.getElementById('saErr');err.textContent='';
+  if(!tallerSel){err.textContent='Selecciona un taller';return;}
   if(!n||!u||!e){err.textContent='Nombre, usuario y correo son obligatorios';return;}
   if(!uid&&!p){err.textContent='La contraseña es obligatoria al crear';return;}
   if(p&&p!==p2){err.textContent='Las contraseñas no coinciden';return;}
   if(p&&p.length<6){err.textContent='La contraseña debe tener al menos 6 caracteres';return;}
   try{
     if(uid){
-      await apiReq('/api/talleres/'+window._suTallerActual+'/admins/'+uid,{method:'PUT',body:JSON.stringify({nombre:n,usuario:u,correo:e,telefono:tel,documento:d,password:p||undefined})});
+      await apiReq('/api/talleres/'+tallerSel+'/admins/'+uid,{method:'PUT',body:JSON.stringify({nombre:n,usuario:u,correo:e,telefono:tel,documento:d,password:p||undefined})});
+      if(tallerSel!==window._suTallerActual)await apiReq('/api/talleres/admins/'+uid+'/talleres',{method:'PUT',body:JSON.stringify({talleres:[tallerSel]})});
       toast('✅ Administrador actualizado con éxito');
     }else{
-      await apiReq('/api/talleres/'+window._suTallerActual+'/admins',{method:'POST',body:JSON.stringify({nombre:n,usuario:u,correo:e,telefono:tel,documento:d,password:p})});
+      await apiReq('/api/talleres/'+tallerSel+'/admins',{method:'POST',body:JSON.stringify({nombre:n,usuario:u,correo:e,telefono:tel,documento:d,password:p})});
       toast('✅ Administrador creado con éxito');
     }
   }catch(ex){err.textContent=ex.message;return;}
@@ -2670,43 +2676,11 @@ function renderNoTaller(){removeSuper();const el=document.createElement('div');e
 function showTallerInactivo(t){removeSuper();const el=document.createElement('div');el.id='superPanel';el.className='pickerwrap';el.innerHTML=`<div class="pickcard"><div style="padding:26px;text-align:center"><div style="font-size:34px;margin-bottom:4px">🔒</div><h3>Taller desactivado</h3><div class="sub" style="margin:8px 0 6px">El taller <b>${t.nombre}</b> está desactivado por el Super Administrador.</div><div style="background:#fdecec;color:#b91c1c;border-radius:10px;padding:11px 13px;font-size:13px;margin:8px 0 16px;text-align:left">Motivo: ${t.motivo_inactivo||'No especificado.'}</div><button class="lbtn lbtn-p" onclick="cerrarInactivo()">Cerrar</button><span class="llink" onclick="logout()">Cerrar sesión</span></div></div>`;document.body.appendChild(el);}
 function cerrarInactivo(){removeSuper();if(CURRENT_TALLER){document.getElementById('stage').style.display='';renderTallerSelector();}else{renderTallerPicker();}}
 function renderTallerPicker(){removeSuper();const el=document.createElement('div');el.id='superPanel';el.className='pickerwrap';el.innerHTML=`<div class="pickcard"><div style="padding:22px"><h3>Selecciona un taller</h3><div class="sub" style="margin:4px 0 14px">Hola ${ME.nombre}, tienes varios talleres. ¿Con cuál deseas trabajar?</div>${TALLERES.map(t=>{const inact=(t.activo===0||t.activo===false);return `<button class="lbtn lbtn-g" style="justify-content:flex-start;margin-bottom:8px;${inact?'opacity:.6':''}" onclick="enterTaller(${t.id},'${(t.nombre||'').replace(/'/g,'')}')">${inact?'🔒':'🏭'} ${t.nombre}${inact?' (inactivo)':''}</button>`;}).join('')}<span class="llink" onclick="logout()">Cerrar sesión</span></div></div>`;document.body.appendChild(el);}
-async function renderSuperPanel(){const _cont=document.getElementById('w-talleres');if(!_cont)return;let talleres=[],admins=[];try{talleres=await apiReq('/api/talleres');window._talleresCache=talleres;}catch(e){}try{admins=await apiReq('/api/talleres/admins/all');}catch(e){}
+async function renderSuperPanel(){const _cont=document.getElementById('w-talleres');if(!_cont)return;let talleres=[];try{talleres=await apiReq('/api/talleres');window._talleresCache=talleres;window._TALLERES_SU=talleres;}catch(e){}
   _cont.innerHTML=`
    <div class="supermain" style="max-width:none;padding:0">
-     <div class="dcard"><h3 style="font-size:15px;margin-bottom:10px">Crear nuevo taller</h3>
-       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
-         <div class="fld" style="flex:1;min-width:180px;margin:0"><label>Nombre del taller</label><input id="spNombre" placeholder="ej. Taller Experto"></div>
-         <div class="fld" style="min-width:130px;margin:0"><label>RIF (opcional)</label><input id="spRif" placeholder="J-..."></div>
-         <div class="fld" style="min-width:150px;margin:0"><label>Teléfono (opcional)</label><input id="spTel" placeholder="+58 ..."></div>
-       </div>
-       <div class="fld" style="margin-top:12px"><label>Versión del taller</label>
-         <div style="display:flex;gap:8px">
-           <button type="button" class="wbtn wbtn-d" id="spPlanBtn_lite" onclick="spElegirPlan('lite')" style="flex:1;justify-content:center">Lite (solo fotos)</button>
-           <button type="button" class="wbtn wbtn-g" id="spPlanBtn_pro" onclick="spElegirPlan('pro')" style="flex:1;justify-content:center">Pro</button>
-           <button type="button" class="wbtn wbtn-g" id="spPlanBtn_premium" onclick="spElegirPlan('premium')" style="flex:1;justify-content:center">Premium</button>
-         </div>
-       </div>
-       <div class="fld" id="spVidWrap" style="display:none"><label>Minutos de video por vehículo: <b id="spVidVal">10</b> min</label>
-         <input type="range" id="spVidMin" min="1" max="60" value="10" style="width:100%" oninput="document.getElementById('spVidVal').textContent=this.value">
-       </div>
-       <button class="wbtn wbtn-d" style="margin-top:12px" onclick="spCrearTaller()">Crear taller</button>
-       <div id="spErr" style="color:var(--red);font-size:12.5px;margin-top:8px"></div>
-     </div>
-     <div class="dcard" style="margin-top:14px"><h3 style="font-size:15px;margin-bottom:10px">Crear administrador y asignar talleres</h3>
-       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
-         <div class="fld" style="margin:0;flex:1;min-width:130px"><label>Nombre</label><input id="caN"></div>
-         <div class="fld" style="margin:0;min-width:110px"><label>Usuario</label><input id="caU"></div>
-         <div class="fld" style="margin:0;min-width:150px"><label>Correo</label><input id="caE"></div>
-         <div class="fld" style="margin:0;min-width:110px"><label>Contraseña</label><input id="caP" type="password"></div>
-       </div>
-       <div style="margin-top:10px"><div style="font-size:12px;font-weight:600;margin-bottom:6px">Asignar a talleres:</div>${talleres.length?talleres.map(t=>`<label style="display:inline-flex;align-items:center;gap:6px;margin:0 14px 6px 0;font-size:13px"><input type="checkbox" class="caTaller" value="${t.id}" style="width:auto"> ${t.nombre}</label>`).join(''):'<span style="font-size:12px;color:var(--muted)">Crea un taller primero.</span>'}</div>
-       <button class="wbtn wbtn-d" style="margin-top:10px" onclick="spCrearAdminMulti()">Crear administrador</button>
-       <div id="caErr" style="color:var(--red);font-size:12.5px;margin-top:8px"></div>
-     </div>
-     <h3 style="font-size:15px;margin:18px 0 10px">Talleres registrados (${talleres.length})</h3>
+     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h3 style="font-size:15px;margin:0">Talleres registrados (${talleres.length})</h3><button class="wbtn wbtn-d" onclick="spAbrirCrearTaller()">＋ Crear taller</button></div>
      <div id="spList">${talleres.map(spTallerCard).join('')||'<div class="dcard" style="color:var(--muted)">Aún no hay talleres. Crea el primero arriba.</div>'}</div>
-     <h3 style="font-size:15px;margin:18px 0 10px">Administradores (${admins.length}) — editar talleres</h3>
-     <div>${admins.length?admins.map(a=>spAdminEditCard(a,talleres)).join(''):'<div class="dcard" style="color:var(--muted)">Aún no hay administradores. Créalos arriba.</div>'}</div>
      <div class="dcard" style="margin-top:14px"><h3 style="font-size:15px;margin-bottom:6px">🖼️ Imágenes del inicio de sesión</h3>
        <div style="font-size:12.5px;color:var(--muted);margin-bottom:12px">Estas fotos aparecen en el panel derecho de la pantalla de inicio de TODA la plataforma, rotando junto con los consejos de mantenimiento. Si no subes ninguna, se muestran fondos de color.</div>
        <div class="fld"><label>Agregar imagen (puedes elegir varias)</label><input id="idxFile" type="file" accept="image/*" multiple onchange="idxAgregar()"></div>
@@ -2720,6 +2694,44 @@ async function renderSuperPanel(){const _cont=document.getElementById('w-tallere
      </div>
    </div>`;
 }
+// Vista previa en vivo de como se veran las Condiciones del servicio y el Pie de pagina
+// en el Acta, mientras el usuario los escribe.
+function previewActaHTML(condiciones,pie){
+  return `<div style="border:1px dashed #c7ccd2;border-radius:8px;padding:10px;margin-top:6px;background:#fafbfc">
+    <div style="font-size:9px;color:#9aa3ad;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Así se verá en el Acta</div>
+    ${condiciones?`<div style="font-size:9px;color:#333;line-height:1.4;font-family:Arial,Helvetica,sans-serif"><b>Condiciones del Servicio:</b><br>${(condiciones||'').replace(/</g,'&lt;')}</div>`:''}
+    ${pie?`<div style="font-size:9px;color:#666;margin-top:6px;text-align:center;font-family:Arial,Helvetica,sans-serif;border-top:1px solid #ddd;padding-top:6px">${(pie||'').replace(/</g,'&lt;')}</div>`:''}
+    ${!condiciones&&!pie?'<div style="font-size:11px;color:#c7ccd2">Escribe arriba para ver el ejemplo…</div>':''}
+  </div>`;
+}
+function spAbrirCrearTaller(){
+  window._spPlanElegido='lite';
+  document.getElementById('modalH').innerHTML=`<h2>Crear nuevo taller</h2>`;
+  document.getElementById('modalB').innerHTML=`
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><div class="fld" style="flex:1;min-width:180px"><label>Nombre del taller</label><input id="spNombre" placeholder="ej. Taller Experto"></div><div class="fld" style="min-width:130px"><label>RIF / RUC</label><input id="spRif" placeholder="J-..."></div></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><div class="fld" style="flex:1;min-width:150px"><label>Rubro (subtítulo)</label><input id="spRubro" placeholder="TALLER AUTOMOTRIZ"></div><div class="fld" style="min-width:150px"><label>Teléfono</label><input id="spTel" placeholder="+58 ..."></div></div>
+    <div class="fld"><label>Dirección</label><input id="spDir" placeholder="Dirección del taller"></div>
+    <div class="fld"><label>Logo / foto del taller</label><input id="spLogo" type="file" accept="image/*" onchange="spLeerLogoCrear()"></div>
+    <div class="fld"><label>Versión del taller</label>
+      <div style="display:flex;gap:8px">
+        <button type="button" class="wbtn wbtn-d" id="spPlanBtn_lite" onclick="spElegirPlan('lite')" style="flex:1;justify-content:center">Lite (solo fotos)</button>
+        <button type="button" class="wbtn wbtn-g" id="spPlanBtn_pro" onclick="spElegirPlan('pro')" style="flex:1;justify-content:center">Pro</button>
+        <button type="button" class="wbtn wbtn-g" id="spPlanBtn_premium" onclick="spElegirPlan('premium')" style="flex:1;justify-content:center">Premium</button>
+      </div>
+    </div>
+    <div class="fld" id="spVidWrap" style="display:none"><label>Minutos de video por vehículo: <b id="spVidVal">10</b> min</label>
+      <input type="range" id="spVidMin" min="1" max="60" value="10" style="width:100%" oninput="document.getElementById('spVidVal').textContent=this.value">
+    </div>
+    <div class="fld"><label>Condiciones del servicio (aparece en el Acta)</label><textarea id="spCond" rows="3" style="width:100%;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:8px" oninput="spActualizarPreview()"></textarea></div>
+    <div class="fld"><label>Pie de página (aparece en el Acta)</label><input id="spPie" placeholder="Ej. Gracias por su preferencia" oninput="spActualizarPreview()"></div>
+    <div id="spPreview">${previewActaHTML('','')}</div>
+    <button class="wbtn wbtn-d" style="margin-top:12px;width:100%;justify-content:center" onclick="spCrearTaller()">Crear taller</button>
+    <div id="spErr" style="color:var(--red);font-size:12.5px;margin-top:8px"></div>`;
+  document.getElementById('modal').classList.add('on');
+}
+function spActualizarPreview(){const el=document.getElementById('spPreview');if(el)el.innerHTML=previewActaHTML(val('spCond'),val('spPie'));}
+window._spLogoCrearTmp=null;
+function spLeerLogoCrear(){const f=document.getElementById('spLogo').files[0];if(!f)return;const r=new FileReader();r.onload=()=>{window._spLogoCrearTmp=r.result;};r.readAsDataURL(f);}
 async function resetTotal(){
   if(!confirm('¿Seguro que deseas BORRAR TODOS los datos de prueba? Esto elimina talleres, clientes, vehiculos, recepciones y mecanicos. Solo se conserva tu superadmin. NO se puede deshacer.'))return;
   if(!confirm('Ultima confirmacion: ¿Borrar todo definitivamente?'))return;
@@ -2729,7 +2741,8 @@ function spTallerCard(t){const nm=(t.nombre||'').replace(/'/g,'');const inactivo
 async function spEditarTaller(id){const box=document.getElementById('spEd_'+id);if(!box)return;if(box.style.display!=='none'){box.style.display='none';return;}box.style.display='';const t=(window._talleresCache||[]).find(x=>x.id===id)||{};
   let cfg={};try{const st=await apiReq('/api/state?taller='+id);cfg=(st&&st.data&&st.data.config)||{};}catch(e){}
   const plan=cfg.plan||'lite';const vidMin=cfg.videoMinutosPorVehiculo||10;
-  box.innerHTML=`<div style="border-top:1px solid var(--line);margin-top:10px;padding-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end"><div class="fld" style="margin:0;min-width:140px"><label>Nombre</label><input id="etN_${id}" value="${(t.nombre||'').replace(/"/g,'&quot;')}"></div><div class="fld" style="margin:0;min-width:120px"><label>RIF</label><input id="etR_${id}" value="${(t.rif||'').replace(/"/g,'&quot;')}"></div><div class="fld" style="margin:0;min-width:130px"><label>Teléfono</label><input id="etT_${id}" value="${(t.telefono||'').replace(/"/g,'&quot;')}"></div><div class="fld" style="margin:0;min-width:180px"><label>Dirección</label><input id="etD_${id}" value="${(t.direccion||'').replace(/"/g,'&quot;')}"></div><div class="fld" style="margin:0;min-width:140px"><label>Rubro (subtítulo)</label><input id="etU_${id}" placeholder="TALLER AUTOMOTRIZ" value="${(t.rubro||'').replace(/"/g,'&quot;')}"></div><div class="fld" style="margin:0;min-width:170px"><label>Logo / foto del taller</label><input id="etL_${id}" type="file" accept="image/*" onchange="spLeerLogo(${id})"></div><div class="fld" style="margin:0;flex:1;min-width:240px"><label>Condiciones del servicio (acta)</label><textarea id="etC_${id}" rows="2" style="width:100%;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:8px">${(t.condiciones||'')}</textarea></div><div class="fld" style="margin:0;flex:1;min-width:240px"><label>Pie de página (acta)</label><input id="etP_${id}" placeholder="Ej. Gracias por su preferencia" value="${(t.pie||'').replace(/"/g,'&quot;')}"></div></div>
+  box.innerHTML=`<div style="border-top:1px solid var(--line);margin-top:10px;padding-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end"><div class="fld" style="margin:0;min-width:140px"><label>Nombre</label><input id="etN_${id}" value="${(t.nombre||'').replace(/"/g,'&quot;')}"></div><div class="fld" style="margin:0;min-width:120px"><label>RIF</label><input id="etR_${id}" value="${(t.rif||'').replace(/"/g,'&quot;')}"></div><div class="fld" style="margin:0;min-width:130px"><label>Teléfono</label><input id="etT_${id}" value="${(t.telefono||'').replace(/"/g,'&quot;')}"></div><div class="fld" style="margin:0;min-width:180px"><label>Dirección</label><input id="etD_${id}" value="${(t.direccion||'').replace(/"/g,'&quot;')}"></div><div class="fld" style="margin:0;min-width:140px"><label>Rubro (subtítulo)</label><input id="etU_${id}" placeholder="TALLER AUTOMOTRIZ" value="${(t.rubro||'').replace(/"/g,'&quot;')}"></div><div class="fld" style="margin:0;min-width:170px"><label>Logo / foto del taller</label><input id="etL_${id}" type="file" accept="image/*" onchange="spLeerLogo(${id})"></div><div class="fld" style="margin:0;flex:1;min-width:240px"><label>Condiciones del servicio (acta)</label><textarea id="etC_${id}" rows="2" style="width:100%;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:8px" oninput="document.getElementById('etPreview_${id}').innerHTML=previewActaHTML(this.value,val('etP_${id}'))">${(t.condiciones||'')}</textarea></div><div class="fld" style="margin:0;flex:1;min-width:240px"><label>Pie de página (acta)</label><input id="etP_${id}" placeholder="Ej. Gracias por su preferencia" value="${(t.pie||'').replace(/"/g,'&quot;')}" oninput="document.getElementById('etPreview_${id}').innerHTML=previewActaHTML(val('etC_${id}'),this.value)"></div></div>
+  <div id="etPreview_${id}">${previewActaHTML(t.condiciones||'',t.pie||'')}</div>
   <div class="fld" style="margin-top:10px"><label>Versión del taller</label><div style="display:flex;gap:8px">
     <button type="button" class="wbtn ${plan==='lite'?'wbtn-d':'wbtn-g'}" id="etPlanBtn_lite_${id}" onclick="spEtElegirPlan(${id},'lite')" style="flex:1;justify-content:center">Lite (solo fotos)</button>
     <button type="button" class="wbtn ${plan==='pro'?'wbtn-d':'wbtn-g'}" id="etPlanBtn_pro_${id}" onclick="spEtElegirPlan(${id},'pro')" style="flex:1;justify-content:center">Pro</button>
@@ -2765,10 +2778,10 @@ function spElegirPlan(p){
 async function spCrearTaller(){const nombre=(document.getElementById('spNombre').value||'').trim();if(!nombre){document.getElementById('spErr').textContent='Escribe el nombre del taller';return;}
   const plan=window._spPlanElegido||'lite';const vidMin=+val('spVidMin')||10;
   let nuevo;
-  try{nuevo=await apiReq('/api/talleres',{method:'POST',body:JSON.stringify({nombre,rif:document.getElementById('spRif').value,telefono:document.getElementById('spTel').value})});}
+  try{nuevo=await apiReq('/api/talleres',{method:'POST',body:JSON.stringify({nombre,rif:val('spRif'),telefono:val('spTel'),direccion:val('spDir'),rubro:val('spRubro'),condiciones:val('spCond'),pie:val('spPie'),logo:window._spLogoCrearTmp||undefined})});}
   catch(e){document.getElementById('spErr').textContent=e.message;return;}
   try{await apiReq('/api/state?taller='+nuevo.id,{method:'PUT',body:JSON.stringify({data:{config:{plan,videoMinutosPorVehiculo:plan==='lite'?0:vidMin}}})});}catch(e){}
-  toast('Taller creado: '+nombre+' (versión '+plan.toUpperCase()+')');spElegirPlan('lite');document.getElementById('spNombre').value='';document.getElementById('spRif').value='';document.getElementById('spTel').value='';renderSuperPanel();}
+  window._spLogoCrearTmp=null;closeModal();toast('✅ Taller creado: '+nombre+' (versión '+plan.toUpperCase()+')');renderSuperPanel();}
 async function spAdmins(id,nombre){const cont=document.getElementById('spAdmins_'+id);if(!cont)return;if(cont.dataset.open==='admins'){cont.dataset.open='';cont.innerHTML='';return;}cont.dataset.open='admins';
   let admins=[];try{admins=await apiReq('/api/talleres/'+id+'/admins');}catch(e){}
   cont.innerHTML=`<div style="border-top:1px solid var(--line);margin-top:10px;padding-top:10px"><div style="font-size:12px;font-weight:600;margin-bottom:6px">Administradores de ${nombre}</div>${admins.map(a=>`<div style="font-size:12.5px;padding:3px 0">• ${a.nombre} <span style="color:var(--muted)">(${a.usuario} · ${a.correo})</span></div>`).join('')||'<div style="font-size:12px;color:var(--muted)">Sin administradores aún.</div>'}<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:10px"><div class="fld" style="margin:0;flex:1;min-width:110px"><label>Nombre</label><input id="adN_${id}"></div><div class="fld" style="margin:0;min-width:100px"><label>Usuario</label><input id="adU_${id}"></div><div class="fld" style="margin:0;min-width:130px"><label>Correo</label><input id="adE_${id}"></div><div class="fld" style="margin:0;min-width:100px"><label>Contraseña</label><input id="adP_${id}" type="password"></div><button class="wbtn wbtn-d" onclick="spCrearAdmin(${id},'${nombre}')">Agregar admin</button></div><div id="adErr_${id}" style="color:var(--red);font-size:12px;margin-top:6px"></div></div>`;}

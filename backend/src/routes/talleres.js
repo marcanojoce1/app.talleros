@@ -25,11 +25,11 @@ router.get('/', async (req, res) => {
 
 // Crear taller (solo superadmin)
 router.post('/', requireRole('superadmin'), async (req, res) => {
-  const { nombre, rif, direccion, telefono, logo } = req.body;
+  const { nombre, rif, direccion, telefono, logo, rubro, condiciones, pie } = req.body;
   if (!nombre || !nombre.trim()) return res.status(400).json({ error: 'El nombre del taller es obligatorio' });
   const { rows } = await query(
-    'INSERT INTO talleres (nombre, rif, direccion, telefono, logo) VALUES ($1,$2,$3,$4,$5) RETURNING *',
-    [nombre.trim(), rif || null, direccion || null, telefono || null, logo || null]);
+    'INSERT INTO talleres (nombre, rif, direccion, telefono, logo, rubro, condiciones, pie) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *',
+    [nombre.trim(), rif || null, direccion || null, telefono || null, logo || null, rubro || null, condiciones || null, pie || null]);
   registrar({ req, accion: 'Creó taller', modulo: 'talleres', detalle: rows[0].nombre, taller_id: rows[0].id });
   res.status(201).json(rows[0]);
 });
