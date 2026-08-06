@@ -38,6 +38,7 @@ async function init() {
   await pool.query('ALTER TABLE talleres ADD COLUMN IF NOT EXISTS rubro TEXT');
   await pool.query('ALTER TABLE talleres ADD COLUMN IF NOT EXISTS condiciones TEXT');
   await pool.query('ALTER TABLE talleres ADD COLUMN IF NOT EXISTS pie TEXT');
+  await pool.query('ALTER TABLE talleres ADD COLUMN IF NOT EXISTS logo_tam INTEGER DEFAULT 100');
   const r = await pool.query('SELECT 1 FROM usuarios LIMIT 1');
   if (r.rows.length) { console.log('Base PostgreSQL lista (ya tenía datos).'); return; }
   const hash = await bcrypt.hash('super1234', 10);

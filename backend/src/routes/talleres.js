@@ -25,27 +25,38 @@ router.get('/', async (req, res) => {
 
 // Crear taller (solo superadmin)
 router.post('/', requireRole('superadmin'), async (req, res) => {
-  const { nombre, rif, direccion, telefono, logo, rubro, condiciones, pie } = req.body;
+  const { nombre, rif, direccion, telefono, logo, rubro, condiciones, pie, logoTam } = req.body;
   if (!nombre || !nombre.trim()) return res.status(400).json({ error: 'El nombre del taller es obligatorio' });
   const { rows } = await query(
-    'INSERT INTO talleres (nombre, rif, direccion, telefono, logo, rubro, condiciones, pie) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *',
-    [nombre.trim(), rif || null, direccion || null, telefono || null, logo || null, rubro || null, condiciones || null, pie || null]);
+    'INSERT INTO talleres (nombre, rif, direccion, telefono, logo, rubro, condiciones, pie, logo_tam) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *',
+    [nombre.trim(), rif || null, direccion || null, telefono || null, logo || null, rubro || null, condiciones || null, pie || null, logoTam || 100]);
   registrar({ req, accion: 'Creó taller', modulo: 'talleres', detalle: rows[0].nombre, taller_id: rows[0].id });
   res.status(201).json(rows[0]);
 });
 
-// Editar / activar-inactivar taller (solo superadmin)
-router.put('/:id', requireRole('superadmin'), async (req, res) => {
-  const { nombre, rif, direccion, telefono, activo, motivo_inactivo, logo, rubro, condiciones, pie } = req.body;
+// Editar taller — el Super Administrador puede editar todo; el administrador dueño del
+// taller puede editar sus propios datos (logo, contacto, condiciones), pero no el nombre
+// ni activar/inactivar, que quedan solo para el Super Administrador.
+router.put('/:id', async (req, res) => {
+  const esSuper = req.user.rol === 'superadmin';
+  if (!esSuper) {
+    const own = (await query('SELECT 1 FROM taller_admins WHERE taller_id=$1 AND usuario_id=$2', [req.params.id, req.user.id])).rows[0];
+    if (req.user.rol !== 'administrador' || !own) return res.status(403).json({ error: 'No autorizado para esta acción' });
+  }
+  const { rif, direccion, telefono, logo, rubro, condiciones, pie, logoTam } = req.body;
+  const nombre = esSuper ? req.body.nombre : null;
+  const activo = esSuper ? req.body.activo : null;
+  const motivo_inactivo = esSuper ? req.body.motivo_inactivo : null;
   const { rows } = await query(
     `UPDATE talleres SET nombre=COALESCE($2,nombre), rif=COALESCE($3,rif),
        direccion=COALESCE($4,direccion), telefono=COALESCE($5,telefono),
        activo=COALESCE($6,activo), motivo_inactivo=$7, logo=COALESCE($8,logo),
-       rubro=COALESCE($9,rubro), condiciones=COALESCE($10,condiciones), pie=COALESCE($11,pie) WHERE id=$1 RETURNING *`,
+       rubro=COALESCE($9,rubro), condiciones=COALESCE($10,condiciones), pie=COALESCE($11,pie),
+       logo_tam=COALESCE($12,logo_tam) WHERE id=$1 RETURNING *`,
     [req.params.id, nombre, rif, direccion, telefono,
      activo == null ? null : (activo ? 1 : 0),
      activo === false || activo === 0 ? (motivo_inactivo || 'Taller desactivado') : null,
-     logo || null, rubro || null, condiciones || null, pie || null]);
+     logo || null, rubro || null, condiciones || null, pie || null, logoTam || null]);
   if (!rows[0]) return res.status(404).json({ error: 'Taller no encontrado' });
   res.json(rows[0]);
 });

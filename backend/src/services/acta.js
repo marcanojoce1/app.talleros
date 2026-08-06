@@ -146,7 +146,7 @@ function generarActaHTML(o = {}) {
   <div class="sheet">
     <div class="head">
       <div class="brand">
-        ${taller.logo ? `<img src="${esc(taller.logo)}" style="max-height:44px;max-width:170px;margin-bottom:4px"/>` : ''}
+        ${taller.logo ? `<img src="${esc(taller.logo)}" style="max-height:${Math.round(44*((taller.logo_tam||100)/100))}px;max-width:${Math.round(170*((taller.logo_tam||100)/100))}px;margin-bottom:4px"/>` : ''}
         <h1>${esc(taller.nombre || 'TallerOS')}</h1>
         <div class="sub">${esc(taller.rubro || 'TALLER AUTOMOTRIZ')}</div>
         ${taller.telefono ? `<div class="sub2">Tel: ${esc(taller.telefono)}</div>` : ''}
@@ -281,7 +281,7 @@ function generarActaHTML(o = {}) {
       3) En caso de requerir servicio adicional, el cliente será notificado antes de realizarlo.
       4) El taller no se responsabiliza por objetos de valor no reportados al momento de la recepción.`}
     </div>
-    ${taller.pie ? `<div style="text-align:center;font-size:9px;color:#666;padding:6px;border-top:1px solid #ccc">${esc(taller.pie)}</div>` : ''}
+    ${taller.pie ? `<div style="text-align:center;font-size:9px;color:#666;padding:6px;border-top:1px solid #ccc">${esc(taller.pie).replace(/\n/g, '<br/>')}</div>` : ''}
   </div>
 </body></html>`;
 }
@@ -417,7 +417,7 @@ function generarCotizacionHTML(o = {}) {
   <div class="sheet">
     <div class="head">
       <div class="brand">
-        ${taller.logo ? `<img src="${esc(taller.logo)}" style="max-height:40px;max-width:170px;margin-bottom:4px"/>` : ''}
+        ${taller.logo ? `<img src="${esc(taller.logo)}" style="max-height:${Math.round(40*((taller.logo_tam||100)/100))}px;max-width:${Math.round(170*((taller.logo_tam||100)/100))}px;margin-bottom:4px"/>` : ''}
         <h1>${esc(taller.nombre || 'TallerOS')}</h1>
         <div class="sub">${esc(taller.rubro || 'TALLER AUTOMOTRIZ')}</div>
       </div>
