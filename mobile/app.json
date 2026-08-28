@@ -31,7 +31,7 @@
       "versionCode": 1
     },
     "extra": {
-      "apiUrl": "https://app-talleros.onrender.com",
+      "apiUrl": "https://taller.mjservices.app",
       "eas": {
         "projectId": "efeefa2e-b6e4-497f-8c30-f96402e911c3"
       }
@@ -46,7 +46,8 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Permite compartir tu ubicación cuando solicitas auxilio vial."
         }
-      ]
+      ],
+      "./plugins/withGradleFix.js"
     ]
   }
 }

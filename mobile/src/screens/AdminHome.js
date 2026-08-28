@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Alert, ScrollView, TextInput, Image, Modal, Pressable, Linking, BackHandler, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Alert, ScrollView, TextInput, Image, Modal, Pressable, Linking, BackHandler, ActivityIndicator, AppState } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { api, getState, putState, clearSession, getApiUrl } from '../api';
+import { api, getState, getStateCache, putState, clearSession, getApiUrl } from '../api';
 import { compartirActaPDF, abrirEnNavegador, compartirCotizacionPDF, compartirResumenEsperaPDF } from '../acta';
-import { Dropdown, FirmaPad, FirmaVista, CarroSVG, etiqueta, colorMarca, marcaDe, Calendario, BotonAjustes, AjustesModal } from '../ui';
+import { Dropdown, FirmaPad, FirmaVista, CarroSVG, etiqueta, colorMarca, marcaDe, Calendario, BotonAjustes, AjustesModal, firmaADataUri } from '../ui';
 
 const STATUS = {
   espera: { l: 'En espera', c: '#64748B' }, rep: { l: 'En reparación', c: '#D97706' },
@@ -140,6 +140,7 @@ export default function AdminHomeScreen({ navigation, route }) {
   const [modal, setModal] = useState(null);
   const [qOrd, setQOrd] = useState('');
   const [resumenOpen, setResumenOpen] = useState(false);
+  const [editarItem, setEditarItem] = useState(null);
   const [fCod, setFCod] = useState(''); const [fMonto, setFMonto] = useState(''); const [fFoto, setFFoto] = useState(null);
 
   useEffect(() => {
@@ -153,14 +154,34 @@ export default function AdminHomeScreen({ navigation, route }) {
 
   const seleccionar = useCallback(async (t) => {
     if (t.activo === 0 || t.activo === false) { Alert.alert('Taller desactivado', t.motivo_inactivo || 'Desactivado por el Super Administrador.'); return; }
-    setTaller(t); setLoading(true); setError('');
-    try { const d = await getState(t.id); setData(d || {}); } catch (e) { setError(e.message); } finally { setLoading(false); }
+    setTaller(t); setError('');
+    // Muestra al instante lo último que se vio de este taller, mientras confirma en segundo
+    // plano si hay algo nuevo — así la app no se siente "colgada" esperando al servidor.
+    const cache = await getStateCache(t.id);
+    if (cache) { setData(cache); setLoading(true); } else { setLoading(true); }
+    try { const d = await getState(t.id); setData(d || {}); } catch (e) { if (!cache) setError(e.message); } finally { setLoading(false); }
   }, []);
 
   const recargar = useCallback(async () => {
     if (!taller) return; setLoading(true);
     try { const d = await getState(taller.id); setData(d || {}); } catch (e) { setError(e.message); } finally { setLoading(false); }
   }, [taller]);
+
+  // Al volver de segundo plano (el usuario minimizó la app un rato y regresó), el servidor
+  // gratuito puede haberse "dormido" mientras tanto, y cualquier conexión que haya quedado a
+  // medias se pierde. Sin esto, la app se queda pegada en "cargando" para siempre y hay que
+  // cerrarla a la fuerza. Detectamos el regreso y forzamos una recarga limpia.
+  const estadoApp = React.useRef(AppState.currentState);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (siguiente) => {
+      if (estadoApp.current.match(/inactive|background/) && siguiente === 'active' && taller) {
+        setError('');
+        recargar();
+      }
+      estadoApp.current = siguiente;
+    });
+    return () => sub.remove();
+  }, [taller, recargar]);
 
   const guardar = useCallback(async (nuevo) => {
     setData(nuevo);
@@ -318,10 +339,17 @@ export default function AdminHomeScreen({ navigation, route }) {
         </ScrollView>
       )}
 
+      {loading && taller && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fdf3e0', padding: 10, marginHorizontal: 14, marginTop: 10, borderRadius: 10 }}>
+          <ActivityIndicator color="#b45309" size="small" />
+          <Text style={{ color: '#b45309', fontWeight: '700', fontSize: 12.5, flex: 1 }}>Actualizando datos con el servidor… puede tardar hasta 2 minutos si estaba dormido. No cierres la app.</Text>
+        </View>
+      )}
       {loading && !taller && !error && (
         <View style={{ padding: 30, alignItems: 'center' }}>
           <ActivityIndicator color="#F5B700" size="large" />
           <Text style={{ color: '#16191d', fontWeight: '700', marginTop: 14, textAlign: 'center' }}>Conectando con el servidor…</Text>
+          <Text style={{ color: '#dc2626', fontWeight: '700', fontSize: 12.5, marginTop: 8, textAlign: 'center' }}>No cierres la app — puede tardar hasta 2 minutos la primera vez</Text>
           <Text style={{ color: '#6b7480', fontSize: 12.5, marginTop: 6, textAlign: 'center', lineHeight: 18 }}>Si es la primera vez que entras en un rato, el servidor puede tardar hasta un minuto en despertar. Espera un momento.</Text>
         </View>
       )}
@@ -339,7 +367,7 @@ export default function AdminHomeScreen({ navigation, route }) {
       {tab === 'inicio' && taller && <Inicio data={data} cur={cur} kpis={kpis} taller={taller} me={me} modulos={MODULOS} onNav={setTab} loading={loading} recargar={recargar} />}
 
       {tab === 'dash' && taller && <Dashboard data={data} cur={cur} kpis={kpis} V={V} loading={loading} recargar={recargar} />}
-      {tab === 'recep' && taller && <Recepcion data={data} guardar={guardar} onListo={() => setTab('ordenes')} />}
+      {tab === 'recep' && taller && <Recepcion data={data} guardar={guardar} onListo={() => setTab('ordenes')} editarItem={editarItem} onEditarConsumido={() => setEditarItem(null)} taller={taller} />}
       {tab === 'avances' && taller && <Avances data={data} guardar={guardar} cur={cur} taller={taller} />}
 
       {tab === 'ordenes' && taller && (() => {
@@ -400,10 +428,11 @@ export default function AdminHomeScreen({ navigation, route }) {
                             <TouchableOpacity style={[s.act, { backgroundColor: '#16A34A', borderColor: '#16A34A' }]} onPress={() => cambiarEstadoOrden(item.id, 'term')}><Text style={[s.actT, { color: '#fff' }]}>Marcar listo</Text></TouchableOpacity>
                           )}
                         </View>
-                        <View style={{ flexDirection: 'row', gap: 14, marginTop: 9 }}>
-                          <TouchableOpacity onPress={() => setModal({ tipo: 'avances', item })}><Text style={[s.link, { color: '#F5B700' }]}>📸 Ver avances{(item.advances || []).filter((a) => a.foto).length ? ' (' + (item.advances || []).filter((a) => a.foto).length + ')' : ''} →</Text></TouchableOpacity>
+                        <View style={{ flexDirection: 'row', gap: 14, marginTop: 9, flexWrap: 'wrap' }}>
+                          <TouchableOpacity onPress={() => setModal({ tipo: 'avances', item })}><Text style={[s.link, { color: '#F5B700' }]}>📸 Ver avances{(item.advances || []).filter((a) => a.foto || a.video).length ? ' (' + (item.advances || []).filter((a) => a.foto || a.video).length + ')' : ''} →</Text></TouchableOpacity>
                           <TouchableOpacity onPress={() => abrirEnNavegador(taller.id, item, 'acta')}><Text style={s.link}>Ver acta →</Text></TouchableOpacity>
                           <TouchableOpacity onPress={() => compartirActaPDF(taller.id, item)}><Text style={s.link}>Compartir acta (PDF) →</Text></TouchableOpacity>
+                          <TouchableOpacity onPress={() => { setEditarItem(item); setTab('recep'); }}><Text style={[s.link, { color: '#2563EB' }]}>✎ Editar acta →</Text></TouchableOpacity>
                         </View>
                       </View>
                     );
@@ -516,8 +545,8 @@ export default function AdminHomeScreen({ navigation, route }) {
         </ScrollView>
       )}
 
-      {tab === 'usuarios' && taller && <Usuarios esSuper={esSuper} taller={taller} />}
-      {tab === 'config' && taller && <Config data={data} guardar={guardar} />}
+      {tab === 'usuarios' && (esSuper || taller) && <Usuarios esSuper={esSuper} taller={taller} />}
+      {tab === 'config' && taller && <Config data={data} guardar={guardar} taller={taller} esSuper={esSuper} />}
       {tab === 'talleres' && esSuper && <Talleres />}
 
       {modal && modal.tipo === 'acta' && <Acta item={modal.item} close={() => setModal(null)} />}
@@ -708,7 +737,7 @@ function Dashboard({ data, cur, kpis, V, loading, recargar }) {
 }
 
 /* =================== RECEPCIÓN (todo en listas desplegables, como la web) =================== */
-function Recepcion({ data, guardar, onListo }) {
+function Recepcion({ data, guardar, onListo, editarItem, onEditarConsumido, taller }) {
   const cur = (data.config && data.config.currency && data.config.currency.sym) || 'Bs.';
   const cfg = data.config || {};
   const vehicles = data.vehicles || [];
@@ -746,11 +775,43 @@ function Recepcion({ data, guardar, onListo }) {
   const [acc, setAcc] = useState([]);
   const [docs, setDocs] = useState([]);
   const [obs, setObs] = useState('');
+  const [bateria, setBateria] = useState(false);
+  const [bateriaMarca, setBateriaMarca] = useState('');
+  const [bateriaAmperaje, setBateriaAmperaje] = useState('');
+  const [bateriaColor, setBateriaColor] = useState('');
+  const [bateriaObs, setBateriaObs] = useState('');
+  const [bateriaModalOpen, setBateriaModalOpen] = useState(false);
   const [firmaCli, setFirmaCli] = useState(null);
   const [firmaRec, setFirmaRec] = useState(null);
   const [padAbierto, setPadAbierto] = useState(null); // 'cli' | 'rec'
   const [agAcc, setAgAcc] = useState(false);
   const [nvAcc, setNvAcc] = useState('');
+  const [editandoVehId, setEditandoVehId] = useState(null);
+  const [campoFaltante, setCampoFaltante] = useState(null);
+  const colorRef = React.useRef(null);
+  const kmRef = React.useRef(null);
+
+  useEffect(() => {
+    if (!editarItem) return;
+    const v = editarItem;
+    const r = v.recepcion || {};
+    setEditandoVehId(v.id);
+    setTipoIngreso('nuevo'); setCotizacionId(null); setCotizacionNum(null); setMontoCotizacion(0); setCotizacionItems([]);
+    setCliente(v.owner || ''); setVehId(v.id);
+    setMotivo(r.motivo || v.motivo || ''); setTrabajo(r.trabajo || v.motivo || '');
+    setTipoVeh(r.tipoVeh || v.tipoVeh || 'Automóvil'); setColor(r.color || v.color || '');
+    setPrio(r.prioridad || 'Media'); setComb(r.combustible || '½');
+    setKm((r.km && r.km !== '—') ? r.km : ''); setAcc([...(r.accesorios || [])]); setDocs([...(r.documentos || [])]);
+    setObs((r.obs && r.obs !== '—') ? r.obs : ''); setMech(v.mech || '');
+    setBateria(!!r.bateria); setBateriaMarca(r.bateriaMarca || ''); setBateriaAmperaje(r.bateriaAmperaje || ''); setBateriaColor(r.bateriaColor || ''); setBateriaObs(r.bateriaObs || '');
+    setFirmaCli(r.firmaCli || null); setFirmaRec(r.firmaRec || null);
+    const LADOMAP = { 'Superior': 'sup', 'Frontal': 'front', 'Lat. Izq.': 'izq', 'Lat. Der.': 'der', 'Posterior': 'post' };
+    const nuevoDmg = { sup: [], front: [], izq: [], der: [], post: [] };
+    (v.recepDamages || []).forEach((d) => { const k = LADOMAP[d.lado]; if (!k) return; nuevoDmg[k].push({ id: Date.now() + Math.random(), type: (d.tipo || '').split(', ').filter(Boolean), sev: d.sev, x: d.x, y: d.y }); });
+    setDmg(nuevoDmg);
+    if (onEditarConsumido) onEditarConsumido();
+    if (scrollRef.current) scrollRef.current.scrollTo({ y: 0, animated: true });
+  }, [editarItem]);
 
   const cvs = vehicles.filter((v) => v.owner === cliente && v.activo !== false);
   const vSel = vehicles.find((v) => v.id === vehId);
@@ -810,11 +871,51 @@ function Recepcion({ data, guardar, onListo }) {
   const total = Object.values(dmg).reduce((a, arr) => a + arr.length, 0);
 
   const confirmar = () => {
+    setCampoFaltante(null);
     if (!cliente) { Alert.alert('Falta', 'Selecciona un cliente.'); return; }
     if (!vehId) { Alert.alert('Falta', 'Selecciona un vehículo.'); return; }
-    if (!trabajo.trim()) { Alert.alert('Falta', 'Indica el trabajo a realizar.'); return; }
+    if (!motivo.trim()) { setCampoFaltante('motivo'); Alert.alert('Falta un dato obligatorio', 'Indica el motivo de ingreso — está resaltado en rojo más arriba.'); return; }
+    if (!trabajo.trim()) { setCampoFaltante('trabajo'); Alert.alert('Falta un dato obligatorio', 'Indica el trabajo a realizar — está resaltado en rojo más arriba.'); return; }
+    if (!mech || mech === '(Por asignar)') { setCampoFaltante('mech'); Alert.alert('Falta un dato obligatorio', 'Selecciona el técnico asignado — está resaltado en rojo más arriba.'); return; }
+    if (!color.trim()) { setCampoFaltante('color'); Alert.alert('Falta un dato obligatorio', 'Indica el color del vehículo — está resaltado en rojo más arriba.'); if (colorRef.current) colorRef.current.focus(); return; }
+    if (!km.trim()) { setCampoFaltante('km'); Alert.alert('Falta un dato obligatorio', 'Indica el kilometraje — está resaltado en rojo más arriba.'); if (kmRef.current) kmRef.current.focus(); return; }
+    if (bateria && !bateriaMarca.trim() && !bateriaAmperaje.trim() && !bateriaColor.trim() && !bateriaObs.trim()) { Alert.alert('Falta un dato obligatorio', 'Marcaste "Batería" — indica al menos la observación (ej. dónde está ubicada) si no vas a llenar marca/amperaje/color.'); return; }
+    if (!editandoVehId) {
+      const vSel = vehicles.find((v) => v.id === vehId);
+      if (vSel && vSel.status && !vSel.cerrada && vSel.recepcion) {
+        Alert.alert('⚠️ Este vehículo ya está en el taller', (vSel.model || '') + ' — ' + (vSel.plate || '') + ' de ' + (vSel.owner || '') + ' ya ingresó y se está trabajando en él. Si vuelves a recepcionarlo, se reiniciará el avance actual de esa orden.', [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Continuar de todas formas', style: 'destructive', onPress: () => confirmarForzado() },
+        ]);
+        return;
+      }
+    }
+    confirmarForzado();
+  };
+  const confirmarForzado = () => {
     let n = 0; const dmgs = []; const ladosCon = [];
     LADOS.forEach(([k]) => { (dmg[k] || []).forEach((dd) => { n++; dmgs.push({ n, tipo: dd.tipo, sev: dd.sev, lado: LADO_NOMBRE[k], x: dd.x, y: dd.y }); }); if ((dmg[k] || []).length) ladosCon.push(LADO_NOMBRE[k]); });
+
+    if (editandoVehId) {
+      const ahora = new Date();
+      const vs2 = vehicles.map((v) => v.id !== editandoVehId ? v : {
+        ...v, owner: cliente, motivo: trabajo, color: color || v.color, tipoVeh, mech: mech || v.mech || null,
+        recepDamages: dmgs, recepLados: ladosCon,
+        recepcion: {
+          ...(v.recepcion || {}), tipoVeh, color, motivo, trabajo, prioridad: prio, combustible: comb, km: km || '—',
+          accesorios: acc, documentos: docs, obs, firmaCli: !!firmaCli, firmaRec: !!firmaRec, firmaCliImg: firmaCli ? firmaADataUri(firmaCli) : ((v.recepcion && v.recepcion.firmaCliImg) || ''), firmaRecImg: firmaRec ? firmaADataUri(firmaRec) : ((v.recepcion && v.recepcion.firmaRecImg) || ''),
+          bateria: !!bateria, bateriaMarca: bateria ? bateriaMarca : '', bateriaAmperaje: bateria ? bateriaAmperaje : '', bateriaColor: bateria ? bateriaColor : '', bateriaObs: bateria ? bateriaObs : '',
+          editada: true, editadaFecha: ahora.toLocaleString('es-VE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
+        },
+        advances: [...(v.advances || []), { t: 'Acta de recepción editada', m: 'Administración · ' + dmgs.length + ' daño(s)', type: 'nota', ago: 'ahora' }],
+      });
+      guardar({ ...data, vehicles: vs2, config: { ...cfg, motivos, trabajos, tiposDano: tipos, accesorios } });
+      setEditandoVehId(null); setDmg({ sup: [], front: [], izq: [], der: [], post: [] }); setMotivo(''); setTrabajo(''); setAcc([]); setDocs([]); setObs('');
+      setFirmaCli(null); setFirmaRec(null); setKm(''); setMech(''); setColor(''); setTipoVeh('Automóvil'); setCliente(''); setVehId(null); setBateria(false); setBateriaMarca(''); setBateriaAmperaje(''); setBateriaColor(''); setBateriaObs('');
+      Alert.alert('✅ Acta actualizada con éxito', 'Los cambios se guardaron sobre la orden existente.', [{ text: 'OK', onPress: onListo }]);
+      return;
+    }
+
     const now = new Date();
     // Número de orden de servicio correlativo (va aumentando)
     const nOrden = ((data.config && data.config.ultimoNumOrden) || 0) + 1;
@@ -822,7 +923,7 @@ function Recepcion({ data, guardar, onListo }) {
       ...v, status: 'espera', progress: 0, cerrada: false, cost: cotizacionId ? (+montoCotizacion || 0) : 0, pending: null, entregado: false, motivo: trabajo, mech: mech || v.mech || null,
       color: color || v.color, tipoVeh, numOrden: nOrden,
       ingreso: now.toISOString().slice(0, 10), recepDamages: dmgs, recepLados: ladosCon,
-      recepcion: { fecha: now.toLocaleDateString('es-VE'), hora: now.toTimeString().slice(0, 5), tipoVeh, color, motivo, trabajo, prioridad: prio, combustible: comb, km: km || '—', accesorios: acc, documentos: docs, obs, via: 'App', firmaCli, firmaRec, numOrden: nOrden, cotizacionId: cotizacionId || null, cotizacionNum: cotizacionNum || null, montoCotizacion: cotizacionId ? (+montoCotizacion || 0) : 0, cotizacionItems: cotizacionId ? cotizacionItems : [] },
+      recepcion: { fecha: now.toLocaleDateString('es-VE'), hora: now.toTimeString().slice(0, 5), tipoVeh, color, motivo, trabajo, prioridad: prio, combustible: comb, km: km || '—', accesorios: acc, documentos: docs, obs, via: 'App', firmaCli, firmaRec, firmaCliImg: firmaADataUri(firmaCli), firmaRecImg: firmaADataUri(firmaRec), numOrden: nOrden, cotizacionId: cotizacionId || null, cotizacionNum: cotizacionNum || null, montoCotizacion: cotizacionId ? (+montoCotizacion || 0) : 0, cotizacionItems: cotizacionId ? cotizacionItems : [], bateria: !!bateria, bateriaMarca: bateria ? bateriaMarca : '', bateriaAmperaje: bateria ? bateriaAmperaje : '', bateriaColor: bateria ? bateriaColor : '', bateriaObs: bateria ? bateriaObs : '' },
       advances: [{ t: 'Vehículo recibido — recepción digital (app)', m: (motivo || trabajo) + ' · ' + dmgs.length + ' daño(s)' + (cotizacionId ? ' · cobre por cotización P-' + String(cotizacionNum || 0).padStart(6, '0') : ''), type: 'recep', ago: 'ahora' }],
     });
     const cotsActualizadas = cotizacionId
@@ -831,74 +932,102 @@ function Recepcion({ data, guardar, onListo }) {
     // guarda también los catálogos nuevos (motivos/trabajos/marcas) para que la web los vea
     guardar({ ...data, vehicles: vs, cotizaciones: cotsActualizadas, config: { ...cfg, motivos, trabajos, tiposDano: tipos, accesorios, ultimoNumOrden: nOrden } });
     setDmg({ sup: [], front: [], izq: [], der: [], post: [] }); setMotivo(''); setTrabajo(''); setAcc([]); setDocs([]); setObs('');
-    setFirmaCli(null); setFirmaRec(null); setKm(''); setMech(''); setColor(''); setTipoVeh('Automóvil');
+    setFirmaCli(null); setFirmaRec(null); setKm(''); setMech(''); setColor(''); setTipoVeh('Automóvil'); setBateria(false); setBateriaMarca(''); setBateriaAmperaje(''); setBateriaColor(''); setBateriaObs('');
     setTipoIngreso('nuevo'); quitarCotizacion(); setBusquedaCot('');
     Alert.alert('Recepción registrada ✓', 'Se generó la Orden de Trabajo. El vehículo ya está en el módulo Órdenes.', [
       { text: 'Ver órdenes', onPress: onListo },
       { text: 'Registrar otra', onPress: () => { setCliente(''); setVehId(null); setPrio('Media'); setComb('½'); setDocs([]); if (scrollRef.current) scrollRef.current.scrollTo({ y: 0, animated: true }); } },
     ]);
   };
+  const cancelarEdicion = () => {
+    setEditandoVehId(null); setDmg({ sup: [], front: [], izq: [], der: [], post: [] }); setMotivo(''); setTrabajo(''); setAcc([]); setDocs([]); setObs('');
+    setFirmaCli(null); setFirmaRec(null); setKm(''); setMech(''); setColor(''); setTipoVeh('Automóvil'); setCliente(''); setVehId(null); setBateria(false); setBateriaMarca(''); setBateriaAmperaje(''); setBateriaColor(''); setBateriaObs('');
+  };
 
   return (
     <ScrollView ref={scrollRef} contentContainerStyle={{ padding: 14 }}>
-      <Text style={s.label}>Tipo de recepción</Text>
-      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
-        <TouchableOpacity style={[s.pillBtn, { flex: 1, alignItems: 'center' }, tipoIngreso !== 'cotizacion' && s.pillBtnOn]} onPress={() => setTipoIngreso('nuevo')}>
-          <Text style={[s.pillBtnT, tipoIngreso !== 'cotizacion' && { color: '#16191d' }]}>Nueva Recepción</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[s.pillBtn, { flex: 1, alignItems: 'center' }, tipoIngreso === 'cotizacion' && s.pillBtnOn]} onPress={() => setTipoIngreso('cotizacion')}>
-          <Text style={[s.pillBtnT, tipoIngreso === 'cotizacion' && { color: '#16191d' }]}>Recepción por Cotización</Text>
-        </TouchableOpacity>
-      </View>
-
-      {tipoIngreso === 'cotizacion' ? (
-        cotizacionId ? (
-          <View style={{ backgroundColor: '#e8f6ec', borderRadius: 10, padding: 12, marginBottom: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <View>
-              <Text style={{ fontWeight: '800', color: '#0F6E56' }}>Cobre por cotización P-{String(cotizacionNum || 0).padStart(6, '0')}</Text>
-              <Text style={s.muted}>Monto: {cur} {(+montoCotizacion || 0).toLocaleString('es-VE')}</Text>
-            </View>
-            <TouchableOpacity onPress={quitarCotizacion}><Text style={{ color: '#dc2626', fontWeight: '700' }}>Quitar</Text></TouchableOpacity>
+      {editandoVehId ? (
+        <View style={{ backgroundColor: '#fdf3e0', borderRadius: 10, padding: 12, marginBottom: 14 }}>
+          <Text style={{ color: '#b45309', fontWeight: '800', fontSize: 13 }}>✎ Editando el acta de un vehículo ya recibido</Text>
+          <Text style={{ color: '#b45309', fontSize: 12, marginTop: 2 }}>Los cambios se guardan sobre la orden existente, no se crea una nueva.</Text>
+        </View>
+      ) : (
+        <>
+          <Text style={s.label}>Tipo de recepción</Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+            <TouchableOpacity style={[s.pillBtn, { flex: 1, alignItems: 'center' }, tipoIngreso !== 'cotizacion' && s.pillBtnOn]} onPress={() => setTipoIngreso('nuevo')}>
+              <Text style={[s.pillBtnT, tipoIngreso !== 'cotizacion' && { color: '#16191d' }]}>Nueva Recepción</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.pillBtn, { flex: 1, alignItems: 'center' }, tipoIngreso === 'cotizacion' && s.pillBtnOn]} onPress={() => setTipoIngreso('cotizacion')}>
+              <Text style={[s.pillBtnT, tipoIngreso === 'cotizacion' && { color: '#16191d' }]}>Recepción por Cotización</Text>
+            </TouchableOpacity>
           </View>
-        ) : (
-          <View style={{ marginBottom: 14 }}>
-            <Text style={s.label}>Buscar cotización aprobada</Text>
-            <TextInput style={s.input} value={busquedaCot} onChangeText={setBusquedaCot} placeholder="N° de cotización, cliente o placa…" placeholderTextColor="#9aa3ad" />
-            <Dropdown
-              label="Cotización aprobada" value=""
-              options={cotizacionesFiltradas.map((c) => 'P-' + String(c.num).padStart(6, '0') + ' — ' + c.cliente + (c.vehiculo ? ' — ' + c.vehiculo : '') + ' — ' + cur + ' ' + (+c.monto || 0).toLocaleString('es-VE'))}
-              onChange={(label) => { const num = label.match(/^P-(\d+)/); const c = cotizacionesFiltradas.find((x) => num && x.num === +num[1]); if (c) elegirCotizacion(c); }}
-              placeholder={cotizacionesFiltradas.length ? 'Selecciona la cotización' : 'Ninguna coincide con la búsqueda'}
-              textoVacio="No hay cotizaciones aprobadas disponibles." />
-          </View>
-        )
-      ) : null}
 
-      <Dropdown label="Cliente" obligatorio value={cliente} placeholder="Selecciona el cliente"
-        options={clients.map((c) => c.n)}
-        meta={Object.fromEntries(clients.map((c) => [c.n, [c.tipoDoc, c.doc, c.tel, c.correo].filter(Boolean).join(' · ')]))}
-        onChange={(v) => { setCliente(v); const nc = vehicles.filter((x) => x.owner === v && x.activo !== false); const pv = nc[0]; setVehId(pv ? pv.id : null); if (pv && pv.color) setColor(pv.color); if (pv && pv.tipoVeh) setTipoVeh(pv.tipoVeh); }}
-        textoVacio="Aún no hay clientes. Regístralos en el módulo Clientes." />
-      {cSel ? <Text style={s.muted}>{cSel.tipoDoc || ''} {cSel.doc || ''} · {cSel.tel || ''} · {cSel.correo || ''}</Text> : null}
+          {tipoIngreso === 'cotizacion' ? (
+            cotizacionId ? (
+              <View style={{ backgroundColor: '#e8f6ec', borderRadius: 10, padding: 12, marginBottom: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View>
+                  <Text style={{ fontWeight: '800', color: '#0F6E56' }}>Cobre por cotización P-{String(cotizacionNum || 0).padStart(6, '0')}</Text>
+                  <Text style={s.muted}>Monto: {cur} {(+montoCotizacion || 0).toLocaleString('es-VE')}</Text>
+                </View>
+                <TouchableOpacity onPress={quitarCotizacion}><Text style={{ color: '#dc2626', fontWeight: '700' }}>Quitar</Text></TouchableOpacity>
+              </View>
+            ) : (
+              <View style={{ marginBottom: 14 }}>
+                <Text style={s.label}>Buscar cotización aprobada</Text>
+                <TextInput style={s.input} value={busquedaCot} onChangeText={setBusquedaCot} placeholder="N° de cotización, cliente o placa…" placeholderTextColor="#9aa3ad" />
+                <Dropdown
+                  label="Cotización aprobada" value=""
+                  options={cotizacionesFiltradas.map((c) => 'P-' + String(c.num).padStart(6, '0') + ' — ' + c.cliente + (c.vehiculo ? ' — ' + c.vehiculo : '') + ' — ' + cur + ' ' + (+c.monto || 0).toLocaleString('es-VE'))}
+                  onChange={(label) => { const num = label.match(/^P-(\d+)/); const c = cotizacionesFiltradas.find((x) => num && x.num === +num[1]); if (c) elegirCotizacion(c); }}
+                  placeholder={cotizacionesFiltradas.length ? 'Selecciona la cotización' : 'Ninguna coincide con la búsqueda'}
+                  textoVacio="No hay cotizaciones aprobadas disponibles." />
+              </View>
+            )
+          ) : null}
+        </>
+      )}
 
-      <Dropdown label="Vehículo del cliente" obligatorio value={vSel ? (vSel.model + ' · ' + vSel.plate) : ''}
-        placeholder={cliente ? 'Selecciona el vehículo' : 'Primero elige el cliente'}
-        deshabilitado={!cliente}
-        options={cvs.map((v) => v.model + ' · ' + v.plate)}
-        meta={Object.fromEntries(cvs.map((v) => [v.model + ' · ' + v.plate, [v.color, v.anio, v.tipoVeh].filter(Boolean).join(' · ')]))}
-        onChange={(txt) => { const v = cvs.find((x) => (x.model + ' · ' + x.plate) === txt); setVehId(v ? v.id : null); if (v && v.color) setColor(v.color); if (v && v.tipoVeh) setTipoVeh(v.tipoVeh); }}
-        textoVacio="Este cliente no tiene vehículos. Regístralos en el módulo Vehículos." />
+      {editandoVehId ? (
+        <>
+          <Text style={s.label}>Cliente</Text>
+          <View style={s.input}><Text style={{ color: '#6b7480', fontWeight: '700' }}>{cliente}</Text></View>
+          <Text style={s.label}>Vehículo</Text>
+          <View style={s.input}><Text style={{ color: '#6b7480', fontWeight: '700' }}>{vSel ? vSel.model + ' — ' + vSel.plate : ''}</Text></View>
+        </>
+      ) : (
+        <>
+          <Dropdown label="Cliente" obligatorio value={cliente} placeholder="Selecciona el cliente"
+            options={clients.map((c) => c.n)}
+            meta={Object.fromEntries(clients.map((c) => [c.n, [c.tipoDoc, c.doc, c.tel, c.correo].filter(Boolean).join(' · ')]))}
+            onChange={(v) => { setCliente(v); const nc = vehicles.filter((x) => x.owner === v && x.activo !== false); const pv = nc[0]; setVehId(pv ? pv.id : null); if (pv && pv.color) setColor(pv.color); if (pv && pv.tipoVeh) setTipoVeh(pv.tipoVeh); }}
+            textoVacio="Aún no hay clientes. Regístralos en el módulo Clientes." />
+          {cSel ? <Text style={s.muted}>{cSel.tipoDoc || ''} {cSel.doc || ''} · {cSel.tel || ''} · {cSel.correo || ''}</Text> : null}
 
-      <Dropdown label="Técnico responsable" value={mech} placeholder="Selecciona el técnico"
+          <Dropdown label="Vehículo del cliente" obligatorio value={vSel ? (vSel.model + ' · ' + vSel.plate) : ''}
+            placeholder={cliente ? 'Selecciona el vehículo' : 'Primero elige el cliente'}
+            deshabilitado={!cliente}
+            options={cvs.map((v) => v.model + ' · ' + v.plate)}
+            meta={Object.fromEntries(cvs.map((v) => [v.model + ' · ' + v.plate, [v.color, v.anio, v.tipoVeh].filter(Boolean).join(' · ')]))}
+            onChange={(txt) => { const v = cvs.find((x) => (x.model + ' · ' + x.plate) === txt); setVehId(v ? v.id : null); if (v && v.color) setColor(v.color); if (v && v.tipoVeh) setTipoVeh(v.tipoVeh); }}
+            textoVacio="Este cliente no tiene vehículos. Regístralos en el módulo Vehículos." />
+        </>
+      )}
+
+
+      <Dropdown label="Técnico responsable" value={mech} placeholder="Selecciona el técnico" error={campoFaltante === 'mech'}
         options={mecanicos.map((m) => m.n)}
         meta={Object.fromEntries(mecanicos.map((m) => [m.n, [m.esp, m.tel, m.doc].filter(Boolean).join(' · ')]))}
         onChange={setMech}
         textoVacio="No hay técnicos activos. Regístralos en el módulo Técnicos." />
 
-      <Dropdown label="Motivo de ingreso" value={motivo} placeholder="Selecciona el motivo"
+      <Text style={s.label}>Color del vehículo</Text>
+      <TextInput ref={colorRef} style={[s.input, campoFaltante === 'color' && s.inputError]} value={color} onChangeText={setColor} placeholder="ej. Plata" />
+
+      <Dropdown label="Motivo de ingreso" value={motivo} placeholder="Selecciona el motivo" error={campoFaltante === 'motivo'}
         options={motivos} onChange={setMotivo} onAdd={(t) => setMotivos([...motivos, t])} />
 
-      <Dropdown label="Trabajo a realizar" obligatorio value={trabajo} placeholder="Selecciona el trabajo"
+      <Dropdown label="Trabajo a realizar" obligatorio value={trabajo} placeholder="Selecciona el trabajo" error={campoFaltante === 'trabajo'}
         options={trabajos} onChange={setTrabajo} onAdd={(t) => setTrabajos([...trabajos, t])} />
 
       <Dropdown label="Prioridad" value={prio} options={PRIOS} onChange={setPrio} />
@@ -989,7 +1118,7 @@ function Recepcion({ data, guardar, onListo }) {
       </View>
 
       <Dropdown label="Combustible" value={comb} options={FUEL} onChange={setComb} />
-      <Text style={s.label}>Kilometraje</Text><TextInput style={s.input} value={km} onChangeText={setKm} keyboardType="numeric" placeholder="Ej. 85000" />
+      <Text style={s.label}>Kilometraje</Text><TextInput ref={kmRef} style={[s.input, campoFaltante === 'km' && s.inputError]} value={km} onChangeText={setKm} keyboardType="numeric" placeholder="Ej. 85000" />
 
       <Text style={s.label}>Accesorios dentro del vehículo</Text>
       <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -1011,6 +1140,46 @@ function Recepcion({ data, guardar, onListo }) {
           <Text style={[s.pillBtnT, { color: '#2563EB' }]}>＋ Agregar</Text>
         </TouchableOpacity>
       </View>
+      <View style={{ backgroundColor: '#f7f8fa', borderRadius: 12, padding: 12, marginTop: 4 }}>
+        <TouchableOpacity onPress={() => { const nuevo = !bateria; setBateria(nuevo); if (nuevo) setBateriaModalOpen(true); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <View style={{ width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: bateria ? '#F5B700' : '#c7ccd2', backgroundColor: bateria ? '#F5B700' : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
+            {bateria ? <Text style={{ fontWeight: '900', color: '#16191d' }}>✓</Text> : null}
+          </View>
+          <Text style={{ fontWeight: '700', color: '#16191d', fontSize: 14 }}>🔋 Batería</Text>
+        </TouchableOpacity>
+        {bateria ? (
+          <View style={{ marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              {(bateriaMarca || bateriaAmperaje || bateriaColor) ? (
+                <Text style={{ fontWeight: '700', fontSize: 12.5 }}>{[bateriaMarca, bateriaAmperaje && bateriaAmperaje + 'A', bateriaColor].filter(Boolean).join(' · ')}</Text>
+              ) : <Text style={{ color: '#6b7480', fontSize: 12.5 }}>Sin datos todavía</Text>}
+              {bateriaObs ? <Text style={{ color: '#6b7480', fontSize: 11.5, marginTop: 2 }}>{bateriaObs}</Text> : null}
+            </View>
+            <TouchableOpacity style={s.act} onPress={() => setBateriaModalOpen(true)}><Text style={s.actT}>✎ Editar</Text></TouchableOpacity>
+          </View>
+        ) : null}
+      </View>
+      <Modal visible={bateriaModalOpen} transparent animationType="slide" onRequestClose={() => setBateriaModalOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,.45)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 18, maxHeight: '85%' }}>
+            <ScrollView>
+              <Text style={{ fontSize: 17, fontWeight: '800', marginBottom: 12 }}>🔋 Datos de la batería</Text>
+              <Text style={s.label}>Marca</Text>
+              <TextInput style={s.input} value={bateriaMarca} onChangeText={setBateriaMarca} />
+              <Text style={s.label}>Amperaje</Text>
+              <TextInput style={s.input} value={bateriaAmperaje} onChangeText={setBateriaAmperaje} placeholder="ej. 650" keyboardType="numeric" />
+              <Text style={s.label}>Color</Text>
+              <TextInput style={s.input} value={bateriaColor} onChangeText={setBateriaColor} />
+              <Text style={s.label}>Observación{(!bateriaMarca && !bateriaAmperaje && !bateriaColor) ? ' (obligatoria si no llenas los demás datos)' : ''}</Text>
+              <TextInput style={[s.input, { minHeight: 80, textAlignVertical: 'top' }]} value={bateriaObs} onChangeText={setBateriaObs} placeholder="ej. batería ubicada bajo el asiento trasero" multiline />
+              <TouchableOpacity style={[s.btn, { marginTop: 14 }]} onPress={() => {
+                if (!bateriaMarca.trim() && !bateriaAmperaje.trim() && !bateriaColor.trim() && !bateriaObs.trim()) { Alert.alert('Falta un dato', 'Indica al menos la observación.'); return; }
+                setBateriaModalOpen(false);
+              }}><Text style={s.btnT}>Guardar</Text></TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
       <Text style={s.label}>Observaciones</Text>
       <TextInput style={[s.input, { minHeight: 80, textAlignVertical: 'top' }]} value={obs} onChangeText={setObs} multiline />
 
@@ -1031,7 +1200,28 @@ function Recepcion({ data, guardar, onListo }) {
       </View>
 
       <Text style={{ fontSize: 12, color: '#6b7480', marginTop: 10 }}>{total} daño(s) marcado(s) en total.</Text>
-      <TouchableOpacity style={s.btn} onPress={confirmar}><Text style={s.btnT}>Registrar recepción y generar orden</Text></TouchableOpacity>
+      <TouchableOpacity style={s.btn} onPress={confirmar}><Text style={s.btnT}>{editandoVehId ? 'Guardar cambios del acta' : 'Registrar recepción y generar orden'}</Text></TouchableOpacity>
+      {editandoVehId ? <TouchableOpacity style={[s.btn, { backgroundColor: '#eef0f2', marginTop: 10 }]} onPress={cancelarEdicion}><Text style={[s.btnT, { color: '#16191d' }]}>Cancelar edición</Text></TouchableOpacity> : null}
+
+      <View style={{ marginTop: 26, paddingTop: 18, borderTopWidth: 1, borderColor: '#e3e7ec' }}>
+        <Text style={{ fontSize: 15, fontWeight: '800', color: '#16191d' }}>Recepciones registradas</Text>
+        <Text style={s.muted}>Ver o editar las actas registradas (cambiar técnico, motivo, observaciones, etc.).</Text>
+        {vehicles.filter((v) => v.recepcion).length ? vehicles.filter((v) => v.recepcion).slice(0, 20).map((v) => (
+          <View key={v.id} style={{ paddingVertical: 12, borderBottomWidth: 1, borderColor: '#f0f2f5' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={{ fontWeight: '800', color: '#16191d' }}>{v.model} <Text style={{ color: '#6b7480', fontWeight: '600' }}>{v.plate}</Text></Text>
+            </View>
+            <Text style={s.muted}>{v.owner} · {v.motivo || ''} · 🔧 {v.mech || 'sin técnico'}</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+              <TouchableOpacity style={s.act} onPress={() => abrirEnNavegador(taller.id, v, 'acta')}><Text style={s.actT}>Ver acta</Text></TouchableOpacity>
+              <TouchableOpacity style={[s.act, { backgroundColor: '#e8f6ec' }]} onPress={() => compartirActaPDF(taller.id, v)}><Text style={[s.actT, { color: '#0F6E56' }]}>💬 Compartir</Text></TouchableOpacity>
+              <TouchableOpacity style={[s.act, { backgroundColor: '#eef0f2' }]} onPress={() => { setEditandoVehId(v.id); const r = v.recepcion || {}; setCliente(v.owner || ''); setVehId(v.id); setMotivo(r.motivo || v.motivo || ''); setTrabajo(r.trabajo || v.motivo || ''); setTipoVeh(r.tipoVeh || v.tipoVeh || 'Automóvil'); setColor(r.color || v.color || ''); setPrio(r.prioridad || 'Media'); setComb(r.combustible || '½'); setKm((r.km && r.km !== '—') ? r.km : ''); setAcc([...(r.accesorios || [])]); setDocs([...(r.documentos || [])]); setObs((r.obs && r.obs !== '—') ? r.obs : ''); setMech(v.mech || ''); setBateria(!!r.bateria); setBateriaMarca(r.bateriaMarca || ''); setBateriaAmperaje(r.bateriaAmperaje || ''); setBateriaColor(r.bateriaColor || ''); setBateriaObs(r.bateriaObs || ''); setFirmaCli(r.firmaCli || null); setFirmaRec(r.firmaRec || null); const LADOMAP2 = { 'Superior': 'sup', 'Frontal': 'front', 'Lat. Izq.': 'izq', 'Lat. Der.': 'der', 'Posterior': 'post' }; const nd = { sup: [], front: [], izq: [], der: [], post: [] }; (v.recepDamages || []).forEach((d) => { const k = LADOMAP2[d.lado]; if (!k) return; nd[k].push({ id: Date.now() + Math.random(), type: (d.tipo || '').split(', ').filter(Boolean), sev: d.sev, x: d.x, y: d.y }); }); setDmg(nd); if (scrollRef.current) scrollRef.current.scrollTo({ y: 0, animated: true }); }}>
+                <Text style={[s.actT, { color: '#2563EB' }]}>✎ Editar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )) : <Text style={s.muted}>Aún no hay recepciones registradas.</Text>}
+      </View>
 
       <FirmaPad
         visible={!!padAbierto}
@@ -2005,19 +2195,29 @@ function Historial({ data, guardar, cur, loading, recargar, pickFoto, taller }) 
 /* =================== AVANCES DEL TÉCNICO =================== */
 function AvancesModal({ item, close, taller, data, guardar }) {
   const [foto, setFoto] = useState(null);
+  const [notificando, setNotificando] = useState(false);
+  const [notificadosLocal, setNotificadosLocal] = useState({}); // idx -> true, para reflejar al instante
   const avsOriginal = item.advances || [];
   const avs = avsOriginal.map((a, i) => ({ ...a, _idx: i })).reverse();
   const ico = { nota: '📝', atencion: '⚠️', recep: '🔧', check: '✅', term: '✅' };
-  const notificar = (idx) => {
-    if (!data || !guardar) return;
-    const vehicles = (data.vehicles || []).map((v) => {
-      if (v.id !== item.id) return v;
-      const advances = (v.advances || []).map((a, i) => (i === idx ? { ...a, pendienteRevision: false, notificadoCliente: true } : a));
-      return { ...v, advances };
-    });
-    const notifs = [...(data.notifs || []), { owner: item.owner, veh: item.model, text: '🔧 ' + avsOriginal[idx].t + (avsOriginal[idx].m ? ' — ' + avsOriginal[idx].m : ''), time: 'ahora', read: false }];
-    guardar({ ...data, vehicles, notifs });
-    Alert.alert('✅ Notificado', 'El cliente ya puede ver este avance.');
+  const notificar = async (idx) => {
+    if (!data || !guardar) { Alert.alert('Error', 'No se pudo notificar: faltan datos del taller. Cierra y vuelve a abrir esta pantalla.'); return; }
+    setNotificando(true);
+    try {
+      const vehicles = (data.vehicles || []).map((v) => {
+        if (v.id !== item.id) return v;
+        const advances = (v.advances || []).map((a, i) => (i === idx ? { ...a, pendienteRevision: false, notificadoCliente: true } : a));
+        return { ...v, advances };
+      });
+      const notifs = [...(data.notifs || []), { owner: item.owner, veh: item.model, text: '🔧 ' + avsOriginal[idx].t + (avsOriginal[idx].m ? ' — ' + avsOriginal[idx].m : ''), time: 'ahora', read: false }];
+      await guardar({ ...data, vehicles, notifs });
+      setNotificadosLocal((prev) => ({ ...prev, [idx]: true }));
+      Alert.alert('✅ Notificado', 'El cliente ya puede ver este avance.');
+    } catch (e) {
+      Alert.alert('No se pudo notificar', (e && e.message) || 'Intenta de nuevo.');
+    } finally {
+      setNotificando(false);
+    }
   };
   return (
     <Modal visible transparent animationType="slide" onRequestClose={close}>
@@ -2040,16 +2240,29 @@ function AvancesModal({ item, close, taller, data, guardar }) {
                       <Text style={s.avVer}>👁 Toca para ampliar</Text>
                     </TouchableOpacity>
                   ) : null}
+                  {a.video ? (
+                    <TouchableOpacity onPress={() => a.video && Linking.openURL(a.video).catch(() => Alert.alert('No se pudo abrir', 'Intenta de nuevo.'))}>
+                      <View>
+                        <Image source={{ uri: a.videoThumb || a.video }} style={s.avImg} />
+                        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
+                          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,.55)', alignItems: 'center', justifyContent: 'center' }}>
+                            <Text style={{ fontSize: 16, color: '#fff' }}>▶</Text>
+                          </View>
+                        </View>
+                      </View>
+                      <Text style={s.avVer}>▶ Toca para ver el video</Text>
+                    </TouchableOpacity>
+                  ) : null}
                   {a.respondido !== undefined ? (
                     <Text style={{ fontSize: 12, fontWeight: '700', marginTop: 4, color: a.autorizado ? '#16A34A' : '#dc2626' }}>
                       {a.autorizado ? '✓ Autorizado por el cliente' : '✕ Denegado por el cliente'}
                     </Text>
                   ) : null}
-                  {a.pendienteRevision ? (
-                    <TouchableOpacity style={[s.act, { backgroundColor: '#fdf3e0', marginTop: 6, alignSelf: 'flex-start' }]} onPress={() => notificar(a._idx)}>
-                      <Text style={[s.actT, { color: '#b45309' }]}>🔔 Notificar al cliente</Text>
+                  {a.pendienteRevision && !notificadosLocal[a._idx] ? (
+                    <TouchableOpacity style={[s.act, { backgroundColor: '#fdf3e0', marginTop: 6, alignSelf: 'flex-start' }, notificando && { opacity: 0.6 }]} disabled={notificando} onPress={() => notificar(a._idx)}>
+                      <Text style={[s.actT, { color: '#b45309' }]}>{notificando ? 'Notificando…' : '🔔 Notificar al cliente'}</Text>
                     </TouchableOpacity>
-                  ) : a.notificadoCliente ? (
+                  ) : (a.notificadoCliente || notificadosLocal[a._idx]) ? (
                     <View style={{ backgroundColor: '#e8f6ec', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, alignSelf: 'flex-start', marginTop: 6 }}>
                       <Text style={{ color: '#0F6E56', fontWeight: '700', fontSize: 11 }}>✅ Visible para el cliente</Text>
                     </View>
@@ -2072,6 +2285,7 @@ function AvancesModal({ item, close, taller, data, guardar }) {
           <Text style={{ color: '#fff', marginTop: 14 }}>Toca para cerrar</Text>
         </TouchableOpacity>
       </Modal>
+      {/* El video se abre en el navegador del celular (evita depender de un reproductor dentro de la app) */}
     </Modal>
   );
 }
@@ -2107,97 +2321,230 @@ function Acta({ item, close }) {
 
 /* =================== TALLERES =================== */
 function Talleres() {
-  const [list, setList] = useState([]); const [nombre, setNombre] = useState(''); const [loading, setLoading] = useState(false);
+  const [list, setList] = useState([]); const [loading, setLoading] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const vacio = { nombre: '', rif: '', rubro: '', telefono: '', direccion: '', logo: null, logoTam: 100, plan: 'lite', videoMin: 10, condiciones: '', pie: '' };
+  const [f, setF] = useState(vacio);
   const cargar = async () => { setLoading(true); try { setList(await api('/api/talleres')); } catch (e) { Alert.alert('Error', e.message); } finally { setLoading(false); } };
   useEffect(() => { cargar(); }, []);
-  const crear = async () => { if (!nombre.trim()) return; try { await api('/api/talleres', { method: 'POST', body: JSON.stringify({ nombre }) }); setNombre(''); cargar(); } catch (e) { Alert.alert('Error', e.message); } };
+  const abrirNuevo = () => { setEditId(null); setF(vacio); setModalOpen(true); };
+  const abrirEditar = async (t) => {
+    setEditId(t.id);
+    let plan = 'lite', videoMin = 10;
+    try { const st = await api('/api/state?taller=' + t.id); plan = (st.data && st.data.config && st.data.config.plan) || 'lite'; videoMin = (st.data && st.data.config && st.data.config.videoMinutosPorVehiculo) || 10; } catch (e) {}
+    setF({ nombre: t.nombre || '', rif: t.rif || '', rubro: t.rubro || '', telefono: t.telefono || '', direccion: t.direccion || '', logo: t.logo || null, logoTam: t.logo_tam || 100, plan, videoMin, condiciones: t.condiciones || '', pie: t.pie || '' });
+    setModalOpen(true);
+  };
+  const elegirLogo = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) { Alert.alert('Permiso', 'Se necesita acceso a la galería.'); return; }
+    const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.5, base64: true });
+    if (!r.canceled && r.assets && r.assets[0]) setF({ ...f, logo: 'data:image/jpeg;base64,' + r.assets[0].base64 });
+  };
+  const guardar = async () => {
+    if (!f.nombre.trim()) { Alert.alert('Falta', 'Escribe el nombre del taller.'); return; }
+    try {
+      let tId = editId;
+      if (editId) {
+        await api('/api/talleres/' + editId, { method: 'PUT', body: JSON.stringify({ nombre: f.nombre, rif: f.rif, rubro: f.rubro, telefono: f.telefono, direccion: f.direccion, logo: f.logo || undefined, logoTam: f.logoTam, condiciones: f.condiciones, pie: f.pie }) });
+      } else {
+        const nuevo = await api('/api/talleres', { method: 'POST', body: JSON.stringify({ nombre: f.nombre, rif: f.rif, rubro: f.rubro, telefono: f.telefono, direccion: f.direccion, logo: f.logo || undefined, condiciones: f.condiciones, pie: f.pie }) });
+        tId = nuevo.id;
+      }
+      await api('/api/state?taller=' + tId, { method: 'PUT', body: JSON.stringify({ data: { config: { plan: f.plan, videoMinutosPorVehiculo: f.plan === 'lite' ? 0 : f.videoMin } } }) });
+      setModalOpen(false); cargar(); Alert.alert('✅ Listo', editId ? 'Taller actualizado con éxito.' : 'Taller creado con éxito.');
+    } catch (e) { Alert.alert('Error', e.message); }
+  };
   const toggle = async (t) => { try { await api('/api/talleres/' + t.id, { method: 'PUT', body: JSON.stringify({ activo: !t.activo, motivo_inactivo: t.activo ? 'Desactivado desde la app' : null }) }); cargar(); } catch (e) { Alert.alert('Error', e.message); } };
   return (
     <ScrollView contentContainerStyle={{ padding: 14 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={cargar} />}>
-      <View style={s.card}><Text style={s.h}>Nuevo taller</Text><TextInput style={[s.input, { marginTop: 8 }]} value={nombre} onChangeText={setNombre} placeholder="Nombre del taller" /><TouchableOpacity style={s.btn} onPress={crear}><Text style={s.btnT}>Crear taller</Text></TouchableOpacity></View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <Text style={s.h}>Talleres ({list.length})</Text>
+        <TouchableOpacity style={s.btn} onPress={abrirNuevo}><Text style={s.btnT}>＋ Crear</Text></TouchableOpacity>
+      </View>
       {list.map((t) => (
         <View key={t.id} style={s.card}>
           <Text style={s.veh}>{t.nombre} {t.activo ? '' : '· inactivo'}</Text>
           <Text style={s.muted}>{t.rif || ''} {t.telefono || ''}</Text>
-          <TouchableOpacity style={[s.btn, { marginTop: 8, backgroundColor: t.activo ? '#eef0f2' : '#F5B700' }]} onPress={() => toggle(t)}><Text style={[s.btnT, { color: '#16191d' }]}>{t.activo ? 'Inactivar' : 'Reactivar'}</Text></TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+            <TouchableOpacity style={s.act} onPress={() => abrirEditar(t)}><Text style={s.actT}>✎ Editar</Text></TouchableOpacity>
+            <TouchableOpacity style={[s.act, { backgroundColor: t.activo ? '#fdf3e0' : '#e8f6ec' }]} onPress={() => toggle(t)}><Text style={s.actT}>{t.activo ? 'Inactivar' : 'Reactivar'}</Text></TouchableOpacity>
+          </View>
         </View>
       ))}
+
+      <Modal visible={modalOpen} transparent animationType="slide" onRequestClose={() => setModalOpen(false)}>
+        <View style={s.modalWrap}><View style={s.modalCard}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={s.h}>{editId ? 'Editar taller' : 'Crear taller'}</Text><TouchableOpacity onPress={() => setModalOpen(false)}><Text style={{ fontSize: 20, color: '#6b7480' }}>✕</Text></TouchableOpacity>
+          </View>
+          <ScrollView style={{ maxHeight: 500 }}>
+            <Text style={s.label}>Nombre del taller</Text><TextInput style={s.input} value={f.nombre} onChangeText={(v) => setF({ ...f, nombre: v })} />
+            <Text style={s.label}>RIF / RUC</Text><TextInput style={s.input} value={f.rif} onChangeText={(v) => setF({ ...f, rif: v })} />
+            <Text style={s.label}>Rubro (subtítulo)</Text><TextInput style={s.input} value={f.rubro} onChangeText={(v) => setF({ ...f, rubro: v })} placeholder="TALLER AUTOMOTRIZ" />
+            <Text style={s.label}>Teléfono</Text><TextInput style={s.input} value={f.telefono} onChangeText={(v) => setF({ ...f, telefono: v })} />
+            <Text style={s.label}>Dirección</Text><TextInput style={s.input} value={f.direccion} onChangeText={(v) => setF({ ...f, direccion: v })} />
+            <Text style={s.label}>Logo del taller</Text>
+            <TouchableOpacity style={s.act} onPress={elegirLogo}><Text style={s.actT}>{f.logo ? '✓ Logo elegido — tocar para cambiar' : '📷 Elegir logo'}</Text></TouchableOpacity>
+            {f.logo ? <Image source={{ uri: f.logo }} style={{ width: 90, height: 60, borderRadius: 8, marginTop: 8 }} resizeMode="contain" /> : null}
+
+            <Text style={[s.label, { marginTop: 14 }]}>Versión del taller</Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {[['lite', 'Lite'], ['pro', 'Pro'], ['premium', 'Premium']].map(([k, l]) => (
+                <TouchableOpacity key={k} style={[s.pillBtn, { flex: 1, alignItems: 'center' }, f.plan === k && s.pillBtnOn]} onPress={() => setF({ ...f, plan: k })}><Text style={[s.pillBtnT, f.plan === k && { color: '#16191d' }]}>{l}</Text></TouchableOpacity>
+              ))}
+            </View>
+            {f.plan !== 'lite' ? (<>
+              <Text style={s.label}>Minutos de video por vehículo: {f.videoMin}</Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {[5, 10, 15, 30, 60].map((m) => (
+                  <TouchableOpacity key={m} style={[s.pillBtn, f.videoMin === m && s.pillBtnOn]} onPress={() => setF({ ...f, videoMin: m })}><Text style={[s.pillBtnT, f.videoMin === m && { color: '#16191d' }]}>{m}</Text></TouchableOpacity>
+                ))}
+              </View>
+            </>) : null}
+
+            <Text style={[s.label, { marginTop: 14 }]}>Tamaño del logo: {f.logoTam}%</Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {[50, 75, 100, 150, 200].map((t) => (
+                <TouchableOpacity key={t} style={[s.pillBtn, f.logoTam === t && s.pillBtnOn]} onPress={() => setF({ ...f, logoTam: t })}><Text style={[s.pillBtnT, f.logoTam === t && { color: '#16191d' }]}>{t}%</Text></TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={{ fontSize: 10, color: '#9aa3ad', textTransform: 'uppercase', marginTop: 16, marginBottom: 6 }}>Así se verá el encabezado en el Acta</Text>
+            <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start', borderWidth: 1, borderColor: '#e7e9ec', borderRadius: 8, padding: 12, backgroundColor: '#fff' }}>
+              <View style={{ alignItems: 'center', minWidth: Math.round(90 * (f.logoTam / 100)) }}>
+                {f.logo ? <Image source={{ uri: f.logo }} style={{ width: Math.round(90 * (f.logoTam / 100)), height: Math.round(24 * (f.logoTam / 100)), resizeMode: 'contain' }} /> : <Text style={{ fontSize: 10, color: '#c7ccd2' }}>(sin logo)</Text>}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontWeight: '800', fontSize: 14 }}>{f.nombre || 'TallerOS'}</Text>
+                <Text style={{ fontSize: 10, color: '#666', textTransform: 'uppercase' }}>{f.rubro || 'TALLER AUTOMOTRIZ'}</Text>
+                {f.telefono ? <Text style={{ fontSize: 9, color: '#888', marginTop: 2 }}>Tel: {f.telefono}</Text> : null}
+              </View>
+            </View>
+
+            <Text style={s.label}>Condiciones del servicio (aparece en el Acta)</Text>
+            <TextInput style={[s.input, { minHeight: 70, textAlignVertical: 'top' }]} value={f.condiciones} onChangeText={(v) => setF({ ...f, condiciones: v })} multiline />
+            <Text style={s.label}>Pie de página (aparece en el Acta)</Text>
+            <TextInput style={[s.input, { minHeight: 50, textAlignVertical: 'top' }]} value={f.pie} onChangeText={(v) => setF({ ...f, pie: v })} multiline placeholder="Ej. Gracias por su preferencia" />
+            {(f.condiciones || f.pie) ? (
+              <View style={{ borderWidth: 1, borderColor: '#e7e9ec', borderRadius: 8, padding: 10, marginTop: 4, backgroundColor: '#fafbfc' }}>
+                <Text style={{ fontSize: 10, color: '#9aa3ad', textTransform: 'uppercase', marginBottom: 6 }}>Así se verán en el Acta</Text>
+                {f.condiciones ? <Text style={{ fontSize: 10, color: '#333' }}><Text style={{ fontWeight: '700' }}>Condiciones del Servicio:</Text>{'\n'}{f.condiciones}</Text> : null}
+                {f.pie ? <Text style={{ fontSize: 10, color: '#666', marginTop: 6, textAlign: 'center' }}>{f.pie}</Text> : null}
+              </View>
+            ) : null}
+          </ScrollView>
+          <TouchableOpacity style={s.btn} onPress={guardar}><Text style={s.btnT}>{editId ? 'Guardar cambios' : 'Crear taller'}</Text></TouchableOpacity>
+        </View></View>
+      </Modal>
     </ScrollView>
   );
 }
 
-/* =================== USUARIOS (crear y EDITAR con credenciales) =================== */
+/* =================== USUARIOS (crear y EDITAR, igual que la web) =================== */
 function Usuarios({ esSuper, taller }) {
-  const [list, setList] = useState([]); const [loading, setLoading] = useState(false);
-  const vacio = { nombre: '', usuario: '', correo: '', password: '', password2: '', rol: 'administrador' };
+  const [list, setList] = useState([]); const [talleresList, setTalleresList] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [filtroTaller, setFiltroTaller] = useState('');
+  const [busqueda, setBusqueda] = useState('');
+  const vacio = { nombre: '', documento: '', usuario: '', correo: '', telefono: '', password: '', password2: '', tallerId: taller ? taller.id : null };
+  const [modalOpen, setModalOpen] = useState(false);
   const [f, setF] = useState(vacio);
-  const [edit, setEdit] = useState(null);
+  const [editId, setEditId] = useState(null);
   const cargar = async () => {
     setLoading(true);
-    try { setList(esSuper ? await api('/api/talleres/users/all') : await api('/api/talleres/' + taller.id + '/admins')); }
-    catch (e) { Alert.alert('Error', e.message); } finally { setLoading(false); }
+    try {
+      if (esSuper) {
+        const [admins, ts] = await Promise.all([api('/api/talleres/admins/all'), api('/api/talleres')]);
+        setList(admins); setTalleresList(ts);
+      } else {
+        setList(await api('/api/talleres/' + taller.id + '/admins'));
+      }
+    } catch (e) { Alert.alert('Error', e.message); } finally { setLoading(false); }
   };
   useEffect(() => { cargar(); }, []);
-  const crear = async () => {
-    if (!f.nombre || !f.usuario || !f.correo || !f.password) { Alert.alert('Faltan datos', 'Completa todos los campos.'); return; }
-    if (f.password !== f.password2) { Alert.alert('Error', 'Las contraseñas no coinciden.'); return; }
-    if (f.password.length < 6) { Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres.'); return; }
+  const nombreTaller = (id) => (talleresList.find((t) => t.id === id) || {}).nombre || '';
+  const filtrados = list.filter((a) => {
+    if (esSuper && filtroTaller && !(a.talleres || []).includes(+filtroTaller)) return false;
+    if (busqueda.trim()) {
+      const q = busqueda.trim().toLowerCase();
+      const texto = (a.nombre + ' ' + (a.documento || '') + ' ' + (a.correo || '') + ' ' + (a.usuario || '')).toLowerCase();
+      if (!texto.includes(q)) return false;
+    }
+    return true;
+  });
+  const abrirNuevo = () => { setEditId(null); setF({ ...vacio, tallerId: esSuper ? (filtroTaller ? +filtroTaller : (talleresList[0] || {}).id) : taller.id }); setModalOpen(true); };
+  const abrirEditar = (a) => {
+    setEditId(a.id);
+    setF({ nombre: a.nombre, documento: a.documento || '', usuario: a.usuario, correo: a.correo, telefono: a.telefono || '', password: '', password2: '', tallerId: (a.talleres && a.talleres[0]) || (taller ? taller.id : null) });
+    setModalOpen(true);
+  };
+  const guardar = async () => {
+    if (!f.tallerId) { Alert.alert('Falta', 'Selecciona un taller.'); return; }
+    if (!f.nombre || !f.usuario || !f.correo) { Alert.alert('Faltan datos', 'Nombre, usuario y correo son obligatorios.'); return; }
+    if (!editId && !f.password) { Alert.alert('Falta', 'La contraseña es obligatoria al crear.'); return; }
+    if (f.password && f.password !== f.password2) { Alert.alert('Error', 'Las contraseñas no coinciden.'); return; }
+    if (f.password && f.password.length < 6) { Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres.'); return; }
     try {
-      if (esSuper) await api('/api/talleres/users/new', { method: 'POST', body: JSON.stringify(f) });
-      else await api('/api/talleres/' + taller.id + '/admins', { method: 'POST', body: JSON.stringify({ nombre: f.nombre, usuario: f.usuario, correo: f.correo, password: f.password }) });
-      setF(vacio); cargar(); Alert.alert('Listo', 'Usuario creado.');
+      if (editId) {
+        await api('/api/talleres/' + f.tallerId + '/admins/' + editId, { method: 'PUT', body: JSON.stringify({ nombre: f.nombre, usuario: f.usuario, correo: f.correo, telefono: f.telefono, documento: f.documento, password: f.password || undefined }) });
+      } else {
+        await api('/api/talleres/' + f.tallerId + '/admins', { method: 'POST', body: JSON.stringify({ nombre: f.nombre, usuario: f.usuario, correo: f.correo, telefono: f.telefono, documento: f.documento, password: f.password }) });
+      }
+      setModalOpen(false); cargar(); Alert.alert('✅ Listo', editId ? 'Administrador actualizado con éxito.' : 'Administrador creado con éxito.');
     } catch (e) { Alert.alert('Error', e.message); }
   };
-  const guardarEdicion = async () => {
-    if (edit.password && edit.password !== edit.password2) { Alert.alert('Error', 'Las contraseñas no coinciden.'); return; }
-    if (edit.password && edit.password.length < 6) { Alert.alert('Error', 'Mínimo 6 caracteres.'); return; }
-    const body = { nombre: edit.nombre, usuario: edit.usuario, correo: edit.correo };
-    if (edit.password) body.password = edit.password;
-    try {
-      if (esSuper) await api('/api/talleres/users/' + edit.id, { method: 'PUT', body: JSON.stringify(body) });
-      else await api('/api/talleres/' + taller.id + '/admins/' + edit.id, { method: 'PUT', body: JSON.stringify(body) });
-      setEdit(null); cargar(); Alert.alert('Listo', 'Usuario actualizado.');
-    } catch (e) { Alert.alert('Error', e.message); }
+  const toggle = async (a) => {
+    try { await api('/api/talleres/' + ((a.talleres && a.talleres[0]) || taller.id) + '/admins/' + a.id + '/estado', { method: 'PUT', body: JSON.stringify({ activo: !a.activo }) }); cargar(); }
+    catch (e) { Alert.alert('Error', e.message); }
   };
-  const RB = { superadmin: 'Super Admin', administrador: 'Administrador', mecanico: 'Técnico', cliente: 'Cliente' };
-  const roles = [['administrador', 'Administrador'], ['superadmin', 'Super Admin'], ['mecanico', 'Técnico'], ['cliente', 'Cliente']];
   return (
     <ScrollView contentContainerStyle={{ padding: 14 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={cargar} />}>
-      <View style={s.card}>
-        <Text style={s.h}>Crear usuario</Text>
-        <Text style={s.label}>Nombre</Text><TextInput style={s.input} value={f.nombre} onChangeText={(v) => setF({ ...f, nombre: v })} />
-        <Text style={s.label}>Usuario de acceso</Text><TextInput style={s.input} value={f.usuario} onChangeText={(v) => setF({ ...f, usuario: v })} autoCapitalize="none" />
-        <Text style={s.label}>Correo</Text><TextInput style={s.input} value={f.correo} onChangeText={(v) => setF({ ...f, correo: v })} autoCapitalize="none" keyboardType="email-address" />
-        <Text style={s.label}>Contraseña</Text><TextInput style={s.input} value={f.password} onChangeText={(v) => setF({ ...f, password: v })} secureTextEntry />
-        <Text style={s.label}>Confirmar contraseña</Text><TextInput style={s.input} value={f.password2} onChangeText={(v) => setF({ ...f, password2: v })} secureTextEntry />
-        {esSuper && (<>
-          <Text style={s.label}>Rol</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {roles.map(([k, l]) => (<TouchableOpacity key={k} style={[s.pillBtn, f.rol === k && s.pillBtnOn]} onPress={() => setF({ ...f, rol: k })}><Text style={[s.pillBtnT, f.rol === k && { color: '#16191d' }]}>{l}</Text></TouchableOpacity>))}
-          </View>
-        </>)}
-        <TouchableOpacity style={s.btn} onPress={crear}><Text style={s.btnT}>Crear</Text></TouchableOpacity>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <Text style={s.h}>{esSuper ? 'Administradores' : 'Administradores de ' + (taller ? taller.nombre : '')}</Text>
+        <TouchableOpacity style={s.btn} onPress={abrirNuevo}><Text style={s.btnT}>＋ Nuevo</Text></TouchableOpacity>
       </View>
-      {list.map((u) => (
-        <View key={u.id} style={s.card}>
-          <Text style={s.veh}>{u.nombre}</Text>
-          <Text style={s.muted}>{u.usuario} · {u.correo}{u.rol ? ' · ' + (RB[u.rol] || u.rol) : ''}</Text>
-          <TouchableOpacity style={[s.act, { marginTop: 10 }]} onPress={() => setEdit({ ...u, password: '', password2: '' })}><Text style={s.actT}>Modificar (usuario y contraseña)</Text></TouchableOpacity>
+      {esSuper ? (
+        <View style={s.card}>
+          <Text style={s.label}>Empresa / Taller</Text>
+          <Dropdown value={nombreTaller(+filtroTaller) || 'Todos los talleres'} options={['Todos los talleres', ...talleresList.map((t) => t.nombre)]} onChange={(v) => { const t = talleresList.find((x) => x.nombre === v); setFiltroTaller(t ? String(t.id) : ''); }} placeholder="Todos los talleres" />
+          <Text style={s.label}>Buscar</Text>
+          <TextInput style={s.input} value={busqueda} onChangeText={setBusqueda} placeholder="Nombre, documento, correo, usuario…" />
+        </View>
+      ) : null}
+      {filtrados.map((a) => (
+        <View key={a.id} style={s.card}>
+          <Text style={s.veh}>{a.nombre} {a.activo === false ? '· inactivo' : ''}</Text>
+          <Text style={s.muted}>{a.documento ? a.documento + ' · ' : ''}{a.usuario} · {a.correo}{a.telefono ? ' · ' + a.telefono : ''}</Text>
+          {esSuper ? <Text style={s.muted}>{(a.talleresNombres || (a.talleres || []).map(nombreTaller)).join(', ') || '—'}</Text> : null}
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+            <TouchableOpacity style={s.act} onPress={() => abrirEditar(a)}><Text style={s.actT}>✎ Editar</Text></TouchableOpacity>
+            <TouchableOpacity style={[s.act, { backgroundColor: a.activo === false ? '#e8f6ec' : '#fdf3e0' }]} onPress={() => toggle(a)}><Text style={s.actT}>{a.activo === false ? 'Activar' : 'Inactivar'}</Text></TouchableOpacity>
+          </View>
         </View>
       ))}
-      <Modal visible={!!edit} transparent animationType="slide" onRequestClose={() => setEdit(null)}>
+      {!filtrados.length ? <Text style={[s.muted, { textAlign: 'center', marginTop: 20 }]}>Sin administradores{busqueda || filtroTaller ? ' que coincidan' : ''}.</Text> : null}
+
+      <Modal visible={modalOpen} transparent animationType="slide" onRequestClose={() => setModalOpen(false)}>
         <View style={s.modalWrap}><View style={s.modalCard}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={s.h}>Editar usuario</Text><TouchableOpacity onPress={() => setEdit(null)}><Text style={{ fontSize: 20, color: '#6b7480' }}>✕</Text></TouchableOpacity>
+            <Text style={s.h}>{editId ? 'Editar administrador' : 'Nuevo administrador'}</Text><TouchableOpacity onPress={() => setModalOpen(false)}><Text style={{ fontSize: 20, color: '#6b7480' }}>✕</Text></TouchableOpacity>
           </View>
-          {edit && (<ScrollView style={{ maxHeight: 430 }}>
-            <Text style={s.label}>Nombre</Text><TextInput style={s.input} value={edit.nombre} onChangeText={(v) => setEdit({ ...edit, nombre: v })} />
-            <Text style={s.label}>Usuario de acceso</Text><TextInput style={s.input} value={edit.usuario} onChangeText={(v) => setEdit({ ...edit, usuario: v })} autoCapitalize="none" />
-            <Text style={s.label}>Correo</Text><TextInput style={s.input} value={edit.correo} onChangeText={(v) => setEdit({ ...edit, correo: v })} autoCapitalize="none" />
-            <Text style={s.label}>Nueva contraseña (opcional)</Text><TextInput style={s.input} value={edit.password} onChangeText={(v) => setEdit({ ...edit, password: v })} secureTextEntry placeholder="Dejar vacío para no cambiar" />
-            <Text style={s.label}>Confirmar contraseña</Text><TextInput style={s.input} value={edit.password2} onChangeText={(v) => setEdit({ ...edit, password2: v })} secureTextEntry />
-          </ScrollView>)}
-          <TouchableOpacity style={s.btn} onPress={guardarEdicion}><Text style={s.btnT}>Guardar cambios</Text></TouchableOpacity>
+          <ScrollView style={{ maxHeight: 460 }}>
+            {esSuper ? (<>
+              <Text style={s.label}>Taller</Text>
+              <Dropdown value={nombreTaller(f.tallerId)} options={talleresList.map((t) => t.nombre)} onChange={(v) => { const t = talleresList.find((x) => x.nombre === v); setF({ ...f, tallerId: t ? t.id : null }); }} placeholder="Selecciona el taller" />
+            </>) : null}
+            <Text style={s.label}>Nombre</Text><TextInput style={s.input} value={f.nombre} onChangeText={(v) => setF({ ...f, nombre: v })} />
+            <Text style={s.label}>Documento</Text><TextInput style={s.input} value={f.documento} onChangeText={(v) => setF({ ...f, documento: v })} />
+            <Text style={s.label}>Usuario (nick de acceso)</Text><TextInput style={s.input} value={f.usuario} onChangeText={(v) => setF({ ...f, usuario: v })} autoCapitalize="none" />
+            <Text style={s.label}>Correo</Text><TextInput style={s.input} value={f.correo} onChangeText={(v) => setF({ ...f, correo: v })} autoCapitalize="none" keyboardType="email-address" />
+            <Text style={s.label}>Teléfono / Celular</Text><TextInput style={s.input} value={f.telefono} onChangeText={(v) => setF({ ...f, telefono: v })} />
+            <Text style={s.label}>{editId ? 'Nueva contraseña (opcional)' : 'Contraseña'}</Text><TextInput style={s.input} value={f.password} onChangeText={(v) => setF({ ...f, password: v })} secureTextEntry placeholder={editId ? 'Dejar vacío para no cambiar' : 'mínimo 6 caracteres'} />
+            <Text style={s.label}>Confirmar contraseña</Text><TextInput style={s.input} value={f.password2} onChangeText={(v) => setF({ ...f, password2: v })} secureTextEntry />
+          </ScrollView>
+          <TouchableOpacity style={s.btn} onPress={guardar}><Text style={s.btnT}>{editId ? 'Guardar cambios' : 'Crear administrador'}</Text></TouchableOpacity>
         </View></View>
       </Modal>
     </ScrollView>
@@ -2205,37 +2552,145 @@ function Usuarios({ esSuper, taller }) {
 }
 
 /* =================== CONFIG =================== */
-function Config({ data, guardar }) {
-  const cfg = data.config || {};
-  const [sym, setSym] = useState((cfg.currency && cfg.currency.sym) || 'Bs.');
-  const [esp, setEsp] = useState(cfg.especialidades || ESP_BASE);
-  const [marcas, setMarcas] = useState(cfg.marcas || MARCAS_BASE);
-  const [ne, setNe] = useState(''); const [nm, setNm] = useState('');
-  const salvar = () => { guardar({ ...data, config: { ...cfg, currency: { ...(cfg.currency || {}), sym }, especialidades: esp, marcas } }); Alert.alert('Listo', 'Configuración guardada.'); };
-  const Lista = ({ title, arr, set, val, setVal }) => (
-    <View style={s.card}>
-      <Text style={s.h}>{title}</Text>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
-        {(arr || []).map((x) => { const lab = etiqueta(x); return (
-          <TouchableOpacity key={lab} style={s.pillBtnOn2} onPress={() => set(arr.filter((y) => etiqueta(y) !== lab))}><Text style={{ fontWeight: '700', fontSize: 12 }}>{lab}  ✕</Text></TouchableOpacity>
-        ); })}
-      </View>
-      <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
-        <TextInput style={[s.input, { flex: 1 }]} value={val} onChangeText={setVal} placeholder="Agregar…" />
-        <TouchableOpacity style={[s.act, { flex: 0, paddingHorizontal: 16, justifyContent: 'center' }]} onPress={() => { const t = (val || '').trim(); if (t && !(arr || []).some((y) => etiqueta(y) === t)) set([...(arr || []), title.includes('Marca') ? { marca: t, modelos: [] } : t]); setVal(''); }}><Text style={s.actT}>＋</Text></TouchableOpacity>
-      </View>
-    </View>
-  );
+function Config({ data, guardar, taller, esSuper }) {
+  const [catalogoAbierto, setCatalogoAbierto] = useState(null); // 'moneda'|'docTypes'|'insuranceTypes'|'motivos'|'trabajos'|'marcas'|'especialidades'
+  const [editTallerOpen, setEditTallerOpen] = useState(false);
+  const TITULOS = { moneda: '💰 Moneda', docTypes: '🪪 Tipos de documento', insuranceTypes: '🛡️ Tipos de seguro', motivos: '📋 Motivos de ingreso', trabajos: '🔧 Trabajos / servicios', marcas: '🚗 Marcas y modelos de vehículos', especialidades: '🧑‍🔧 Especialidad de técnico' };
+  const BOTONES = [['moneda', '💰 Moneda'], ['docTypes', '🪪 Tipos de documento'], ['insuranceTypes', '🛡️ Tipos de seguro (ej. RCV)'], ['motivos', '📋 Motivos de ingreso'], ['trabajos', '🔧 Trabajos / servicios'], ['marcas', '🚗 Marcas y modelos de vehículos'], ['especialidades', '🧑‍🔧 Especialidad de técnico']];
   return (
     <ScrollView contentContainerStyle={{ padding: 14 }}>
-      <View style={s.card}><Text style={s.h}>Moneda</Text><TextInput style={[s.input, { marginTop: 8 }]} value={sym} onChangeText={setSym} /></View>
-      <Lista title="Especialidades" arr={esp} set={setEsp} val={ne} setVal={setNe} />
-      <Lista title="Marcas de vehículos" arr={marcas} set={setMarcas} val={nm} setVal={setNm} />
-      <TouchableOpacity style={s.btn} onPress={salvar}><Text style={s.btnT}>Guardar configuración</Text></TouchableOpacity>
+      {taller ? (
+        <TouchableOpacity style={s.btn} onPress={() => setEditTallerOpen(true)}><Text style={s.btnT}>✎ Editar Taller</Text></TouchableOpacity>
+      ) : null}
+      <View style={{ height: 12 }} />
+      {BOTONES.map(([k, l]) => (
+        <TouchableOpacity key={k} style={[s.card, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16 }]} onPress={() => setCatalogoAbierto(k)}>
+          <Text style={{ fontWeight: '700', fontSize: 14.5 }}>{l}</Text><Text style={{ fontSize: 18, color: '#9aa3ad' }}>›</Text>
+        </TouchableOpacity>
+      ))}
+
+      <Modal visible={!!catalogoAbierto} transparent animationType="slide" onRequestClose={() => setCatalogoAbierto(null)}>
+        <View style={s.modalWrap}><View style={s.modalCard}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={s.h}>{TITULOS[catalogoAbierto] || ''}</Text><TouchableOpacity onPress={() => setCatalogoAbierto(null)}><Text style={{ fontSize: 20, color: '#6b7480' }}>✕</Text></TouchableOpacity>
+          </View>
+          {catalogoAbierto ? <CatalogoModalContenido tipo={catalogoAbierto} data={data} guardar={guardar} onDone={() => setCatalogoAbierto(null)} /> : null}
+        </View></View>
+      </Modal>
+
+      <Modal visible={editTallerOpen} transparent animationType="slide" onRequestClose={() => setEditTallerOpen(false)}>
+        <View style={s.modalWrap}><View style={s.modalCard}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={s.h}>Editar Taller</Text><TouchableOpacity onPress={() => setEditTallerOpen(false)}><Text style={{ fontSize: 20, color: '#6b7480' }}>✕</Text></TouchableOpacity>
+          </View>
+          {editTallerOpen ? <EditarTallerContenido taller={taller} esSuper={esSuper} onDone={() => setEditTallerOpen(false)} /> : null}
+        </View></View>
+      </Modal>
     </ScrollView>
   );
 }
-
+function EditarTallerContenido({ taller, esSuper, onDone }) {
+  const [f, setF] = useState({ nombre: taller.nombre || '', rif: taller.rif || '', rubro: taller.rubro || '', telefono: taller.telefono || '', direccion: taller.direccion || '', logo: taller.logo || null, logoTam: taller.logo_tam || 100, condiciones: taller.condiciones || '', pie: taller.pie || '' });
+  const elegirLogo = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) { Alert.alert('Permiso', 'Se necesita acceso a la galería.'); return; }
+    const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.5, base64: true });
+    if (!r.canceled && r.assets && r.assets[0]) setF({ ...f, logo: 'data:image/jpeg;base64,' + r.assets[0].base64 });
+  };
+  const guardar = async () => {
+    try {
+      const body = { rif: f.rif, rubro: f.rubro, telefono: f.telefono, direccion: f.direccion, logo: f.logo || undefined, logoTam: f.logoTam, condiciones: f.condiciones, pie: f.pie };
+      if (esSuper) body.nombre = f.nombre; // solo el Super Administrador puede cambiar el nombre
+      await api('/api/talleres/' + taller.id, { method: 'PUT', body: JSON.stringify(body) });
+      onDone(); Alert.alert('✅ Listo', 'Taller actualizado con éxito.');
+    } catch (e) { Alert.alert('Error', e.message); }
+  };
+  return (
+    <ScrollView style={{ maxHeight: 520 }}>
+      <Text style={s.label}>Nombre del taller{esSuper ? '' : ' (solo lo cambia el Super Administrador)'}</Text>
+      <TextInput style={[s.input, !esSuper && { backgroundColor: '#f7f8fa', color: '#9aa3ad' }]} value={f.nombre} onChangeText={(v) => esSuper && setF({ ...f, nombre: v })} editable={esSuper} />
+      <Text style={s.label}>Rubro (subtítulo)</Text><TextInput style={s.input} value={f.rubro} onChangeText={(v) => setF({ ...f, rubro: v })} placeholder="TALLER AUTOMOTRIZ" />
+      <Text style={s.label}>RIF / RUC</Text><TextInput style={s.input} value={f.rif} onChangeText={(v) => setF({ ...f, rif: v })} />
+      <Text style={s.label}>Teléfono</Text><TextInput style={s.input} value={f.telefono} onChangeText={(v) => setF({ ...f, telefono: v })} />
+      <Text style={s.label}>Dirección</Text><TextInput style={s.input} value={f.direccion} onChangeText={(v) => setF({ ...f, direccion: v })} />
+      <Text style={s.label}>Logo del taller</Text>
+      <TouchableOpacity style={s.act} onPress={elegirLogo}><Text style={s.actT}>{f.logo ? '✓ Logo elegido — tocar para cambiar' : '📷 Elegir logo'}</Text></TouchableOpacity>
+      {f.logo ? <Image source={{ uri: f.logo }} style={{ width: 90, height: 60, borderRadius: 8, marginTop: 8 }} resizeMode="contain" /> : null}
+      <Text style={[s.label, { marginTop: 12 }]}>Tamaño del logo: {f.logoTam}%</Text>
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        {[50, 75, 100, 150, 200].map((t) => (
+          <TouchableOpacity key={t} style={[s.pillBtn, f.logoTam === t && s.pillBtnOn]} onPress={() => setF({ ...f, logoTam: t })}><Text style={[s.pillBtnT, f.logoTam === t && { color: '#16191d' }]}>{t}%</Text></TouchableOpacity>
+        ))}
+      </View>
+      <Text style={{ fontSize: 10, color: '#9aa3ad', textTransform: 'uppercase', marginTop: 16, marginBottom: 6 }}>Así se verá el encabezado en el Acta</Text>
+      <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start', borderWidth: 1, borderColor: '#e7e9ec', borderRadius: 8, padding: 12, backgroundColor: '#fff' }}>
+        <View style={{ alignItems: 'center', minWidth: Math.round(90 * (f.logoTam / 100)) }}>
+          {f.logo ? <Image source={{ uri: f.logo }} style={{ width: Math.round(90 * (f.logoTam / 100)), height: Math.round(24 * (f.logoTam / 100)), resizeMode: 'contain' }} /> : <Text style={{ fontSize: 10, color: '#c7ccd2' }}>(sin logo)</Text>}
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontWeight: '800', fontSize: 14 }}>{f.nombre || 'TallerOS'}</Text>
+          <Text style={{ fontSize: 10, color: '#666', textTransform: 'uppercase' }}>{f.rubro || 'TALLER AUTOMOTRIZ'}</Text>
+          {f.telefono ? <Text style={{ fontSize: 9, color: '#888', marginTop: 2 }}>Tel: {f.telefono}</Text> : null}
+        </View>
+      </View>
+      <Text style={s.label}>Condiciones del servicio (aparece en el Acta)</Text>
+      <TextInput style={[s.input, { minHeight: 70, textAlignVertical: 'top' }]} value={f.condiciones} onChangeText={(v) => setF({ ...f, condiciones: v })} multiline />
+      <Text style={s.label}>Pie de página (aparece en el Acta)</Text>
+      <TextInput style={[s.input, { minHeight: 50, textAlignVertical: 'top' }]} value={f.pie} onChangeText={(v) => setF({ ...f, pie: v })} multiline placeholder="Ej. Gracias por su preferencia" />
+      {(f.condiciones || f.pie) ? (
+        <View style={{ borderWidth: 1, borderColor: '#e7e9ec', borderRadius: 8, padding: 10, marginTop: 4, backgroundColor: '#fafbfc' }}>
+          <Text style={{ fontSize: 10, color: '#9aa3ad', textTransform: 'uppercase', marginBottom: 6 }}>Así se verán en el Acta</Text>
+          {f.condiciones ? <Text style={{ fontSize: 10, color: '#333' }}><Text style={{ fontWeight: '700' }}>Condiciones del Servicio:</Text>{'\n'}{f.condiciones}</Text> : null}
+          {f.pie ? <Text style={{ fontSize: 10, color: '#666', marginTop: 6, textAlign: 'center' }}>{f.pie}</Text> : null}
+        </View>
+      ) : null}
+      <TouchableOpacity style={[s.btn, { marginTop: 14 }]} onPress={guardar}><Text style={s.btnT}>Guardar cambios</Text></TouchableOpacity>
+    </ScrollView>
+  );
+}
+function CatalogoModalContenido({ tipo, data, guardar, onDone }) {
+  const cfg = data.config || {};
+  const [moneda, setMoneda] = useState(cfg.currency || { sym: 'Bs.', name: '', code: '' });
+  const [lista, setLista] = useState(cfg[tipo] || (tipo === 'especialidades' ? ESP_BASE : []));
+  const [nuevo, setNuevo] = useState('');
+  const [marcaNueva, setMarcaNueva] = useState('');
+  const [modeloNuevo, setModeloNuevo] = useState('');
+  if (tipo === 'moneda') {
+    return (<ScrollView style={{ maxHeight: 420 }}>
+      <Text style={s.label}>Símbolo</Text><TextInput style={s.input} value={moneda.sym} onChangeText={(v) => setMoneda({ ...moneda, sym: v })} />
+      <Text style={s.label}>Nombre</Text><TextInput style={s.input} value={moneda.name} onChangeText={(v) => setMoneda({ ...moneda, name: v })} />
+      <Text style={s.label}>Código ISO</Text><TextInput style={s.input} value={moneda.code} onChangeText={(v) => setMoneda({ ...moneda, code: v })} />
+      <Text style={[s.muted, { marginTop: 8 }]}>Vista previa: {moneda.sym} 48.200,00</Text>
+      <TouchableOpacity style={[s.btn, { marginTop: 14 }]} onPress={() => { guardar({ ...data, config: { ...cfg, currency: moneda } }); onDone(); }}><Text style={s.btnT}>Guardar</Text></TouchableOpacity>
+    </ScrollView>);
+  }
+  if (tipo === 'marcas') {
+    return (<ScrollView style={{ maxHeight: 460 }}>
+      {lista.map((m, i) => (
+        <View key={i} style={{ flexDirection: 'row', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+          <TextInput style={[s.input, { flex: 1, fontWeight: '700' }]} value={m.marca} onChangeText={(v) => { const nl = [...lista]; nl[i] = { ...nl[i], marca: v }; setLista(nl); }} />
+          <TextInput style={[s.input, { flex: 2 }]} value={(m.modelos || []).join(', ')} onChangeText={(v) => { const nl = [...lista]; nl[i] = { ...nl[i], modelos: v.split(',').map((x) => x.trim()).filter(Boolean) }; setLista(nl); }} placeholder="Modelos separados por coma" />
+          <TouchableOpacity onPress={() => setLista(lista.filter((_, j) => j !== i))}><Text style={{ color: '#dc2626', fontSize: 16 }}>✕</Text></TouchableOpacity>
+        </View>
+      ))}
+      <TouchableOpacity style={s.act} onPress={() => setLista([...lista, { marca: 'Nueva marca', modelos: [] }])}><Text style={s.actT}>＋ Agregar marca</Text></TouchableOpacity>
+      <TouchableOpacity style={[s.btn, { marginTop: 14 }]} onPress={() => { guardar({ ...data, config: { ...cfg, marcas: lista } }); onDone(); }}><Text style={s.btnT}>Guardar</Text></TouchableOpacity>
+    </ScrollView>);
+  }
+  return (<ScrollView style={{ maxHeight: 460 }}>
+    {lista.map((v, i) => (
+      <View key={i} style={{ flexDirection: 'row', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+        <TextInput style={[s.input, { flex: 1 }]} value={v} onChangeText={(nv) => { const nl = [...lista]; nl[i] = nv; setLista(nl); }} />
+        <TouchableOpacity onPress={() => setLista(lista.filter((_, j) => j !== i))}><Text style={{ color: '#dc2626', fontSize: 16 }}>✕</Text></TouchableOpacity>
+      </View>
+    ))}
+    <View style={{ flexDirection: 'row', gap: 8 }}>
+      <TextInput style={[s.input, { flex: 1 }]} value={nuevo} onChangeText={setNuevo} placeholder="Agregar…" />
+      <TouchableOpacity style={[s.act, { flex: 0, paddingHorizontal: 16, justifyContent: 'center' }]} onPress={() => { const t = nuevo.trim(); if (t) setLista([...lista, t]); setNuevo(''); }}><Text style={s.actT}>＋</Text></TouchableOpacity>
+    </View>
+    <TouchableOpacity style={[s.btn, { marginTop: 14 }]} onPress={() => { guardar({ ...data, config: { ...cfg, [tipo]: lista } }); onDone(); }}><Text style={s.btnT}>Guardar</Text></TouchableOpacity>
+  </ScrollView>);
+}
 /* =================== FORMULARIOS (iguales a la web, con credenciales al crear Y editar) =================== */
 function FormModal({ modal, close, data, guardar, cur, pickFoto, taller }) {
   const { tipo, item } = modal;
@@ -2389,6 +2844,7 @@ function FormModal({ modal, close, data, guardar, cur, pickFoto, taller }) {
                 onAdd={(t) => setMarOpts(marOpts.map((x) => (etiqueta(x) === f.marca ? { marca: etiqueta(x), modelos: [...((x && x.modelos) || []), t] } : x)))} />
               <Text style={s.label}>Año</Text><TextInput style={s.input} value={String(f.anio || '')} onChangeText={(v) => set('anio', v)} keyboardType="numeric" />
               <Text style={s.label}>Placa *</Text><TextInput style={s.input} value={f.plate} onChangeText={(v) => set('plate', v)} autoCapitalize="characters" />
+              <Text style={s.label}>VIN / Serial de carrocería (opcional)</Text><TextInput style={s.input} value={f.vin || ''} onChangeText={(v) => set('vin', v)} autoCapitalize="characters" placeholder="ej. 8XAUZ5CD9M0012345" />
               <Text style={s.label}>Color</Text><TextInput style={s.input} value={f.color} onChangeText={(v) => set('color', v)} />
               <Dropdown label="Tipo de vehículo" value={f.tipoVeh || 'Automóvil'} options={TIPO_VEH} onChange={(v) => set('tipoVeh', v)} />
             </>)}
@@ -2489,6 +2945,7 @@ const s = StyleSheet.create({
   h: { fontSize: 16, fontWeight: '800', marginBottom: 4 },
   label: { fontSize: 12, fontWeight: '700', color: '#3a4048', marginTop: 10, marginBottom: 5 },
   input: { borderWidth: 1, borderColor: '#e7e9ec', borderRadius: 11, padding: 12, fontSize: 15, backgroundColor: '#fff' },
+  inputError: { borderWidth: 2, borderColor: '#dc2626', backgroundColor: '#fff5f5' },
   dateInp: { borderWidth: 1, borderColor: '#e7e9ec', borderRadius: 8, paddingVertical: 5, paddingHorizontal: 8, fontSize: 11, width: 100 },
   sep: { borderTopWidth: 1, borderColor: '#e7e9ec', marginTop: 14, paddingTop: 10 },
   sepT: { fontWeight: '800', fontSize: 13, color: '#16191d' },

@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, RefreshControl, Alert, ScrollView, TextInput, Image, Modal, Linking, Share, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, RefreshControl, Alert, ScrollView, TextInput, Image, Modal, Linking, Share, ActivityIndicator, AppState } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { api, getState, putState, clearSession, getApiUrl } from '../api';
-import { compartirActaPDF, abrirEnNavegador, urlDocumento } from '../acta';
+import * as VideoThumbnails from 'expo-video-thumbnails';
+import { api, getState, getStateCache, putState, clearSession, getApiUrl } from '../api';
+import { compartirActaPDF, abrirEnNavegador, urlDocumento, subirMedia } from '../acta';
 import { ProgressSlider , colorMarca, marcaDe, BotonAjustes, AjustesModal, Calendario } from '../ui';
 
 const STATUS = {
@@ -125,10 +126,26 @@ export default function HomeScreen({ navigation, route }) {
         if (t) setTaller(t);
       }
       if (!t) { setError('Tu cuenta aún no está ligada a un taller. Pide al administrador que te registre como ' + (esTécnico ? 'técnico' : 'cliente') + ' en su taller.'); setLoading(false); return; }
+      // Muestra al instante lo último que se vio, mientras confirma en segundo plano si hay
+      // algo nuevo — así la app no se siente "colgada" esperando al servidor.
+      const cache = await getStateCache(t.id);
+      if (cache) setData(cache);
       const d = await getState(t.id); setData(d || {});
     } catch (e) { setError(e.message); } finally { setLoading(false); }
   }, [taller, esTécnico]);
   useEffect(() => { cargar(); }, [cargar]);
+
+  // Al volver de segundo plano después de un rato, el servidor gratuito puede haberse
+  // "dormido" y cualquier conexión a medias se pierde, dejando la app pegada en "cargando".
+  // Detectamos el regreso a primer plano y forzamos una recarga limpia.
+  const estadoApp = React.useRef(AppState.currentState);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (siguiente) => {
+      if (estadoApp.current.match(/inactive|background/) && siguiente === 'active') cargar();
+      estadoApp.current = siguiente;
+    });
+    return () => sub.remove();
+  }, [cargar]);
 
   const guardar = async (nuevo) => {
     setData(nuevo);
@@ -202,6 +219,7 @@ export default function HomeScreen({ navigation, route }) {
       <View style={[s.wrap, { backgroundColor: fondo, justifyContent: 'center', alignItems: 'center', padding: 30 }]}>
         <ActivityIndicator color="#F5B700" size="large" />
         <Text style={{ color: esTécnico ? '#16191d' : '#fff', fontWeight: '700', marginTop: 14, textAlign: 'center' }}>Conectando con el servidor…</Text>
+        <Text style={{ color: '#dc2626', fontWeight: '700', fontSize: 12.5, marginTop: 8, textAlign: 'center' }}>No cierres la app — puede tardar hasta 2 minutos la primera vez</Text>
         <Text style={{ color: esTécnico ? '#6b7480' : 'rgba(255,255,255,.7)', fontSize: 12.5, marginTop: 6, textAlign: 'center', lineHeight: 18 }}>Si es la primera vez que entras en un rato, puede tardar hasta un minuto en despertar. Espera un momento.</Text>
       </View>
     );
@@ -221,6 +239,12 @@ export default function HomeScreen({ navigation, route }) {
           </View>
         ) : null}
         <Header titulo={tecTab === 'pagos' ? 'Mis pagos' : 'Mis trabajos'} sub={`${misTrabajos.length} activo(s) · ${taller ? taller.nombre : ''}`} />
+        {loading ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fdf3e0', padding: 10, marginHorizontal: 14, marginBottom: 10, borderRadius: 10 }}>
+            <ActivityIndicator color="#b45309" size="small" />
+            <Text style={{ color: '#b45309', fontWeight: '700', fontSize: 12, flex: 1 }}>Actualizando datos… puede tardar hasta 2 minutos si el servidor estaba dormido. No cierres la app.</Text>
+          </View>
+        ) : null}
         <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 14, paddingTop: 10 }}>
           {[['trabajos', '🔧 Trabajos'], ['pagos', '💵 Mis pagos']].map(([k, l]) => (
             <TouchableOpacity key={k} onPress={() => setTecTab(k)} style={[{ flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center', backgroundColor: tecTab === k ? '#16191d' : '#e7ebef' }]}>
@@ -383,6 +407,12 @@ export default function HomeScreen({ navigation, route }) {
   return (
     <View style={[s.wrap, { backgroundColor: fondo }]}>
       <Header titulo="Mi vehículo" sub={taller ? taller.nombre : ''} />
+      {loading ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fdf3e0', padding: 10, marginHorizontal: 14, marginTop: 10, borderRadius: 10 }}>
+          <ActivityIndicator color="#b45309" size="small" />
+          <Text style={{ color: '#b45309', fontWeight: '700', fontSize: 12, flex: 1 }}>Actualizando datos… puede tardar hasta 2 minutos si el servidor estaba dormido. No cierres la app.</Text>
+        </View>
+      ) : null}
       <ScrollView contentContainerStyle={{ padding: 14, paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={cargar} />}>
 
@@ -455,6 +485,19 @@ export default function HomeScreen({ navigation, route }) {
                       <Text style={s.timeT}>{a.t}</Text>
                       <Text style={s.timeM}>{a.m}{a.ago ? ' · ' + a.ago : ''}</Text>
                       {a.foto ? <TouchableOpacity onPress={() => setFotoAmpliada(a.foto)}><Image source={{ uri: a.foto }} style={s.timeFoto} /><Text style={s.verFoto}>👁 Toca para ampliar</Text></TouchableOpacity> : null}
+                      {a.video ? (
+                        <TouchableOpacity onPress={() => a.video && Linking.openURL(a.video).catch(() => Alert.alert('No se pudo abrir', 'Intenta de nuevo.'))}>
+                          <View>
+                            <Image source={{ uri: a.videoThumb || a.video }} style={s.timeFoto} />
+                            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
+                              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,.55)', alignItems: 'center', justifyContent: 'center' }}>
+                                <Text style={{ fontSize: 16, color: '#fff' }}>▶</Text>
+                              </View>
+                            </View>
+                          </View>
+                          <Text style={s.verFoto}>▶ Toca para ver el video</Text>
+                        </TouchableOpacity>
+                      ) : null}
                       {a.type === 'atencion' && !a.respondido ? (
                         <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
                           <TouchableOpacity style={s.autBtn} onPress={() => responderAtencion(v, a, true)}><Text style={s.autBtnT}>✓ Autorizar</Text></TouchableOpacity>
@@ -744,6 +787,8 @@ export default function HomeScreen({ navigation, route }) {
         </TouchableOpacity>
       </Modal>
 
+      {/* El video se abre en el navegador del celular (evita depender de un reproductor dentro de la app) */}
+
       <Modal visible={notifOpen} transparent animationType="slide" onRequestClose={() => setNotifOpen(false)}>
         <View style={s.modalWrap}><View style={s.modalCard}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
@@ -811,6 +856,11 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
   const [prog, setProg] = useState(v.progress || 0);
   const [txt, setTxt] = useState('');
   const [foto, setFoto] = useState(null);
+  const [video, setVideo] = useState(null); // uri local, antes de subir
+  const [videoThumb, setVideoThumb] = useState(null); // uri local de la miniatura
+  const [videoDuracionSeg, setVideoDuracionSeg] = useState(0);
+  const [subiendoVideo, setSubiendoVideo] = useState(false);
+  const [avanceModalOpen, setAvanceModalOpen] = useState(false);
   const [adicional, setAdicional] = useState(false);
   const [txtAd, setTxtAd] = useState('');
   const [obsActa, setObsActa] = useState((v.recepcion && v.recepcion.obs) || '');
@@ -832,6 +882,68 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
     Alert.alert('Agregar foto', '¿De dónde quieres tomar la foto?', [
       { text: '📷 Cámara', onPress: tomarDeCamara },
       { text: '🖼️ Galería', onPress: elegirDeGaleria },
+      { text: 'Cancelar', style: 'cancel' },
+    ]);
+  };
+
+  const procesarVideo = async (uri, duracionMs) => {
+    try {
+      const { uri: thumbUri } = await VideoThumbnails.getThumbnailAsync(uri, { time: 500 });
+      setVideoThumb(thumbUri);
+    } catch (e) { setVideoThumb(null); }
+    setVideo(uri);
+    setVideoDuracionSeg(Math.round((duracionMs || 0) / 1000));
+  };
+  // Sistema de planes: Lite no permite video; Pro y Premium tienen un límite de minutos
+  // de video acumulados por vehículo (lo amplía el super administrador en Pro, y también
+  // el administrador del taller en Premium — se configura en el módulo Configuración).
+  const plan = (data.config && data.config.plan) || 'pro';
+  const limiteMin = (data.config && data.config.videoMinutosPorVehiculo) || 1;
+  const limiteSeg = limiteMin * 60;
+  const segUsados = (v.advances || []).reduce((a, x) => a + (x.video ? (x.videoDuracion || 0) : 0), 0);
+  const segRestante = Math.max(0, limiteSeg - segUsados);
+  const grabarVideoCamara = async () => {
+    if (segRestante <= 0) { Alert.alert('Sin tiempo de video disponible', 'Este vehículo ya usó los ' + limiteMin + ' minuto(s) de video que permite la versión ' + plan.toUpperCase() + ' del taller. Pide al administrador que amplíe el límite.'); return; }
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) { Alert.alert('Permiso', 'Se necesita acceso a la cámara.'); return; }
+    const tope = Math.min(15, segRestante);
+    const r = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Videos, videoMaxDuration: tope, quality: 0.3 });
+    if (r.canceled || !r.assets || !r.assets[0]) return;
+    const asset = r.assets[0];
+    // La cámara del celular no siempre respeta el límite que le pedimos — si de todas
+    // formas grabó más de lo permitido, lo rechazamos aquí en vez de subirlo igual
+    // (eso era lo que dejaba la app "colgada": intentaba subir un video más pesado de
+    // lo esperado).
+    if (asset.duration && asset.duration > (tope * 1000 + 1500)) {
+      Alert.alert('El video quedó más largo de lo permitido', 'Grabaste ' + Math.round(asset.duration / 1000) + ' segundos, pero a este vehículo le quedaban ' + tope + '. Vuelve a grabar y suelta antes de que se cumpla el tiempo.');
+      return;
+    }
+    procesarVideo(asset.uri, asset.duration);
+  };
+  const elegirVideoGaleria = async () => {
+    if (segRestante <= 0) { Alert.alert('Sin tiempo de video disponible', 'Este vehículo ya usó los ' + limiteMin + ' minuto(s) de video que permite la versión ' + plan.toUpperCase() + ' del taller. Pide al administrador que amplíe el límite.'); return; }
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) { Alert.alert('Permiso', 'Se necesita acceso a la galería.'); return; }
+    const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Videos, quality: 0.5 });
+    if (r.canceled || !r.assets || !r.assets[0]) return;
+    const asset = r.assets[0];
+    const MAX_MB = 100;
+    if (asset.fileSize && asset.fileSize > MAX_MB * 1024 * 1024) {
+      Alert.alert('Video muy pesado', 'Este video pesa ' + (asset.fileSize / (1024 * 1024)).toFixed(1) + ' MB — es demasiado incluso para comprimir en el celular. Elige uno más liviano, o graba uno nuevo directo desde la cámara.');
+      return;
+    }
+    if (asset.duration && asset.duration > segRestante * 1000) {
+      Alert.alert('Video muy largo', 'A este vehículo le quedan ' + segRestante + ' segundo(s) de video disponibles (versión ' + plan.toUpperCase() + '). Elige uno más corto.');
+      return;
+    }
+    procesarVideo(asset.uri, asset.duration);
+  };
+  const pickVideo = () => {
+    if (plan === 'lite') { Alert.alert('No disponible en tu versión', 'La versión LITE de este taller no incluye subir video en los avances. Pide al administrador que actualice a la versión PRO o PREMIUM.'); return; }
+    const tope = Math.min(15, segRestante);
+    Alert.alert('Agregar video', 'Puedes grabar hasta ' + tope + ' segundo(s) — suelta la grabación antes de que se cumpla ese tiempo. ¿De dónde quieres el video?', [
+      { text: '🎥 Grabar ahora', onPress: grabarVideoCamara },
+      { text: '🖼️ Galería', onPress: elegirVideoGaleria },
       { text: 'Cancelar', style: 'cancel' },
     ]);
   };
@@ -877,12 +989,26 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
     Alert.alert('Listo', 'Trabajo terminado y próximo mantenimiento programado.\n\nSe notificó al cliente.');
   };
 
-  const guardarAvance = () => {
-    if (!txt.trim() && prog === (v.progress || 0) && !foto) { Alert.alert('Nada que registrar', 'Escribe el avance, cambia el porcentaje o adjunta una foto.'); return; }
+  const guardarAvance = async () => {
+    if (!txt.trim() && prog === (v.progress || 0) && !foto && !video) { Alert.alert('Nada que registrar', 'Escribe una descripción, cambia el porcentaje, o adjunta una foto o video.'); return; }
+    let videoUrl = null, videoThumbUrl = null;
+    if (video) {
+      setSubiendoVideo(true);
+      try {
+        videoUrl = await subirMedia(video, 'video', 'video/mp4');
+        if (videoThumb) videoThumbUrl = await subirMedia(videoThumb, 'miniatura', 'image/jpeg');
+      } catch (e) {
+        setSubiendoVideo(false);
+        Alert.alert('No se pudo subir el video', e.message || 'Intenta de nuevo. Puedes guardar el avance sin video.');
+        return;
+      }
+      setSubiendoVideo(false);
+    }
     aplicar({ progress: prog },
-      { t: txt.trim() || 'Avance actualizado', m: (me.nombre || 'Técnico') + ' · ' + prog + '% completado', type: 'nota', ago: 'ahora', foto },
+      { t: txt.trim() || 'Avance actualizado', m: (me.nombre || 'Técnico') + ' · ' + prog + '% completado', type: 'nota', ago: 'ahora', foto, video: videoUrl, videoThumb: videoThumbUrl, videoDuracion: videoUrl ? videoDuracionSeg : 0 },
       { text: 'Nuevo avance en tu vehículo (' + prog + '%)' });
-    setTxt(''); setFoto(null);
+    setAvanceModalOpen(false);
+    setTxt(''); setFoto(null); setVideo(null); setVideoThumb(null); setVideoDuracionSeg(0);
     Alert.alert('Listo', 'Avance registrado. El cliente ya puede verlo.');
   };
 
@@ -947,21 +1073,53 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
           <Text style={[s.cardH, { marginTop: 16 }]}>Avance del trabajo: {prog}%</Text>
           <ProgressSlider value={prog} onChange={setProg} />
 
-          <Text style={[s.cardH, { marginTop: 16 }]}>Registrar avance</Text>
-          <TextInput style={s.input} value={txt} onChangeText={setTxt} placeholder="Describe el avance…" />
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
-            <TouchableOpacity style={s.addAv} onPress={guardarAvance}><Text style={s.addAvT}>+ Avance</Text></TouchableOpacity>
-            <TouchableOpacity style={s.camBtn} onPress={pickFoto}><Text style={{ fontSize: 20 }}>{foto ? '✅' : '📷'}</Text></TouchableOpacity>
-          </View>
-          {foto ? (
-            <View style={{ marginTop: 10 }}>
-              <Image source={{ uri: foto }} style={s.prev} />
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
-                <Text style={{ color: '#16A34A', fontWeight: '700', fontSize: 12.5, flex: 1 }}>✓ Foto cargada — se enviará con el avance</Text>
-                <TouchableOpacity onPress={() => setFoto(null)}><Text style={{ color: '#dc2626', fontWeight: '700', fontSize: 12.5 }}>Quitar</Text></TouchableOpacity>
+          <TouchableOpacity style={[s.addAv, { marginTop: 16 }]} onPress={() => setAvanceModalOpen(true)}><Text style={s.addAvT}>＋ Añadir avance (foto, video o nota)</Text></TouchableOpacity>
+
+          <Modal visible={avanceModalOpen} transparent animationType="slide" onRequestClose={() => setAvanceModalOpen(false)}>
+            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,.45)', justifyContent: 'flex-end' }}>
+              <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 18, maxHeight: '88%' }}>
+                <ScrollView>
+                  <Text style={{ fontSize: 17, fontWeight: '800', marginBottom: 4 }}>Registrar avance</Text>
+                  <Text style={{ fontSize: 12, color: '#6b7480', marginBottom: 12 }}>Escribe qué hiciste, y si quieres agrega una foto o video. Al final presiona Guardar.</Text>
+                  <TextInput style={[s.input, { minHeight: 70, textAlignVertical: 'top' }]} value={txt} onChangeText={setTxt} placeholder="Describe el avance…" multiline />
+
+                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                    <TouchableOpacity style={[s.camBtn, { flex: 1, flexDirection: 'row', gap: 6, justifyContent: 'center' }]} onPress={pickFoto}><Text style={{ fontSize: 18 }}>{foto ? '✅' : '📷'}</Text><Text style={{ fontWeight: '700' }}>{foto ? 'Foto agregada' : 'Agregar foto'}</Text></TouchableOpacity>
+                    {plan !== 'lite' ? <TouchableOpacity style={[s.camBtn, { flex: 1, flexDirection: 'row', gap: 6, justifyContent: 'center' }]} onPress={pickVideo}><Text style={{ fontSize: 18 }}>{video ? '✅' : '🎥'}</Text><Text style={{ fontWeight: '700' }}>{video ? 'Video agregado' : 'Agregar video'}</Text></TouchableOpacity> : null}
+                  </View>
+
+                  {foto ? (
+                    <View style={{ marginTop: 10 }}>
+                      <Image source={{ uri: foto }} style={s.prev} />
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                        <Text style={{ color: '#16A34A', fontWeight: '700', fontSize: 12.5, flex: 1 }}>✓ Foto cargada — se enviará con el avance</Text>
+                        <TouchableOpacity onPress={() => setFoto(null)}><Text style={{ color: '#dc2626', fontWeight: '700', fontSize: 12.5 }}>Quitar</Text></TouchableOpacity>
+                      </View>
+                    </View>
+                  ) : null}
+                  {video ? (
+                    <View style={{ marginTop: 10 }}>
+                      <View>
+                        <Image source={{ uri: videoThumb || video }} style={s.prev} />
+                        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
+                          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,.55)', alignItems: 'center', justifyContent: 'center' }}>
+                            <Text style={{ fontSize: 18, color: '#fff' }}>▶</Text>
+                          </View>
+                        </View>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                        <Text style={{ color: '#16A34A', fontWeight: '700', fontSize: 12.5, flex: 1 }}>✓ Video cargado ({videoDuracionSeg}s) — se subirá al guardar</Text>
+                        <TouchableOpacity onPress={() => { setVideo(null); setVideoThumb(null); setVideoDuracionSeg(0); }}><Text style={{ color: '#dc2626', fontWeight: '700', fontSize: 12.5 }}>Quitar</Text></TouchableOpacity>
+                      </View>
+                    </View>
+                  ) : null}
+
+                  <TouchableOpacity style={[s.addAv, { marginTop: 16 }]} onPress={guardarAvance} disabled={subiendoVideo}><Text style={s.addAvT}>{subiendoVideo ? 'Subiendo video…' : 'Guardar'}</Text></TouchableOpacity>
+                  <TouchableOpacity style={{ marginTop: 10, alignItems: 'center', padding: 6 }} onPress={() => setAvanceModalOpen(false)}><Text style={{ color: '#6b7480', fontWeight: '600' }}>Cancelar</Text></TouchableOpacity>
+                </ScrollView>
               </View>
             </View>
-          ) : null}
+          </Modal>
 
           <Text style={[s.cardH, { marginTop: 16 }]}>Observación para el acta</Text>
           <Text style={{ fontSize: 11.5, color: '#6b7480', marginBottom: 6 }}>Esto se guarda en el acta del vehículo (no es un avance).</Text>

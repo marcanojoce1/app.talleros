@@ -280,7 +280,8 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover{background:var(--surface-2)}
 .lpanel-dots{display:flex;gap:8px;margin-top:22px}
 .lpanel-dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.4);transition:all .3s;cursor:pointer}
 .lpanel-dots i.on{background:#fff;width:22px;border-radius:5px}
-@media(max-width:820px){.lpanel{display:none}.lsplit{max-width:420px;min-height:auto}}
+@media(max-width:820px){.lpanel{display:none}.lsplit{max-width:420px;min-height:auto;width:100%}.lcard{width:100%;max-width:100%;padding:30px 24px}}
+@media(max-width:480px){#login{padding:14px}.lsplit{border-radius:16px}.lcard{padding:26px 18px}}
 .lhead{padding:0 0 20px;display:flex;align-items:center;gap:11px}
 .lhead .mk{width:36px;height:36px;border-radius:9px;background:var(--signal);display:grid;place-items:center;flex:none}.lhead .mk svg{width:20px;height:20px}
 .lhead b{font-family:'Space Grotesk';font-size:19px;font-weight:700;color:#fff}.lhead b span{color:var(--signal)}
@@ -313,6 +314,30 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover{background:var(--surface-2)}
 .stage{display:block!important;padding:0!important;min-height:100vh!important;gap:0!important}
 .web-wrap{max-width:none!important;width:100%!important;flex:none!important;min-width:0}
 .web{border-radius:0!important;box-shadow:none!important;min-height:100vh!important;width:100%!important}
+/* ===== RESPONSIVE: menú lateral y contenido en celular ===== */
+.wburger{display:none;background:none;border:0;padding:6px;margin-right:10px;color:var(--sidebar,#16191d);cursor:pointer;flex:none}
+.wburger svg{width:22px;height:22px;display:block}
+.wsideBackdrop{display:none}
+@media(max-width:900px){
+  .web{display:block!important}
+  .wburger{display:inline-flex}
+  .wside{position:fixed!important;top:0;left:0;bottom:0;width:82%;max-width:300px;z-index:600;overflow-y:auto;transform:translateX(-105%);transition:transform .28s ease;box-shadow:0 0 40px rgba(0,0,0,.35)}
+  .wside.open{transform:translateX(0)}
+  .wsideBackdrop{display:block;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:590;opacity:0;pointer-events:none;transition:opacity .25s}
+  .wsideBackdrop.open{opacity:1;pointer-events:auto}
+  .wmain{width:100%}
+  .wtop{flex-wrap:wrap;padding:12px 14px;gap:8px}
+  .wtop .who{gap:6px;flex-wrap:wrap}
+  .wtop h1{font-size:17px}
+  .wtop p{font-size:11.5px}
+  .logoutbtn{font-size:10.5px;padding:5px 8px}
+  .wbody{padding:12px}
+  table{display:block;overflow-x:auto;white-space:nowrap}
+  .kpis{grid-template-columns:repeat(2,1fr)!important}
+  .mech-grid,.acc-grid,[style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important}
+  .board{overflow-x:auto}
+}
+@media(max-width:480px){.kpis{grid-template-columns:1fr!important}}
 /* Panel Super Admin y selección de taller */
 .superwrap{position:fixed;inset:0;z-index:150;overflow:auto;background:var(--canvas)}
 .pickerwrap{position:fixed;inset:0;z-index:150;display:flex;align-items:center;justify-content:center;background:radial-gradient(120% 120% at 50% 0%,#1f242b,#0e1014);padding:24px}
@@ -386,8 +411,9 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover{background:var(--surface-2)}
   </div>
 
   <div class="web-wrap"><div class="web">
+    <div class="wsideBackdrop" id="wSideBackdrop" onclick="toggleWSide(false)"></div>
     <div class="wside">
-      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v102</span></div>
+      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v139</span></div>
       <div class="wlbl op-item">Operación</div>
       <a class="on op-item" data-w="dash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
       <a class="op-item" data-w="recep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-6 0v4"/><rect x="2" y="9" width="20" height="11" rx="2"/></svg>Recepción digital</a>
@@ -414,7 +440,7 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover{background:var(--surface-2)}
       <a class="dis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>Reportes</a>
     </div>
     <div class="wmain">
-      <div class="wtop"><div><h1 id="wTitle">Dashboard</h1><p id="wSub">Todo se actualiza al instante desde la app</p></div><div class="who"><span id="tallerSel"></span><div class="av" id="whoAv">JR</div><span id="whoName">Administrador</span><button class="logoutbtn" onclick="openMiClave()" title="Cambiar mi contraseña" style="margin-right:6px">🔑 Mi contraseña</button><button class="logoutbtn" onclick="logout()">Salir</button></div></div>
+      <div class="wtop"><button class="wburger" id="wBurger" onclick="toggleWSide()" aria-label="Menú"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button><div><h1 id="wTitle">Dashboard</h1><p id="wSub">Todo se actualiza al instante desde la app</p></div><div class="who"><span id="planBadge"></span><span id="tallerSel"></span><div class="av" id="whoAv">JR</div><span id="whoName">Administrador</span><button class="logoutbtn" onclick="openMiClave()" title="Cambiar mi contraseña" style="margin-right:6px">🔑 Mi contraseña</button><button class="logoutbtn" onclick="logout()">Salir</button></div></div>
       <div class="wbody">
         <div class="wview on" id="w-dash"></div><div class="wview" id="w-recep"></div><div class="wview" id="w-board"></div>
         <div class="wview" id="w-avances"></div>
@@ -492,7 +518,7 @@ function notify(v,text){store.notifs.push({owner:v.owner,veh:v.model,text,time:'
 function unread(owner){return store.notifs.filter(n=>n.owner===owner&&!n.read).length;}
 function toast(t){const el=document.getElementById('toast');document.getElementById('toastTxt').textContent=t;el.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('on'),2600);}
 function curSym(){try{return (store.config&&store.config.currency&&store.config.currency.sym)||'Bs.';}catch(e){return 'Bs.';}}
-function closeModal(){document.getElementById('modal').classList.remove('on');}
+function closeModal(){document.getElementById('modal').classList.remove('on');window._catalogoAbierto=null;}
 function openModal(titulo,html){const t=document.getElementById('modalH');if(t)t.textContent=titulo;document.getElementById('modalB').innerHTML=html;document.getElementById('modal').classList.add('on');}
 function openMiClave(){document.getElementById('modalT').textContent='Cambiar mi contraseña';
   document.getElementById('modalB').innerHTML=`<div style="font-size:13px;color:var(--muted);margin-bottom:12px">Usuario: <b>${(ME&&ME.usuario)||''}</b></div>
@@ -699,6 +725,13 @@ function renderDlist(){
   box.innerHTML=rec.damages.map(d=>`<div class="di"><span class="num sev-${d.sev}">${d.n}</span><div><b>${d.tipo.join(', ')}</b> · ${sn[d.sev]}</div><button class="x" onclick="delRecDmg(${d.n})">×</button></div>`).join('');
 }
 function delRecDmg(n){rec.damages=rec.damages.filter(d=>d.n!==n);const m=markers3D.find(x=>x.n===n);if(m){rGroup.remove(m.sphere);rGroup.remove(m.sprite);markers3D=markers3D.filter(x=>x.n!==n);}renderDlist();}
+function cargarFirmaEnCanvas(id,dataUrl){
+  if(!dataUrl)return;
+  const cv=document.getElementById(id);if(!cv)return;
+  const img=new Image();
+  img.onload=function(){try{const ctx=cv.getContext('2d');const dpr=window.devicePixelRatio||1;ctx.drawImage(img,0,0,cv.width/dpr,cv.height/dpr);cv._inked=true;cv._data=dataUrl;}catch(e){}};
+  img.src=dataUrl;
+}
 function setupSig(id){const cv=document.getElementById(id);if(!cv)return;if(cv._sigReady)return;cv.style.touchAction='none';const dpr=window.devicePixelRatio||1;let r=cv.getBoundingClientRect();if(!r.width||!r.height){setTimeout(()=>setupSig(id),200);return;}cv._sigReady=true;cv.width=r.width*dpr;cv.height=r.height*dpr;const ctx=cv.getContext('2d');ctx.scale(dpr,dpr);ctx.lineWidth=2;ctx.lineCap='round';ctx.strokeStyle='#16191d';cv._inked=false;let drawing=false;function pos(e){const b=cv.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return{x:t.clientX-b.left,y:t.clientY-b.top};}function start(e){drawing=true;cv._inked=true;const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);e.preventDefault();}function move(e){if(!drawing)return;const p=pos(e);ctx.lineTo(p.x,p.y);ctx.stroke();e.preventDefault();}function end(){if(drawing){drawing=false;try{cv._data=cv.toDataURL('image/png');}catch(e){}}}cv.addEventListener('mousedown',start);cv.addEventListener('mousemove',move);window.addEventListener('mouseup',end);cv.addEventListener('touchstart',start,{passive:false});cv.addEventListener('touchmove',move,{passive:false});cv.addEventListener('touchend',end);}
 function clearSig(id){const c0=document.getElementById(id);if(c0){c0._inked=false;c0._data='';}const cv=document.getElementById(id);if(!cv)return;cv.getContext('2d').clearRect(0,0,cv.width,cv.height);cv._inked=false;}
 function confirmRecep(){
@@ -1162,6 +1195,8 @@ function avanceDetail(vehId){
     ${(v.advances||[]).map((a,i)=>`<div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--line)">
       <b style="font-size:13px">${i+1}. ${a.t}</b>
       ${a.m?`<div style="font-size:12px;color:var(--muted);margin-top:2px">${a.m}</div>`:''}
+      ${a.foto?`<img src="${a.foto}" style="max-width:100%;border-radius:8px;margin-top:8px;max-height:220px;object-fit:cover">`:''}
+      ${a.video?`<video src="${a.video}" controls poster="${a.videoThumb||''}" style="width:100%;border-radius:8px;margin-top:8px;max-height:340px;background:#000"></video><div style="text-align:right;margin-top:4px"><a href="${a.video}" target="_blank" style="font-size:11px;color:#2563EB">🔍 Ver en tamaño completo (pestaña nueva)</a></div>`:''}
       ${a.pendienteRevision?`<button class="wbtn" style="background:#fdf3e0;color:#b45309;margin-top:6px" onclick="notificarAvanceWeb(${v.id},${i})">🔔 Notificar al cliente</button>`
         :`<div style="background:#e8f6ec;border-radius:8px;padding:3px 8px;display:inline-block;margin-top:6px"><span style="color:#0F6E56;font-weight:700;font-size:11px">✅ ${a.notificadoCliente?'Visible para el cliente':'Registro interno'}</span></div>`}
     </div>`).join('')||'<div class="dt2">Sin avances registrados.</div>'}
@@ -1191,7 +1226,12 @@ function createCitaWeb(){const cli=document.getElementById('ncCli').value;const 
 
 /* ===== WEB RENDER ===== */
 const WTITLES={dash:["Dashboard","Todo se actualiza al instante desde la app"],recep:["Recepción digital","Inspección y registro de ingreso del vehículo"],board:["Órdenes de taller","Tablero en vivo por estado"],avances:["Avances","Revisa y notifica al cliente los avances de los técnicos"],hist:["Trabajos realizados","Historial de servicios completados"],citas:["Citas","Solicitudes y agenda del taller"],cotiza:["Cotizaciones","Presupuestos para clientes"],veh:["Vehículos","Estado actual de la flota"],cli:["Clientes","Cartera registrada"],mec:["Técnicos","Equipo técnico y desempeño"],usuarios:["Usuarios y accesos","Cuentas y roles del sistema"],fact:["Facturación","Pagos y facturas del servicio"],talleres:["Talleres","Gestión de talleres y asignación de administradores"],config:["Configuración","Moneda, documentos y seguros — Venezuela"],audit:["Auditoría","Registro de acciones: quién, cuándo, IP y dispositivo"]};
-document.querySelectorAll('.wside a[data-w]').forEach(a=>a.addEventListener('click',()=>{document.querySelectorAll('.wside a').forEach(x=>x.classList.remove('on'));a.classList.add('on');const w=a.dataset.w;document.querySelectorAll('.wview').forEach(s=>s.classList.remove('on'));document.getElementById('w-'+w).classList.add('on');document.getElementById('wTitle').textContent=WTITLES[w][0];document.getElementById('wSub').textContent=WTITLES[w][1];if(w==='talleres'){renderSuperPanel();setTimeout(idxCargar,300);}if(w==='usuarios')renderUsuariosView();if(w==='fact')renderFacturacion();if(w==='audit')renderAuditoria();}));
+function toggleWSide(force){
+  const side=document.querySelector('.wside');const bg=document.getElementById('wSideBackdrop');if(!side)return;
+  const abrir=force!==undefined?force:!side.classList.contains('open');
+  side.classList.toggle('open',abrir);if(bg)bg.classList.toggle('open',abrir);
+}
+document.querySelectorAll('.wside a[data-w]').forEach(a=>a.addEventListener('click',()=>{document.querySelectorAll('.wside a').forEach(x=>x.classList.remove('on'));a.classList.add('on');const w=a.dataset.w;document.querySelectorAll('.wview').forEach(s=>s.classList.remove('on'));document.getElementById('w-'+w).classList.add('on');document.getElementById('wTitle').textContent=WTITLES[w][0];document.getElementById('wSub').textContent=WTITLES[w][1];if(w==='talleres'){renderSuperPanel();setTimeout(idxCargar,300);}if(w==='usuarios')renderUsuariosView();if(w==='fact')renderFacturacion();if(w==='audit')renderAuditoria();if(window.innerWidth<=900)toggleWSide(false);}));
 function cnt(s){return store.vehicles.filter(v=>v.status===s).length;}
 const DINCOME=[28,31,27,35,33,38,41,39,44,42,46,48],DMONTHS=["E","F","M","A","M","J","J","A","S","O","N","D"];
 const DSERV=[{l:"Cambio de aceite",v:34,c:"#16191d"},{l:"Frenos",v:24,c:"#2563EB"},{l:"Suspensión",v:18,c:"#F5B700"},{l:"Diagnóstico",v:14,c:"#16A34A"},{l:"Otros",v:10,c:"#cbd2da"}];
@@ -1270,6 +1310,10 @@ function dashHTML(){
 }
 function renderWeb(){
   const ingresos=store.history.reduce((a,h)=>a+h.costo,0);
+  const _plan=(store.config&&store.config.plan)||'pro';
+  const _planCol={lite:'#6b7480',pro:'#2563EB',premium:'#F5B700'};
+  const _planBadge=document.getElementById('planBadge');
+  if(_planBadge)_planBadge.innerHTML=`<span style="background:${_planCol[_plan]};color:${_plan==='premium'?'#16191d':'#fff'};font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:20px;letter-spacing:.5px;margin-right:10px">VERSIÓN ${_plan.toUpperCase()}</span>`;
   try{renderMant();}catch(e){}
   try{renderSOS();}catch(e){}
   document.getElementById('w-dash').innerHTML=dashHTML();
@@ -1395,11 +1439,13 @@ const WCARS={
 };
 const WTYPES=["Rayón","Abolladura","Golpe","Pintura dañada","Vidrio roto","Espejo","Luz","Llanta","Parachoques","Capó","Puerta","Guardafango"];
 const WCARVB={sup:'0 0 872 335',front:'0 0 466 293',post:'0 0 483 341',izq:'0 0 884 291',der:'0 0 884 291'};
-let wrec={view:'sup',types:['Rayón'],sev:'leve',seq:0,client:'',vehId:null,mech:null,tipoVeh:'Automóvil',color:'',motivo:RMOTIVOS[0],trabajo:TIPOS[0],prioridad:'Media',combustible:3,km:'',accesorios:['Llave principal'],documentos:['Tarjeta de propiedad','SOAT'],obs:'',dmg:{sup:[],front:[],post:[],izq:[],der:[]},tipoIngreso:'nuevo',cotizacionId:null,montoCotizacion:0,cotizacionItems:[],editandoVehId:null};
+let wrec={view:'sup',types:['Rayón'],sev:'leve',seq:0,client:'',vehId:null,mech:null,tipoVeh:'Automóvil',color:'',motivo:RMOTIVOS[0],trabajo:TIPOS[0],prioridad:'Media',combustible:3,km:'',accesorios:['Llave principal'],documentos:['Tarjeta de propiedad','SOAT'],obs:'',dmg:{sup:[],front:[],post:[],izq:[],der:[]},tipoIngreso:'nuevo',cotizacionId:null,montoCotizacion:0,cotizacionItems:[],editandoVehId:null,bateria:false,bateriaMarca:'',bateriaAmperaje:'',bateriaColor:'',bateriaObs:''};
 
 function renderWebRecep(){
   if(!wrec.client){const _c=store.clients.find(c=>c.activo!==false)||store.clients[0];wrec.client=_c?_c.n:'';}
-  const cvs=store.vehicles.filter(v=>v.owner===wrec.client&&v.activo!==false);wrec.vehId=cvs[0]?cvs[0].id:null;wCargarVehDatos();
+  const cvs=store.vehicles.filter(v=>v.owner===wrec.client&&v.activo!==false);
+  if(!wrec.vehId||!cvs.some(v=>v.id===wrec.vehId))wrec.vehId=cvs[0]?cvs[0].id:null;
+  wCargarVehDatos();
   document.getElementById('w-recep').innerHTML=`<div class="recep-grid">
     <div>
       <div class="wviews" id="wViews">${[['sup','Superior'],['front','Frontal'],['izq','Lat. Izq.'],['der','Lat. Der.'],['post','Posterior']].map(([k,l],i)=>`<button class="${i===0?'on':''}" onclick="wView('${k}',this)">${l}</button>`).join('')}</div>
@@ -1414,26 +1460,22 @@ function renderWebRecep(){
           <button class="wbtn ${wrec.tipoIngreso==='cotizacion'?'wbtn-d':'wbtn-g'}" onclick="wrecSetTipoIngreso('cotizacion')" style="flex:1;justify-content:center">Recepción por Cotización</button>
         </div>
       </div>
-      ${wrec.tipoIngreso==='cotizacion'?(!wrec.cotizacionId?`
-      <div class="fld"><label>Buscar cotización aprobada</label>
-        <div class="searchbar" style="margin-bottom:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-          <input id="wrCotBusca" placeholder="N° de cotización, cliente o placa…" autocomplete="off" oninput="wrFiltrarCotizaciones(this.value)" onfocus="wrFiltrarCotizaciones('')"></div>
-        <div id="wrCotResults" style="position:relative;z-index:5"></div>
-      </div>`:`
-      <div class="fld"><div style="background:#e8f6ec;border:1px solid #bfe6cd;border-radius:10px;padding:12px;display:flex;justify-content:space-between;align-items:center">
-        <div><b style="color:#0F6E56">Cobre por cotización P-${String(wrec.cotizacionNum||0).padStart(6,'0')}</b><div style="font-size:12px;color:var(--muted)">Cliente: ${wrec.client||''} · Monto: ${curSym()} ${(+wrec.montoCotizacion||0).toLocaleString('es-VE')}</div></div>
-        <button class="wbtn wbtn-gr" onclick="wrecQuitarCotizacion()">Quitar</button>
-      </div></div>`):`
-      <div class="fld"><label>Cliente</label>
-        <input id="wrCliBusca" placeholder="Buscar por nombre, cédula o teléfono…" autocomplete="off" oninput="wrFiltrarSelectClientes(this.value)" style="margin-bottom:8px">
-        <select id="wrCli" style="width:100%" onchange="wrClient(this.value)"></select>
-      </div>`}
-      <div class="fld"><label>Vehículo</label><div id="wrVehWrap"><select id="wrVeh"></select></div></div>
+      ${wrClienteVehiculoHTML()}
       <div class="fld"><label style="display:flex;align-items:center;justify-content:space-between">¿Por qué ingresa el vehículo? <button class="wbtn wbtn-g" style="padding:3px 9px;font-size:11px" onclick="addOptionModal('motivo','web')">＋ Nuevo</button></label><select id="wSelMotivo" onchange="wrec.motivo=this.value">${store.config.motivos.map(m=>`<option ${m===wrec.motivo?'selected':''}>${m}</option>`).join('')}</select></div>
       <div class="fld"><label style="display:flex;align-items:center;justify-content:space-between">Trabajo a realizar <button class="wbtn wbtn-g" style="padding:3px 9px;font-size:11px" onclick="addOptionModal('trabajo','web')">＋ Nuevo</button></label><select id="wSelTrabajo" onchange="wrec.trabajo=this.value">${store.config.trabajos.map(t=>`<option ${t===wrec.trabajo?'selected':''}>${t}</option>`).join('')}</select></div>
-      <div class="fld"><label>Técnico asignado</label><select onchange="wrec.mech=this.value">${['(Por asignar)'].concat(store.mecanicos.filter(m=>m.activo!==false).map(m=>m.n)).map(n=>`<option ${n===wrec.mech||(n==='(Por asignar)'&&!wrec.mech)?'selected':''}>${n}</option>`).join('')}</select></div>
+      <div class="fld"><label>Técnico asignado</label><select id="wrMech" onchange="wrec.mech=this.value">${['(Por asignar)'].concat(store.mecanicos.filter(m=>m.activo!==false).map(m=>m.n)).map(n=>`<option ${n===wrec.mech||(n==='(Por asignar)'&&!wrec.mech)?'selected':''}>${n}</option>`).join('')}</select></div>
+      <div class="fld"><label>Color del vehículo</label><input id="wrColor" value="${wrec.color||''}" oninput="wrec.color=this.value" placeholder="ej. Plata"></div>
       <div class="fld"><label>Prioridad</label><div class="wsev" id="wrPrio">${['Baja','Media','Alta'].map(p=>`<button data-s="${p==='Alta'?'grave':p==='Media'?'mod':'leve'}" class="${p===wrec.prioridad?'on':''}" onclick="wPrio(this,'${p}')">${p}</button>`).join('')}</div></div>
-      <div style="display:flex;gap:10px"><div class="fld" style="flex:1"><label>Combustible</label><div class="fuel" id="wrFuel">${FUELSH.map((l,i)=>`<button class="${i===wrec.combustible?'on':''}" onclick="wFuel(this,${i})">${l}</button>`).join('')}</div></div><div class="fld" style="width:120px"><label>Kilometraje</label><input value="${wrec.km}" oninput="wrec.km=this.value" placeholder="84 500"></div></div>
+      <div style="display:flex;gap:10px">
+        <div class="fld" style="flex:1"><label>Combustible</label><div class="fuel" id="wrFuel">${FUELSH.map((l,i)=>`<button class="${i===wrec.combustible?'on':''}" onclick="wFuel(this,${i})">${l}</button>`).join('')}</div></div>
+        <div class="fld" style="width:120px"><label>Kilometraje</label><input id="wrKm" value="${wrec.km}" oninput="wrec.km=this.value" placeholder="84 500"></div>
+      </div>
+      <div class="fld"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" ${wrec.bateria?'checked':''} onchange="wrec.bateria=this.checked;if(this.checked)abrirModalBateria();renderWebRecep()" style="width:18px;height:18px">🔋 Marcar si hay que anotar la batería</label>
+        ${wrec.bateria?`<div style="background:#f7f8fa;border-radius:10px;padding:10px;margin-top:8px;display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:12.5px">${wrec.bateriaMarca||wrec.bateriaAmperaje||wrec.bateriaColor?`<b>${[wrec.bateriaMarca,wrec.bateriaAmperaje&&wrec.bateriaAmperaje+'A',wrec.bateriaColor].filter(Boolean).join(' · ')}</b>`:'<span style="color:var(--muted)">Sin datos todavía</span>'}${wrec.bateriaObs?`<div style="color:var(--muted);font-size:11px;margin-top:2px">${wrec.bateriaObs}</div>`:''}</div>
+          <button type="button" class="wbtn wbtn-g" onclick="abrirModalBateria()">✎ Editar</button>
+        </div>`:''}
+      </div>
       <div class="fld"><label>Accesorios entregados</label><div class="wchips" id="wrAcc">${RACC.map(a=>`<button class="${wrec.accesorios.includes(a)?'on':''}" onclick="toggleArr(this,wrec.accesorios,'${a}')">${a}</button>`).join('')}${wrec.accesorios.filter(a=>!RACC.includes(a)).map(a=>`<button class="on" onclick="toggleArr(this,wrec.accesorios,'${a}')">${a}</button>`).join('')}</div>
         <div style="display:flex;gap:8px;margin-top:8px"><input id="wrAccNew" placeholder="¿Falta uno? Escríbelo aquí…" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();wrecAgregarExtra('accesorios','wrAcc','wrAccNew');}"><button type="button" class="wbtn wbtn-g" onclick="wrecAgregarExtra('accesorios','wrAcc','wrAccNew')">＋ Agregar</button></div></div>
       <div class="fld"><label>Documentos entregados</label><div class="wchips" id="wrDoc">${RDOC.map(d=>`<button class="${wrec.documentos.includes(d)?'on':''}" onclick="toggleArr(this,wrec.documentos,'${d}')">${d}</button>`).join('')}${wrec.documentos.filter(d=>!RDOC.includes(d)).map(d=>`<button class="on" onclick="toggleArr(this,wrec.documentos,'${d}')">${d}</button>`).join('')}</div>
@@ -1445,10 +1487,51 @@ function renderWebRecep(){
     <button class="wbtn wbtn-d" style="width:100%;justify-content:center;margin-bottom:${wrec.editandoVehId?'10px':'24px'}" onclick="wConfirm()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-6 0v4"/><rect x="2" y="9" width="20" height="11" rx="2"/></svg> ${wrec.editandoVehId?'Guardar cambios del acta':'Registrar recepción'}</button>
     ${wrec.editandoVehId?`<button class="wbtn wbtn-g" style="width:100%;justify-content:center;margin-bottom:24px" onclick="cancelarEdicionRecep()">Cancelar edición</button>`:''}
     <div class="dcard"><h3 style="font-size:14px;margin-bottom:4px">Recepciones registradas</h3><div style="font-size:11px;color:var(--muted);margin-bottom:12px">Ver o editar las actas registradas (cambiar técnico, motivo, observaciones, etc.).</div><div id="wRecepList">${wRecepList()}</div></div>`;
-  wrVehOptions();wDrawCar();wDList();wrFiltrarSelectClientes('',wrec.client);setTimeout(()=>{setupSig('wSigCli');setupSig('wSigRec');},150);
+  wrVehOptions();wDrawCar();wDList();wrFiltrarSelectClientes('',wrec.client);setTimeout(()=>{setupSig('wSigCli');setupSig('wSigRec');
+    if(wrec.editandoVehId){const ve=veh(wrec.editandoVehId);const r=ve&&ve.recepcion;if(r){cargarFirmaEnCanvas('wSigCli',r.firmaCliImg);cargarFirmaEnCanvas('wSigRec',r.firmaRecImg);}}
+  },150);
 }
 function wPrio(b,p){document.querySelectorAll('#wrPrio button').forEach(x=>x.classList.remove('on'));b.classList.add('on');wrec.prioridad=p;}
 function wFuel(b,i){document.querySelectorAll('#wrFuel button').forEach(x=>x.classList.remove('on'));b.classList.add('on');wrec.combustible=i;}
+function wrClienteVehiculoHTML(){
+  if(wrec.tipoIngreso==='cotizacion'){
+    if(!wrec.cotizacionId){
+      return `<div class="fld"><label>Buscar cotización aprobada</label>
+        <div class="searchbar" style="margin-bottom:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input id="wrCotBusca" placeholder="N° de cotización, cliente o placa…" autocomplete="off" oninput="wrFiltrarCotizaciones(this.value)" onfocus="wrFiltrarCotizaciones('')"></div>
+        <div id="wrCotResults" style="position:relative;z-index:5"></div>
+      </div>`;
+    }
+    return `<div class="fld"><div style="background:#e8f6ec;border:1px solid #bfe6cd;border-radius:10px;padding:12px;display:flex;justify-content:space-between;align-items:center">
+      <div><b style="color:#0F6E56">Cobre por cotización P-${String(wrec.cotizacionNum||0).padStart(6,'0')}</b><div style="font-size:12px;color:var(--muted)">Cliente: ${wrec.client||''} · Monto: ${curSym()} ${(+wrec.montoCotizacion||0).toLocaleString('es-VE')}</div></div>
+      <button class="wbtn wbtn-gr" onclick="wrecQuitarCotizacion()">Quitar</button>
+    </div></div>`;
+  }
+  if(wrec.editandoVehId){
+    const vv=veh(wrec.vehId);
+    return `<div class="fld"><label>Cliente</label><div style="background:#f7f8fa;border-radius:10px;padding:10px 12px;font-weight:700;color:#6b7480">${wrec.client||''} <span style="font-weight:400;font-size:11px">(no editable — es el dueño registrado del vehículo)</span></div></div>
+    <div class="fld"><label>Vehículo</label><div style="background:#f7f8fa;border-radius:10px;padding:10px 12px;font-weight:700;color:#6b7480">${vv?vv.model+' — '+vv.plate:''} <span style="font-weight:400;font-size:11px">(no editable)</span></div></div>`;
+  }
+  return `<div class="fld"><label>Cliente</label>
+    <input id="wrCliBusca" placeholder="Buscar por nombre, cédula o teléfono…" autocomplete="off" oninput="wrFiltrarSelectClientes(this.value)" style="margin-bottom:8px">
+    <select id="wrCli" style="width:100%" onchange="wrClient(this.value)"></select>
+  </div>
+  <div class="fld"><label>Vehículo</label><div id="wrVehWrap"><select id="wrVeh"></select></div></div>`;
+}
+function abrirModalBateria(){
+  document.getElementById('modalH').innerHTML=`<h2>🔋 Datos de la batería</h2>`;
+  document.getElementById('modalB').innerHTML=`
+    <div class="fld"><label>Marca</label><input id="bmMarca" value="${wrec.bateriaMarca||''}"></div>
+    <div style="display:flex;gap:10px"><div class="fld" style="flex:1"><label>Amperaje</label><input id="bmAmp" value="${wrec.bateriaAmperaje||''}" placeholder="ej. 650"></div><div class="fld" style="flex:1"><label>Color</label><input id="bmColor" value="${wrec.bateriaColor||''}"></div></div>
+    <div class="fld"><label>Observación${(!wrec.bateriaMarca&&!wrec.bateriaAmperaje&&!wrec.bateriaColor)?' (obligatoria si no llenas los demás datos)':''}</label><textarea id="bmObs" style="width:100%;min-height:80px" placeholder="ej. batería ubicada bajo el asiento trasero">${wrec.bateriaObs||''}</textarea></div>
+    <button class="wbtn wbtn-d" style="width:100%;justify-content:center" onclick="guardarModalBateria()">Guardar</button>`;
+  document.getElementById('modal').classList.add('on');
+}
+function guardarModalBateria(){
+  wrec.bateriaMarca=val('bmMarca');wrec.bateriaAmperaje=val('bmAmp');wrec.bateriaColor=val('bmColor');wrec.bateriaObs=val('bmObs');
+  if(!wrec.bateriaMarca&&!wrec.bateriaAmperaje&&!wrec.bateriaColor&&!wrec.bateriaObs){toast('⚠️ Indica al menos la observación');return;}
+  closeModal();renderWebRecep();
+}
 function wrecSetTipoIngreso(tipo){wrec.tipoIngreso=tipo;if(tipo==='nuevo'){wrec.cotizacionId=null;wrec.montoCotizacion=0;wrec.cotizacionItems=[];}renderWebRecep();if(tipo==='nuevo')setTimeout(()=>wrFiltrarSelectClientes('',wrec.client),30);}
 function wrFiltrarCotizaciones(q){
   const el=document.getElementById('wrCotResults');if(!el)return;
@@ -1503,7 +1586,8 @@ function wrClient(n){
 }
 function wrVehOptions(){
   const cvs=store.vehicles.filter(v=>v.owner===wrec.client&&v.activo!==false);
-  wrec.vehId=cvs[0]?cvs[0].id:null;wCargarVehDatos();
+  if(!wrec.vehId||!cvs.some(v=>v.id===wrec.vehId))wrec.vehId=cvs[0]?cvs[0].id:null;
+  wCargarVehDatos();
   const cont=document.getElementById('wrVehWrap');
   if(!cont)return;
   if(cvs.length<=1){
@@ -1565,10 +1649,28 @@ function wPins(){const st=document.getElementById('wStage');[...st.querySelector
 function wAll(){return [].concat(...Object.values(wrec.dmg)).sort((a,b)=>a.id-b.id);}
 function wDList(){const all=wAll();const box=document.getElementById('wrList');if(!box)return;if(!all.length){box.innerHTML='<div class="empty">Aún no hay daños marcados.</div>';return;}const sn={leve:'Leve',mod:'Moderado',grave:'Grave'};box.innerHTML=all.map(d=>`<div class="di"><span class="num sev-${d.sev}">${d.id}</span><div><b>${d.type.join(', ')}</b> · ${sn[d.sev]}</div><button class="x" onclick="wDel(${d.id})">×</button></div>`).join('');}
 function wDel(id){for(const k in wrec.dmg)wrec.dmg[k]=wrec.dmg[k].filter(d=>d.id!==id);wPins();wDList();}
-async function wConfirm(){if(!wrec.vehId){toast('Selecciona un vehículo');return;}const v=veh(wrec.vehId);const LADOS={sup:'Superior',front:'Frontal',izq:'Lat. Izq.',der:'Lat. Der.',post:'Posterior'};let n=0;const dmgs=[];['sup','front','izq','der','post'].forEach(k=>{(wrec.dmg[k]||[]).forEach(d=>{n++;dmgs.push({n,tipo:(Array.isArray(d.type)?d.type.join(', '):d.type),sev:d.sev,lado:LADOS[k],x:d.x,y:d.y});});});
-  const camposObligatorios=[['cliente',wrec.client,'Cliente'],['vehículo',wrec.vehId,'Vehículo'],['motivo',wrec.motivo,'Motivo de ingreso'],['trabajo',wrec.trabajo,'Trabajo a realizar'],['color',wrec.color,'Color'],['combustible',wrec.combustible,'Combustible'],['km',wrec.km,'Kilometraje']];
+function marcarCampoFaltante(id){
+  const el=document.getElementById(id);if(!el)return;
+  el.style.outline='3px solid #dc2626';el.style.outlineOffset='2px';el.style.borderRadius=el.style.borderRadius||'8px';
+  el.scrollIntoView({behavior:'smooth',block:'center'});
+  if(el.focus)try{el.focus();}catch(e){}
+  setTimeout(()=>{el.style.outline='';el.style.outlineOffset='';},4000);
+}
+async function wConfirm(){if(!wrec.vehId){toast('Selecciona un vehículo');return;}const v=veh(wrec.vehId);
+  if(!wrec.editandoVehId&&v.status&&!v.cerrada&&v.recepcion){
+    document.getElementById('modalH').innerHTML=`<h2>⚠️ Este vehículo ya está en el taller</h2>`;
+    document.getElementById('modalB').innerHTML=`<p style="font-size:13.5px">El vehículo <b>${v.model} — ${v.plate}</b> de <b>${v.owner}</b> ya ingresó y se está trabajando en él (orden ${v.numOrden?'OS'+String(v.numOrden).padStart(4,'0'):''}).</p><p style="font-size:13px;color:var(--muted);margin-top:8px">Si vuelves a recepcionarlo, se reiniciará el avance actual de esa orden. Si es un vehículo distinto con la misma placa por error, revisa los datos antes de continuar.</p>
+    <div style="display:flex;gap:10px;margin-top:14px"><button class="wbtn wbtn-g" style="flex:1;justify-content:center" onclick="closeModal()">Cancelar</button><button class="wbtn wbtn-gr" style="flex:1;justify-content:center;color:var(--red)" onclick="closeModal();wConfirmForzado()">Continuar de todas formas</button></div>`;
+    document.getElementById('modal').classList.add('on');
+    return;
+  }
+  await wConfirmForzado();
+}
+async function wConfirmForzado(){const v=veh(wrec.vehId);const LADOS={sup:'Superior',front:'Frontal',izq:'Lat. Izq.',der:'Lat. Der.',post:'Posterior'};let n=0;const dmgs=[];['sup','front','izq','der','post'].forEach(k=>{(wrec.dmg[k]||[]).forEach(d=>{n++;dmgs.push({n,tipo:(Array.isArray(d.type)?d.type.join(', '):d.type),sev:d.sev,lado:LADOS[k],x:d.x,y:d.y});});});
+  const camposObligatorios=[['cliente',wrec.client,'Cliente',null],['vehículo',wrec.vehId,'Vehículo',null],['motivo',wrec.motivo,'Motivo de ingreso','wSelMotivo'],['trabajo',wrec.trabajo,'Trabajo a realizar','wSelTrabajo'],['técnico',(wrec.mech&&wrec.mech!=='(Por asignar)')?wrec.mech:'','Técnico asignado','wrMech'],['color',wrec.color,'Color','wrColor'],['combustible',wrec.combustible,'Combustible','wrFuel'],['km',wrec.km,'Kilometraje','wrKm']];
   const faltante=camposObligatorios.find(([,val])=>val===''||val===null||val===undefined);
-  if(faltante){toast('⚠️ Falta un dato obligatorio: '+faltante[2]);return;}
+  if(faltante){toast('⚠️ Falta un dato obligatorio: '+faltante[2]);if(faltante[3])marcarCampoFaltante(faltante[3]);return;}
+  if(wrec.bateria&&!wrec.bateriaMarca&&!wrec.bateriaAmperaje&&!wrec.bateriaColor&&!wrec.bateriaObs){toast('⚠️ Marcaste "Batería" — indica al menos la observación (ej. dónde está ubicada) si no vas a llenar marca/amperaje/color');return;}
   if(wrec.editandoVehId){
     const ve=veh(wrec.vehId);if(!ve){wrec.editandoVehId=null;toast('No se encontró el vehículo a editar');return;}
     ve.owner=wrec.client;
@@ -1578,19 +1680,23 @@ async function wConfirm(){if(!wrec.vehId){toast('Selecciona un vehículo');retur
     const r=ve.recepcion||mkRecep({});
     r.motivo=wrec.motivo;r.trabajo=wrec.trabajo;r.tipoVeh=wrec.tipoVeh;r.color=wrec.color;r.prioridad=wrec.prioridad;
     r.combustible=FUELLBL[wrec.combustible];r.km=wrec.km;r.accesorios=wrec.accesorios;r.documentos=wrec.documentos;r.obs=wrec.obs;
+    r.bateria=!!wrec.bateria;r.bateriaMarca=wrec.bateria?(wrec.bateriaMarca||''):'';r.bateriaAmperaje=wrec.bateria?(wrec.bateriaAmperaje||''):'';r.bateriaColor=wrec.bateria?(wrec.bateriaColor||''):'';r.bateriaObs=wrec.bateria?(wrec.bateriaObs||''):'';
+    const cvCli=document.getElementById('wSigCli'),cvRec=document.getElementById('wSigRec');
+    if(cvCli&&cvCli._inked){r.firmaCli=true;r.firmaCliImg=cvCli._data||r.firmaCliImg;}
+    if(cvRec&&cvRec._inked){r.firmaRec=true;r.firmaRecImg=cvRec._data||r.firmaRecImg;}
     r.editada=true;r.editadaFecha=new Date().toLocaleString('es-VE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
     ve.recepcion=r;
     ve.advances=ve.advances||[];ve.advances.push({t:'Acta de recepción editada',m:'Administración · '+dmgs.length+' daño(s)',type:'nota',ago:'ahora'});
-    wrec.editandoVehId=null;wrec.seq=0;wrec.dmg={sup:[],front:[],post:[],izq:[],der:[]};wrec.types=['Rayón'];wrec.client='';wrec.vehId=null;
+    wrec.editandoVehId=null;wrec.seq=0;wrec.dmg={sup:[],front:[],post:[],izq:[],der:[]};wrec.types=['Rayón'];wrec.client='';wrec.vehId=null;wrec.bateria=false;wrec.bateriaMarca='';wrec.bateriaAmperaje='';wrec.bateriaColor='';wrec.bateriaObs='';
     renderWebRecep();renderWeb();renderPhone();store.emit('✅ Acta actualizada con éxito');persistNow();
     return;
   }
   if(!store.config)store.config={};const nOrden=(store.config.ultimoNumOrden||0)+1;store.config.ultimoNumOrden=nOrden;v.numOrden=nOrden;v.motivo=wrec.trabajo;v.color=wrec.color||v.color;v.tipoVeh=wrec.tipoVeh;v.ingreso=new Date().toISOString().slice(0,10);v.recepDamages=dmgs;v.recepLados=['sup','front','izq','der','post'].filter(k=>(wrec.dmg[k]||[]).length).map(k=>LADOS[k]);v.status='espera';v.progress=0;v.cerrada=false;v.cost=wrec.cotizacionId?(+wrec.montoCotizacion||0):0;v.pending=null;v.advances=[];v.entregado=false;v.fechaEntrega='';
-  v.recepcion=mkRecep({numOrden:nOrden,motivo:wrec.motivo,trabajo:wrec.trabajo,tipoVeh:wrec.tipoVeh,color:wrec.color,prioridad:wrec.prioridad,combustible:FUELLBL[wrec.combustible],km:wrec.km,accesorios:wrec.accesorios,documentos:wrec.documentos,obs:wrec.obs,via:'Web 2D',firmaCli:!!(document.getElementById('wSigCli')||{})._inked,firmaRec:!!(document.getElementById('wSigRec')||{})._inked,firmaCliImg:(document.getElementById('wSigCli')||{})._data||'',firmaRecImg:(document.getElementById('wSigRec')||{})._data||'',cotizacionId:wrec.cotizacionId||null,cotizacionNum:wrec.cotizacionNum||null,montoCotizacion:wrec.cotizacionId?(+wrec.montoCotizacion||0):0,cotizacionItems:wrec.cotizacionId?(wrec.cotizacionItems||[]):[]});
+  v.recepcion=mkRecep({numOrden:nOrden,motivo:wrec.motivo,trabajo:wrec.trabajo,tipoVeh:wrec.tipoVeh,color:wrec.color,prioridad:wrec.prioridad,combustible:FUELLBL[wrec.combustible],km:wrec.km,accesorios:wrec.accesorios,documentos:wrec.documentos,obs:wrec.obs,via:'Web 2D',firmaCli:!!(document.getElementById('wSigCli')||{})._inked,firmaRec:!!(document.getElementById('wSigRec')||{})._inked,firmaCliImg:(document.getElementById('wSigCli')||{})._data||'',firmaRecImg:(document.getElementById('wSigRec')||{})._data||'',cotizacionId:wrec.cotizacionId||null,cotizacionNum:wrec.cotizacionNum||null,montoCotizacion:wrec.cotizacionId?(+wrec.montoCotizacion||0):0,cotizacionItems:wrec.cotizacionId?(wrec.cotizacionItems||[]):[],bateria:!!wrec.bateria,bateriaMarca:wrec.bateria?(wrec.bateriaMarca||''):'',bateriaAmperaje:wrec.bateria?(wrec.bateriaAmperaje||''):'',bateriaColor:wrec.bateria?(wrec.bateriaColor||''):'',bateriaObs:wrec.bateria?(wrec.bateriaObs||''):''});
   v.status='espera';v.progress=v.progress||0;
   if(wrec.mech&&wrec.mech!=='(Por asignar)')v.mech=wrec.mech;v.advances.push({t:'Vehículo recibido — recepción digital (web)',m:`${wrec.motivo} · ${dmgs.length} daño(s)${wrec.cotizacionId?' · cobre por cotización P-'+String(wrec.cotizacionNum||0).padStart(6,'0'):''}`,type:'recep',ago:'ahora'});
   if(wrec.cotizacionId){const c=(store.cotizaciones||[]).find(x=>x.id===wrec.cotizacionId);if(c){c.usadaRecepcion=true;c.vehIdRecepcion=v.id;}}
-  wrec.seq=0;wrec.dmg={sup:[],front:[],post:[],izq:[],der:[]};wrec.types=['Rayón'];wrec.tipoIngreso='nuevo';wrec.cotizacionId=null;wrec.cotizacionNum=null;wrec.montoCotizacion=0;wrec.cotizacionItems=[];wrec.client='';renderWebRecep();renderWeb();renderPhone();notify(v,`Tu ${v.model} fue recibido. Motivo: ${wrec.motivo}. Trabajo: ${wrec.trabajo}.`);toast('Recepción registrada ✓ · el vehículo ya está en Órdenes');persistNow();}
+  wrec.seq=0;wrec.dmg={sup:[],front:[],post:[],izq:[],der:[]};wrec.types=['Rayón'];wrec.tipoIngreso='nuevo';wrec.cotizacionId=null;wrec.cotizacionNum=null;wrec.montoCotizacion=0;wrec.cotizacionItems=[];wrec.client='';wrec.bateria=false;wrec.bateriaMarca='';wrec.bateriaAmperaje='';wrec.bateriaColor='';wrec.bateriaObs='';renderWebRecep();renderWeb();renderPhone();notify(v,`Tu ${v.model} fue recibido. Motivo: ${wrec.motivo}. Trabajo: ${wrec.trabajo}.`);toast('Recepción registrada ✓ · el vehículo ya está en Órdenes');persistNow();}
 function woptAdd(kind){const inp=document.getElementById('wNew_'+kind);if(!inp)return;const val=inp.value.trim();if(!val)return;const key=kind==='motivo'?'motivos':'trabajos';if(!store.config[key].includes(val))store.config[key].push(val);const sel=document.getElementById(kind==='motivo'?'wSelMotivo':'wSelTrabajo');const o=document.createElement('option');o.textContent=val;sel.appendChild(o);sel.value=val;if(kind==='motivo')wrec.motivo=val;else wrec.trabajo=val;inp.value='';toast(`Agregado: ${val}`);}
 
 /* ===== CONFIGURACIÓN ===== */
@@ -1700,47 +1806,85 @@ function openMant(id){const v=veh(id);if(!v||!v.proximoMant)return;const p=v.pro
 function quitarMant(id){if(!confirm('¿Quitar el recordatorio de mantenimiento de este vehículo?'))return;const v=veh(id);if(v)v.proximoMant=null;closeModal();renderMant();persistNow();toast('Recordatorio quitado');}
 async function renderConfig(){persistData();const c=store.config;let _t=(window._talleresCache||[]).find(x=>x.id===CURRENT_TALLER)||null;
   if(!_t){try{const ts=await apiReq('/api/talleres');window._talleresCache=ts;_t=ts.find(x=>x.id===CURRENT_TALLER)||{};}catch(e){_t={};}}
+  const _plan=(store.config.plan)||'pro';
+  const _limiteMin=store.config.videoMinutosPorVehiculo||1;
+  const _puedeEditarLimite=ME&&(ME.rol==='superadmin'||_plan==='premium');
   document.getElementById('w-config').innerHTML=`
-   <div class="dcard" style="margin-bottom:14px"><h3 style="font-size:14px;margin-bottom:12px">📄 Encabezado y pie del acta</h3>
-     <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Esto aparece en la parte de arriba y abajo del acta que se imprime o comparte.</div>
-     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-       <div class="fld"><label>Nombre del taller</label><input id="acN" value="${(_t.nombre||'').replace(/"/g,'&quot;')}"></div>
-       <div class="fld"><label>Rubro / subtítulo</label><input id="acU" value="${(_t.rubro||'').replace(/"/g,'&quot;')}" placeholder="TALLER AUTOMOTRIZ"></div>
-       <div class="fld"><label>Teléfono</label><input id="acT" value="${(_t.telefono||'').replace(/"/g,'&quot;')}"></div>
-       <div class="fld"><label>Dirección</label><input id="acD" value="${(_t.direccion||'').replace(/"/g,'&quot;')}"></div>
-       <div class="fld"><label>RIF</label><input id="acR" value="${(_t.rif||'').replace(/"/g,'&quot;')}"></div>
-       <div class="fld"><label>Logo del taller</label><input id="acL" type="file" accept="image/*" onchange="acLeerLogo()"><span id="acLprev" style="font-size:11px;color:var(--muted)">${_t.logo?'Logo cargado ✓':''}</span></div>
-     </div>
-     <div class="fld"><label>Condiciones del servicio (pie del acta)</label><textarea id="acC" rows="3" style="width:100%;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:8px">${(_t.condiciones||'')}</textarea></div>
-     <div class="fld"><label>Pie de página (texto final)</label><input id="acP" value="${(_t.pie||'').replace(/"/g,'&quot;')}" placeholder="Ej. Gracias por su preferencia"></div>
-     <button class="wbtn wbtn-d" onclick="guardarEncabezado()">Guardar encabezado y pie</button>
+   ${ME&&ME.rol!=='superadmin'?`<div class="dcard" style="margin-bottom:14px"><h3 style="font-size:14px;margin-bottom:12px">🏷️ Versión del taller</h3>
+     <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Versión actual: <b style="text-transform:uppercase">${_plan}</b>. La versión LITE no permite subir video en los avances; PRO y PREMIUM sí, con un límite de minutos por vehículo.</div>
+     ${_plan!=='lite'?`<div class="fld"><label>Minutos de video permitidos por vehículo${_puedeEditarLimite?': <b id="cfgVidVal">'+_limiteMin+'</b> min':' (solo lo puede ampliar el Super Administrador en la versión Pro)'}</label>
+       <input type="range" id="cfgVidMin" min="1" max="60" value="${_limiteMin}" style="width:100%" ${_puedeEditarLimite?`oninput="document.getElementById('cfgVidVal').textContent=this.value"`:'disabled'}>
+       ${_puedeEditarLimite?`<button class="wbtn wbtn-d" style="margin-top:8px" onclick="const v=+val('cfgVidMin')||1;store.config.videoMinutosPorVehiculo=v;persistNow();toast('Límite de video actualizado ✓')">Guardar límite</button>`:''}
+     </div>`:''}
    </div>
-   <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start">
-     <div class="dcard"><h3 style="font-size:14px;margin-bottom:12px">Moneda</h3>
-       <div class="fld"><label>Símbolo</label><input value="${c.currency.sym}" oninput="curSym()=this.value;renderWeb();renderPhone()"></div>
-       <div class="fld"><label>Nombre</label><input value="${c.currency.name}" oninput="store.config.currency.name=this.value"></div>
-       <div class="fld"><label>Código ISO</label><input value="${c.currency.code}" oninput="store.config.currency.code=this.value"></div>
-       <div style="font-size:12px;color:var(--muted)">Vista previa: <b id="curPrev">${c.currency.sym} 48.200,00</b></div>
-     </div>
-     <div>
-       <div class="dcard" style="margin-bottom:14px"><h3 style="font-size:14px;margin-bottom:10px">Tipos de documento</h3><div id="cfgDoc">${cfgList('docTypes')}</div><button class="wbtn wbtn-g" style="margin-top:8px" onclick="cfgAdd('docTypes')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Agregar</button></div>
-       <div class="dcard"><h3 style="font-size:14px;margin-bottom:10px">Tipos de seguro <span style="font-size:11px;color:var(--muted)">(ej. RCV)</span></h3><div id="cfgSeg">${cfgList('insuranceTypes')}</div><button class="wbtn wbtn-g" style="margin-top:8px" onclick="cfgAdd('insuranceTypes')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Agregar</button></div>
-     </div>
+   <button class="wbtn wbtn-d" style="margin-bottom:14px" onclick="abrirModalEditarTallerAdmin()">✎ Editar Taller</button>`:''}
+   <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px;max-width:420px">
+     <button class="wbtn wbtn-g" style="justify-content:space-between" onclick="abrirModalCatalogo('moneda')"><span>💰 Moneda</span><span>›</span></button>
+     <button class="wbtn wbtn-g" style="justify-content:space-between" onclick="abrirModalCatalogo('docTypes')"><span>🪪 Tipos de documento</span><span>›</span></button>
+     <button class="wbtn wbtn-g" style="justify-content:space-between" onclick="abrirModalCatalogo('insuranceTypes')"><span>🛡️ Tipos de seguro (ej. RCV)</span><span>›</span></button>
+     <button class="wbtn wbtn-g" style="justify-content:space-between" onclick="abrirModalCatalogo('motivos')"><span>📋 Motivos de ingreso</span><span>›</span></button>
+     <button class="wbtn wbtn-g" style="justify-content:space-between" onclick="abrirModalCatalogo('trabajos')"><span>🔧 Trabajos / servicios</span><span>›</span></button>
+     <button class="wbtn wbtn-g" style="justify-content:space-between" onclick="abrirModalCatalogo('marcas')"><span>🚗 Marcas y modelos de vehículos</span><span>›</span></button>
    </div>
-   <div style="font-size:12.5px;color:var(--muted);margin-top:14px;line-height:1.6">Estos valores se aplican en toda la app: la <b>moneda</b> en todos los montos e ingresos; los <b>tipos de documento</b> al registrar clientes; y los <b>tipos de seguro</b> al registrar vehículos. Preconfigurado para <b>Venezuela</b> (Bs., Cédula/RIF, RCV) — todo editable.</div>
-   <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;margin-top:14px">
-     <div class="dcard"><h3 style="font-size:14px;margin-bottom:4px">Motivos de ingreso</h3><div style="font-size:11px;color:var(--muted);margin-bottom:10px">Aparecen al recibir el vehículo</div><div>${cfgList('motivos')}</div><button class="wbtn wbtn-g" style="margin-top:8px" onclick="cfgAdd('motivos')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Agregar motivo</button></div>
-     <div class="dcard"><h3 style="font-size:14px;margin-bottom:4px">Trabajos / servicios</h3><div style="font-size:11px;color:var(--muted);margin-bottom:10px">Tipos de trabajo a realizar</div><div>${cfgList('trabajos')}</div><button class="wbtn wbtn-g" style="margin-top:8px" onclick="cfgAdd('trabajos')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Agregar trabajo</button></div>
-   </div>
-   <div class="dcard" style="margin-top:14px"><h3 style="font-size:14px;margin-bottom:4px">Marcas y modelos de vehículos</h3><div style="font-size:11px;color:var(--muted);margin-bottom:12px">Cada marca con sus modelos (separados por coma). Aparecen al registrar un vehículo.</div>
-     <div>${store.config.marcas.map((m,i)=>`<div style="display:flex;gap:8px;margin-bottom:8px;align-items:center"><input style="width:130px;border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:13px;font-weight:600" value="${m.marca}" oninput="store.config.marcas[${i}].marca=this.value"><input style="flex:1;border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12.5px" value="${m.modelos.join(', ')}" oninput="store.config.marcas[${i}].modelos=this.value.split(',').map(x=>x.trim()).filter(Boolean)"><button class="wbtn wbtn-gr" onclick="marcaDel(${i})">✕</button></div>`).join('')}</div>
-     <button class="wbtn wbtn-g" style="margin-top:6px" onclick="marcaAdd()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Agregar marca</button> <button class="wbtn wbtn-d" style="margin-top:6px" onclick="guardarMarcas()">Guardar cambios</button></div>
    <div class="dcard" style="margin-top:14px"><h3 style="font-size:14px;margin-bottom:6px">Datos guardados</h3><div style="font-size:12px;color:var(--muted);margin-bottom:11px">Todo lo que haces (clientes, vehículos, técnicos, recepciones, órdenes, citas y lo que sube el técnico) se guarda en la base de datos en la nube, compartida entre la app y la web.</div><div style="font-size:12px;color:var(--muted)">Para borrar TODOS los datos de prueba (talleres, clientes, técnicos y usuarios), ve al módulo <b>Talleres</b> como superadmin → sección <b>Zona de peligro</b>.</div></div>`;
 }
-function marcaAdd(){store.config.marcas.push({marca:'Nueva marca',modelos:['Modelo 1']});renderConfig();toast('Marca agregada — edítala y presiona Guardar');}
-function guardarMarcas(){persistData();renderWeb();toast('Marcas y modelos guardados con éxito ✓');}
+const CATALOGO_TITULOS={moneda:'💰 Moneda',docTypes:'🪪 Tipos de documento',insuranceTypes:'🛡️ Tipos de seguro',motivos:'📋 Motivos de ingreso',trabajos:'🔧 Trabajos / servicios',marcas:'🚗 Marcas y modelos de vehículos'};
+window._catalogoAbierto=null;
+function abrirModalCatalogo(tipo){
+  window._catalogoAbierto=tipo;
+  document.getElementById('modalH').innerHTML=`<h2>${CATALOGO_TITULOS[tipo]}</h2>`;
+  document.getElementById('modalB').innerHTML=catalogoModalHTML(tipo);
+  document.getElementById('modal').classList.add('on');
+}
+function catalogoModalHTML(tipo){
+  const c=store.config;
+  if(tipo==='moneda'){
+    return `<div class="fld"><label>Símbolo</label><input id="catMonSym" value="${c.currency.sym}" oninput="store.config.currency.sym=this.value"></div>
+      <div class="fld"><label>Nombre</label><input id="catMonNom" value="${c.currency.name}" oninput="store.config.currency.name=this.value"></div>
+      <div class="fld"><label>Código ISO</label><input id="catMonCod" value="${c.currency.code}" oninput="store.config.currency.code=this.value"></div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Vista previa: <b>${c.currency.sym} 48.200,00</b></div>
+      <button class="wbtn wbtn-d" style="width:100%;justify-content:center" onclick="persistNow();renderWeb();renderPhone();closeModal();toast('✅ Moneda guardada con éxito')">Guardar</button>`;
+  }
+  if(tipo==='marcas'){
+    return `<div style="font-size:11px;color:var(--muted);margin-bottom:10px">Cada marca con sus modelos (separados por coma).</div>
+      <div>${store.config.marcas.map((m,i)=>`<div style="display:flex;gap:8px;margin-bottom:8px;align-items:center"><input style="width:110px;border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:13px;font-weight:600" value="${m.marca}" oninput="store.config.marcas[${i}].marca=this.value"><input style="flex:1;border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12.5px" value="${m.modelos.join(', ')}" oninput="store.config.marcas[${i}].modelos=this.value.split(',').map(x=>x.trim()).filter(Boolean)"><button class="wbtn wbtn-gr" onclick="marcaDel(${i})">✕</button></div>`).join('')||'<div style="font-size:12px;color:var(--muted)">Sin marcas.</div>'}</div>
+      <div style="display:flex;gap:8px;margin-top:6px"><button class="wbtn wbtn-g" onclick="marcaAdd()">＋ Agregar marca</button><button class="wbtn wbtn-d" style="flex:1;justify-content:center" onclick="guardarMarcas()">Guardar</button></div>`;
+  }
+  return `<div id="cfgList_${tipo}">${cfgList(tipo)}</div>
+    <button class="wbtn wbtn-g" style="margin-top:8px" onclick="cfgAdd('${tipo}')">＋ Agregar</button>
+    <button class="wbtn wbtn-d" style="width:100%;justify-content:center;margin-top:10px" onclick="persistNow();renderWeb();renderPhone();closeModal();toast('✅ Guardado con éxito')">Guardar</button>`;
+}
+function marcaAdd(){store.config.marcas.push({marca:'Nueva marca',modelos:['Modelo 1']});refrescarCatalogoOConfig();toast('Marca agregada — edítala y presiona Guardar');}
+function guardarMarcas(){persistData();renderWeb();closeModal();toast('✅ Marcas y modelos guardados con éxito');}
+function refrescarCatalogoOConfig(){if(window._catalogoAbierto){document.getElementById('modalB').innerHTML=catalogoModalHTML(window._catalogoAbierto);}else{renderConfig();}}
+function abrirModalEditarTallerAdmin(){
+  const _t=(window._talleresCache||[]).find(x=>x.id===CURRENT_TALLER)||{};
+  document.getElementById('modalH').innerHTML=`<h2>Editar Taller</h2>`;
+  document.getElementById('modalB').innerHTML=`
+    <div class="fld"><label>Nombre del taller (solo lo cambia el Super Administrador)</label><input id="acN" value="${(_t.nombre||'').replace(/"/g,'&quot;')}" disabled style="background:#f7f8fa;color:var(--muted)"></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><div class="fld" style="flex:1;min-width:150px"><label>Rubro (subtítulo)</label><input id="acU" value="${(_t.rubro||'').replace(/"/g,'&quot;')}" placeholder="TALLER AUTOMOTRIZ" oninput="acActualizarPreviewHead()"></div><div class="fld" style="min-width:130px"><label>RIF / RUC</label><input id="acR" value="${(_t.rif||'').replace(/"/g,'&quot;')}"></div></div>
+    <div class="fld"><label>Teléfono</label><input id="acT" value="${(_t.telefono||'').replace(/"/g,'&quot;')}" oninput="acActualizarPreviewHead()"></div>
+    <div class="fld"><label>Dirección</label><input id="acD" value="${(_t.direccion||'').replace(/"/g,'&quot;')}"></div>
+    <div class="fld"><label>Logo / foto del taller</label><input id="acL" type="file" accept="image/*" onchange="acLeerLogo()"><span id="acLprev" style="font-size:11px;color:var(--muted)">${_t.logo?'Logo cargado ✓':''}</span></div>
+    <div id="acPreviewHead">${previewEncabezadoHTML(_t.logo||'',_t.logo_tam||100,_t.nombre||'',_t.rubro||'',_t.telefono||'','acLogoTam','acActualizarPreviewHead()')}</div>
+    <div class="fld" style="margin-top:10px"><label>Condiciones del servicio (aparece en el Acta)</label><textarea id="acC" rows="3" style="width:100%;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:8px" oninput="acActualizarPreview()">${(_t.condiciones||'')}</textarea></div>
+    <div class="fld"><label>Pie de página (aparece en el Acta)</label><textarea id="acP" rows="2" style="width:100%;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:8px" placeholder="Ej. Gracias por su preferencia" oninput="acActualizarPreview()">${(_t.pie||'')}</textarea></div>
+    <div id="acPreview">${previewActaHTML(_t.condiciones||'',_t.pie||'')}</div>
+    <button class="wbtn wbtn-d" style="margin-top:12px;width:100%;justify-content:center" onclick="guardarEncabezado()">Guardar cambios</button>`;
+  document.getElementById('modal').classList.add('on');
+}
+function acActualizarPreviewHead(){
+  const el=document.getElementById('acPreviewHead');if(!el)return;
+  const _t=(window._talleresCache||[]).find(x=>x.id===CURRENT_TALLER)||{};
+  const tamEl=document.getElementById('acLogoTam');
+  el.innerHTML=previewEncabezadoHTML(_acLogoTmp||_t.logo||'',tamEl?(+tamEl.value||100):(_t.logo_tam||100),_t.nombre||'',val('acU'),val('acT'),'acLogoTam','acActualizarPreviewHead()');
+}
 let _acLogoTmp='';
-function acLeerLogo(){const f=document.getElementById('acL').files[0];if(!f)return;const r=new FileReader();r.onload=()=>{_acLogoTmp=r.result;document.getElementById('acLprev').textContent='Logo nuevo cargado ✓';};r.readAsDataURL(f);}
+function acLeerLogo(){const f=document.getElementById('acL').files[0];if(!f)return;const r=new FileReader();r.onload=()=>{_acLogoTmp=r.result;document.getElementById('acLprev').textContent='Logo nuevo cargado ✓';acActualizarPreviewHead();};r.readAsDataURL(f);}
+function acActualizarPreview(){
+  const el=document.getElementById('acPreview');if(!el)return;
+  el.innerHTML=previewActaHTML(val('acC'),val('acP'));
+}
 let _idxImgs = null; // imágenes del login en edición
 async function idxCargar(){
   if(_idxImgs!==null) { idxPintar(); return; }
@@ -1786,11 +1930,16 @@ async function idxGuardar(){
     toast('Imágenes del inicio guardadas ✓ ('+((_idxImgs||[]).length)+')'); }
   catch(e){ toast(e.message||'No se pudo guardar'); }
 }
-async function guardarEncabezado(){const g=x=>(document.getElementById(x)||{}).value||'';const body={nombre:g('acN')||undefined,rubro:g('acU')||undefined,telefono:g('acT')||undefined,direccion:g('acD')||undefined,rif:g('acR')||undefined,condiciones:g('acC')||undefined,pie:g('acP')||undefined};if(_acLogoTmp)body.logo=_acLogoTmp;try{const upd=await apiReq('/api/talleres/'+CURRENT_TALLER,{method:'PUT',body:JSON.stringify(body)});const i=(window._talleresCache||[]).findIndex(x=>x.id===CURRENT_TALLER);if(i>=0)window._talleresCache[i]=upd;else{window._talleresCache=window._talleresCache||[];window._talleresCache.push(upd);}_acLogoTmp='';toast('Encabezado del acta actualizado ✓');}catch(e){toast(e.message);}}
-function marcaDel(i){store.config.marcas.splice(i,1);renderConfig();}
+async function guardarContacto(){
+  try{ await apiReq('/api/config/contacto',{method:'PUT',body:JSON.stringify({mensaje:val('ctMsg'),correo:val('ctCorreo'),telefono:val('ctTel')})});
+    toast('✅ Mensaje de contacto guardado con éxito'); }
+  catch(e){ toast(e.message||'No se pudo guardar'); }
+}
+async function guardarEncabezado(){const g=x=>(document.getElementById(x)||{}).value||'';const body={nombre:g('acN')||undefined,rubro:g('acU')||undefined,telefono:g('acT')||undefined,direccion:g('acD')||undefined,rif:g('acR')||undefined,condiciones:g('acC')||undefined,pie:g('acP')||undefined,logoTam:+g('acLogoTam')||undefined};if(_acLogoTmp)body.logo=_acLogoTmp;try{const upd=await apiReq('/api/talleres/'+CURRENT_TALLER,{method:'PUT',body:JSON.stringify(body)});const i=(window._talleresCache||[]).findIndex(x=>x.id===CURRENT_TALLER);if(i>=0)window._talleresCache[i]=upd;else{window._talleresCache=window._talleresCache||[];window._talleresCache.push(upd);}_acLogoTmp='';closeModal();toast('✅ Taller actualizado con éxito');renderConfig();}catch(e){toast(e.message);}}
+function marcaDel(i){store.config.marcas.splice(i,1);refrescarCatalogoOConfig();}
 function cfgList(key){return store.config[key].map((v,i)=>`<div style="display:flex;gap:8px;margin-bottom:7px"><input style="flex:1;border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:13px" value="${v}" oninput="store.config.${key}[${i}]=this.value"><button class="wbtn wbtn-gr" onclick="cfgDel('${key}',${i})">✕</button></div>`).join('')||'<div style="font-size:12px;color:var(--muted)">Sin elementos.</div>';}
-function cfgAdd(key){store.config[key].push('Nuevo');renderConfig();}
-function cfgDel(key,i){store.config[key].splice(i,1);renderConfig();}
+function cfgAdd(key){store.config[key].push('Nuevo');refrescarCatalogoOConfig();}
+function cfgDel(key,i){store.config[key].splice(i,1);refrescarCatalogoOConfig();}
 function facturaRow(f){const cur=curSym();const foto=f.foto?`<img src="${f.foto}" style="width:48px;height:48px;object-fit:cover;border-radius:8px;cursor:pointer" onclick="verFoto('${f.id}')" id="fimg_${f.id}">`:'<div style="width:48px;height:48px;border-radius:8px;background:var(--line);display:grid;place-items:center;font-size:9px;color:var(--muted)">sin foto</div>';return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)">${foto}<div style="flex:1"><div style="font-weight:600;font-size:13px">${f.codigo} · ${cur} ${(+f.monto).toLocaleString('es-VE')}</div><div style="font-size:11.5px;color:var(--muted)">${f.fecha} · 🏭 ${f.taller||CURRENT_TALLER_NAME||''} · subió ${f.subidoPor||''}</div></div><span class="pill ${f.estado==='pagada'?'s-term':'s-espera'}"><span class="pd"></span>${f.estado}</span></div>`;}
 function facturaSubir(){const cod=(document.getElementById('fcCod').value||'').trim();const monto=document.getElementById('fcMonto').value;const fecha=document.getElementById('fcFecha').value;const file=document.getElementById('fcFoto').files[0];const err=document.getElementById('fcErr');
   if(!cod||!monto||!fecha){err.textContent='Completa código, monto y fecha';return;}
@@ -2024,6 +2173,7 @@ function openVehForm(id){const v=id?veh(id):null;const act=v?v.activo!==false:tr
      </div>
    </div>
    <div style="display:flex;gap:10px"><div class="fld" style="flex:1"><label>Placa</label><input id="veP" value="${v?v.plate:''}" placeholder="AB123CD"></div><div class="fld" style="flex:1"><label>Año</label><input id="veY" value="${v?(v.anio||''):''}" placeholder="2022"></div></div>
+   <div class="fld"><label>VIN / Serial de carrocería <span style="font-weight:400;color:var(--muted);font-size:11px">(opcional)</span></label><input id="veVin" value="${v?(v.vin||''):''}" placeholder="ej. 8XAUZ5CD9M0012345" autoCapitalize="characters"></div>
    <div style="display:flex;gap:10px"><div class="fld" style="flex:1"><label>Color</label><input id="veC" value="${v?(v.color||''):''}" placeholder="ej. Plata"></div>
      <div class="fld" style="flex:1"><label style="display:flex;align-items:center;justify-content:space-between">Tipo de vehículo <button type="button" class="wbtn wbtn-g" style="padding:3px 9px;font-size:11px" onclick="vehAddTipo()">＋ Nuevo</button></label><select id="veTv">${store.config.tiposVeh.map(t=>`<option ${v&&v.tipoVeh===t?'selected':''}>${t}</option>`).join('')}</select>
        <div class="fld" id="veTipoNewWrap" style="display:none;margin-top:6px"><div style="display:flex;gap:8px"><input id="veTipoNew" placeholder="Nuevo tipo"><button type="button" class="wbtn wbtn-d" style="white-space:nowrap" onclick="vehAddTipoGuardar()">Agregar</button></div></div>
@@ -2055,7 +2205,7 @@ function vehAddTipo(){const w=document.getElementById('veTipoNewWrap');if(!w)ret
 function vehAddTipoGuardar(){const v=(document.getElementById('veTipoNew').value||'').trim();if(!v){toast('Escribe el tipo de vehículo');return;}if(!store.config.tiposVeh)store.config.tiposVeh=[...TIPO_VEH];if(!store.config.tiposVeh.includes(v))store.config.tiposVeh.push(v);const sel=document.getElementById('veTv');const o=document.createElement('option');o.textContent=v;sel.appendChild(o);sel.value=v;document.getElementById('veTipoNewWrap').style.display='none';document.getElementById('veTipoNew').value='';persistData();toast('Tipo agregado: '+v);}
 function vehModelos(marca,sel){const m=store.config.marcas.find(x=>x.marca===marca);const opts=(m?m.modelos:[]);document.getElementById('veModelo').innerHTML=opts.map(o=>`<option ${o===sel?'selected':''}>${o}</option>`).join('')||'<option>—</option>';}
 function saveVeh(id){const marca=val('veMarca'),modelo=val('veModelo'),anio=val('veY').trim();const owner=val('veO');const model=`${marca} ${modelo}${anio?' '+anio:''}`.trim();
-  const data={model,marca,modelo,plate:val('veP').toUpperCase(),owner,anio,color:val('veC'),tipoVeh:val('veTv'),tipoSeguro:val('veSg'),nroSeguro:val('veNs'),activo:val('veA')==='1',ini:inits(marca+' '+modelo)};
+  const data={model,marca,modelo,plate:val('veP').toUpperCase(),owner,anio,vin:val('veVin').toUpperCase(),color:val('veC'),tipoVeh:val('veTv'),tipoSeguro:val('veSg'),nroSeguro:val('veNs'),activo:val('veA')==='1',ini:inits(marca+' '+modelo)};
   if(id){Object.assign(veh(id),data);}else{if(data.plate&&store.vehicles.some(x=>x.plate&&x.plate.toUpperCase()===data.plate.toUpperCase())){toast('Ya existe un vehículo con esa placa');return;}const nid=Math.max(0,...store.vehicles.map(x=>x.id))+1;store.vehicles.push(Object.assign({id:nid,status:'espera',progress:0,mech:null,motivo:'Por definir',eta:'Por asignar',cost:0,nextMaint:{tipo:'Revisión general',fecha:'2026-12-31',km:'—'},reminderOn:false,ingreso:new Date().toISOString().slice(0,10),recepDamages:[],recepcion:null,advances:[],pending:null},data));COLORS[nid]=AVCOLORS[nid%AVCOLORS.length];}
   closeModal();renderWeb();renderPhone();renderWebRecep();store.emit(id?'Vehículo actualizado con éxito':'Vehículo registrado con éxito');}
 function toggleVeh(id){const v=veh(id);v.activo=v.activo===false;renderWeb();renderPhone();store.emit(v.activo?'Vehículo activado':'Vehículo inactivado');}
@@ -2176,6 +2326,7 @@ function editRecep(id){
   wrec.color=r.color||v.color||'';wrec.prioridad=r.prioridad||'Media';
   wrec.combustible=(FUELLBL.indexOf(r.combustible)>=0)?FUELLBL.indexOf(r.combustible):3;
   wrec.km=(r.km&&r.km!=='—')?r.km:'';wrec.accesorios=[...(r.accesorios||[])];wrec.documentos=[...(r.documentos||[])];wrec.obs=(r.obs&&r.obs!=='—')?r.obs:'';
+  wrec.bateria=!!r.bateria;wrec.bateriaMarca=r.bateriaMarca||'';wrec.bateriaAmperaje=r.bateriaAmperaje||'';wrec.bateriaColor=r.bateriaColor||'';wrec.bateriaObs=r.bateriaObs||'';
   wrec.mech=v.mech||null;
   // Trae también los daños ya registrados, agrupados por lado, para poder editarlos
   const LADOMAP={'Superior':'sup','Frontal':'front','Lat. Izq.':'izq','Lat. Der.':'der','Posterior':'post'};
@@ -2371,6 +2522,7 @@ applyLoginBg();
 async function doLogin(){const usuario=(document.getElementById('lgU').value||'').trim();const password=document.getElementById('lgP').value||'';if(!usuario||!password){loginErr('Ingresa usuario y contraseña');return;}
   loginErr('');
   try{const r=await fetch(API+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({usuario,password})});const j=await r.json();if(!r.ok)throw new Error(j.error||'No se pudo iniciar sesión');
+    if(j.user&&(j.user.rol==='mecanico'||j.user.rol==='cliente')){loginErr('Esta cuenta es de '+(j.user.rol==='mecanico'?'técnico':'cliente')+' — esta plataforma web es solo para administradores. Descarga la app de TallerOS para entrar con esta cuenta.');return;}
     TOKEN=j.token;ME=j.user;TALLERES=j.talleres||[];guardarSesion();afterLogin();
   }catch(e){loginErr(e.message);}}
 function afterLogin(){document.getElementById('login').style.display='none';removeSuper();
@@ -2403,18 +2555,126 @@ function setWho(){const av=document.getElementById('whoAv'),nm=document.getEleme
 function renderTallerSelector(){const c=document.getElementById('tallerSel');if(!c)return;const isSuper=ME&&ME.rol==='superadmin';if(TALLERES.length>1||isSuper){const ph=(isSuper&&!CURRENT_TALLER)?'<option value="">— Entrar a un taller —</option>':'';c.innerHTML=`<select onchange="if(this.value)switchTaller(+this.value)" style="border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:13px;font-weight:600;background:#fff">${ph}${TALLERES.map(t=>`<option value="${t.id}" ${t.id===CURRENT_TALLER?'selected':''}>🏭 ${t.nombre}</option>`).join('')}</select>`;}else{c.innerHTML='';}}
 async function renderUsuariosView(){const cont=document.getElementById('w-usuarios');if(!cont)return;
   if(ME&&ME.rol==='superadmin'){
-    let users=[];try{users=await apiReq('/api/talleres/users/all');}catch(e){}
-    window._USERS=users;
-    const rb={superadmin:'Super Admin',administrador:'Administrador',mecanico:'Técnico',cliente:'Cliente'};
-    const rows=users.map(u=>{const act=!!u.activo;return `<tr><td>${u.nombre}</td><td class="mono" style="font-size:12px">${u.usuario}</td><td style="font-size:12px">${u.correo}</td><td><span class="pill ${u.rol==='superadmin'?'s-dev':u.rol==='administrador'?'s-rep':u.rol==='mecanico'?'s-wait':'s-ent'}"><span class="pd"></span>${rb[u.rol]||u.rol}</span></td><td>${act?'Activo':'Inactivo'}</td><td style="white-space:nowrap"><button class="wbtn wbtn-g" onclick="suEdit(${u.id})">Modificar</button> <button class="wbtn wbtn-g" onclick="suToggle(${u.id},${act})">${act?'Inactivar':'Activar'}</button> <button class="wbtn wbtn-g" onclick="suPermisos(${u.id})">Permisos</button></td></tr><tr id="suPm_${u.id}" style="display:none"><td colspan="6"></td></tr><tr id="suEd_${u.id}" style="display:none"><td colspan="6"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;padding:6px 0"><div class="fld" style="margin:0;min-width:120px"><label>Nombre</label><input id="seN_${u.id}" value="${u.nombre}"></div><div class="fld" style="margin:0;min-width:150px"><label>Correo</label><input id="seE_${u.id}" value="${u.correo}"></div><div class="fld" style="margin:0;min-width:130px"><label>Rol</label><select id="seR_${u.id}">${['superadmin','administrador','mecanico','cliente'].map(r=>`<option value="${r}" ${r===u.rol?'selected':''}>${rb[r]}</option>`).join('')}</select></div><div class="fld" style="margin:0;min-width:140px"><label>Nueva contraseña (opcional)</label><input id="seP_${u.id}" type="password"></div><button class="wbtn wbtn-d" onclick="suGuardar(${u.id})">Guardar</button></div></td></tr>`;}).join('');
-    cont.innerHTML=`<div class="dcard"><h3 style="font-size:15px;margin-bottom:10px">Crear usuario</h3><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end"><div class="fld" style="margin:0;flex:1;min-width:120px"><label>Nombre</label><input id="nuN"></div><div class="fld" style="margin:0;min-width:100px"><label>Usuario</label><input id="nuU"></div><div class="fld" style="margin:0;min-width:140px"><label>Correo</label><input id="nuE"></div><div class="fld" style="margin:0;min-width:100px"><label>Contraseña</label><input id="nuP" type="password"></div><div class="fld" style="margin:0;min-width:130px"><label>Rol</label><select id="nuR"><option value="superadmin">Super Admin</option><option value="administrador">Administrador</option><option value="mecanico">Técnico</option><option value="cliente">Cliente</option></select></div><button class="wbtn wbtn-d" onclick="suCrearUsuario()">Crear</button></div><div id="nuErr" style="color:var(--red);font-size:12px;margin-top:6px"></div><div style="font-size:11px;color:var(--muted);margin-top:6px">Los administradores se asignan a talleres desde el menú <b>Talleres</b>.</div></div><div class="tablecard" style="margin-top:14px"><table><thead><tr><th>Nombre</th><th>Usuario</th><th>Correo</th><th>Rol</th><th>Estado</th><th></th></tr></thead><tbody>${rows||'<tr><td colspan="6" style="color:var(--muted)">Sin usuarios.</td></tr>'}</tbody></table></div>`;
+    let talleresList=[],admins=[];
+    try{talleresList=await apiReq('/api/talleres');}catch(e){}
+    try{admins=await apiReq('/api/talleres/admins/all');}catch(e){}
+    window._TALLERES_SU=talleresList;window._SU_ADMINS=admins;
+    const fTaller=BUSCA.suFiltroTaller||'';const fEstado=BUSCA.suFiltroEstado||'';const q=(BUSCA.suBusqueda||'').trim();
+    const norm=t=>(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    const nombreTaller=id=>{const t=talleresList.find(x=>x.id===id);return t?t.nombre:'';};
+    let filtrados=admins;
+    if(fTaller)filtrados=filtrados.filter(a=>(a.talleres||[]).includes(+fTaller));
+    if(fEstado==='activo')filtrados=filtrados.filter(a=>a.activo!==false&&a.activo!==0);
+    if(fEstado==='inactivo')filtrados=filtrados.filter(a=>a.activo===false||a.activo===0);
+    if(q)filtrados=filtrados.filter(a=>norm(a.nombre+' '+(a.documento||'')+' '+(a.correo||'')+' '+(a.usuario||'')).includes(norm(q)));
+    cont.innerHTML=`<div class="dcard">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:15px;margin:0">Filtros</h3><button class="wbtn wbtn-d" onclick="suNuevoAdminDesdeFiltros()">＋ Nuevo administrador</button></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <div class="fld" style="margin:0"><label>Empresa / Taller</label><select onchange="BUSCA.suFiltroTaller=this.value;renderUsuariosView()"><option value="">Todos los talleres</option>${talleresList.map(t=>`<option value="${t.id}" ${String(t.id)===fTaller?'selected':''}>${t.nombre}</option>`).join('')}</select></div>
+        <div class="fld" style="margin:0"><label>Estado</label><select onchange="BUSCA.suFiltroEstado=this.value;renderUsuariosView()"><option value="" ${!fEstado?'selected':''}>Todos</option><option value="activo" ${fEstado==='activo'?'selected':''}>Activo</option><option value="inactivo" ${fEstado==='inactivo'?'selected':''}>Inactivo</option></select></div>
+        <div class="fld" style="margin:0"><label>Búsqueda</label><input value="${q.replace(/"/g,'&quot;')}" placeholder="Nombre, documento, correo, usuario…" oninput="BUSCA.suBusqueda=this.value;renderUsuariosView()"></div>
+      </div>
+    </div>
+    <div class="tablecard" style="margin-top:14px"><table><thead><tr><th>Nombre</th><th>Documento</th><th>Celular</th><th>Nick / Usuario</th><th>Taller</th><th>Estado</th><th></th></tr></thead><tbody>${filtrados.length?filtrados.map(a=>`<tr>
+      <td><b>${a.nombre}</b></td>
+      <td class="mono" style="font-size:12px">${a.documento||'—'}</td>
+      <td class="mono" style="font-size:12px">${a.telefono||'—'}</td>
+      <td class="mono" style="font-size:12px">${a.usuario}</td>
+      <td style="font-size:12px">${(a.talleresNombres&&a.talleresNombres.length)?a.talleresNombres.join(', '):(a.talleres||[]).map(nombreTaller).filter(Boolean).join(', ')||'—'}</td>
+      <td>${(a.activo!==false&&a.activo!==0)?'Activo':'<span style="color:var(--red)">Inactivo</span>'}</td>
+      <td><button class="wbtn wbtn-g" onclick="suEditarAdminGlobal(${a.id})">✎ Editar</button></td>
+    </tr>`).join(''):'<tr><td colspan="7" style="color:var(--muted)">Ningún administrador coincide con los filtros.</td></tr>'}</tbody></table></div>`;
   }else{
     if(!CURRENT_TALLER){cont.innerHTML='<div class="dcard" style="color:var(--muted)">Selecciona un taller para gestionar sus accesos.</div>';return;}
     let admins=[];try{admins=await apiReq('/api/talleres/'+CURRENT_TALLER+'/admins');}catch(e){}
-    const list=admins.map(a=>{const act=!!a.activo;return `<div style="padding:8px 0;border-bottom:1px solid var(--line)"><div style="display:flex;align-items:center;gap:10px"><div style="flex:1;font-size:13px">${a.nombre} <span style="color:var(--muted)">(${a.usuario} · ${a.correo})</span> ${act?'':'<span style="color:var(--red);font-size:11px">(inactivo)</span>'}</div><button class="wbtn wbtn-g" onclick="admEdit(${a.id})">Modificar</button> <button class="wbtn wbtn-g" onclick="admToggle(${a.id},${act})">${act?'Inactivar':'Activar'}</button></div><div id="admEd_${a.id}" style="display:none;margin-top:8px"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end"><div class="fld" style="margin:0;min-width:120px"><label>Nombre</label><input id="aeN_${a.id}" value="${a.nombre}"></div><div class="fld" style="margin:0;min-width:150px"><label>Correo</label><input id="aeE_${a.id}" value="${a.correo}"></div><div class="fld" style="margin:0;min-width:140px"><label>Nueva contraseña (opcional)</label><input id="aeP_${a.id}" type="password"></div><button class="wbtn wbtn-d" onclick="admGuardar(${a.id})">Guardar</button></div></div></div>`;}).join('');
-    cont.innerHTML=`<div class="dcard"><h3 style="font-size:15px;margin-bottom:4px">Administradores de ${CURRENT_TALLER_NAME}</h3><div style="font-size:11px;color:var(--muted);margin-bottom:10px">Puedes crear, modificar o inactivar administradores de este taller. La asignación a otros talleres la hace el Super Administrador.</div>${list||'<div style="font-size:12px;color:var(--muted)">Aún no hay administradores.</div>'}<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:12px"><div class="fld" style="margin:0;flex:1;min-width:120px"><label>Nombre</label><input id="auN"></div><div class="fld" style="margin:0;min-width:100px"><label>Usuario</label><input id="auU"></div><div class="fld" style="margin:0;min-width:140px"><label>Correo</label><input id="auE"></div><div class="fld" style="margin:0;min-width:100px"><label>Contraseña</label><input id="auP" type="password"></div><button class="wbtn wbtn-d" onclick="admCrearAdmin()">Agregar administrador</button></div><div id="auErr" style="color:var(--red);font-size:12px;margin-top:6px"></div></div>`;
+    window._suTallerActual=CURRENT_TALLER;window._suAdmins=admins;window._suVolverALista=false;
+    cont.innerHTML=`<div class="dcard">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:15px;margin:0">Administradores de ${CURRENT_TALLER_NAME}</h3><button class="wbtn wbtn-d" onclick="suFormAdmin(null)">＋ Nuevo administrador</button></div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Puedes crear, modificar o inactivar administradores de este taller.</div>
+      ${admins.length?admins.map(a=>`<div style="padding:10px 0;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px">
+        <div style="flex:1"><b>${a.nombre}</b> ${a.activo?'':'<span style="color:var(--red);font-size:11px">(inactivo)</span>'}<div style="font-size:12px;color:var(--muted)">${a.usuario} · ${a.correo}${a.telefono?' · '+a.telefono:''}</div></div>
+        <button class="wbtn wbtn-g" onclick="suFormAdmin(${a.id})">Editar</button>
+        <button class="wbtn ${a.activo?'wbtn-gr':'wbtn-g'}" onclick="suToggleAdmin(${a.id},${!!a.activo})">${a.activo?'Inactivar':'Activar'}</button>
+      </div>`).join(''):'<div style="font-size:12px;color:var(--muted)">Aún no hay administradores.</div>'}
+    </div>`;
   }}
-function suEdit(id){const e=document.getElementById('suEd_'+id);if(e)e.style.display=e.style.display==='none'?'':'none';}
+async function suAbrirTaller(tallerId){
+  const t=(window._TALLERES_SU||[]).find(x=>x.id===tallerId);if(!t)return;
+  window._suTallerActual=tallerId;
+  let admins=[];try{admins=await apiReq('/api/talleres/'+tallerId+'/admins');}catch(e){toast(e.message);return;}
+  window._suAdmins=admins;
+  document.getElementById('modalH').innerHTML=`<h2>Administradores de ${t.nombre}</h2>`;
+  document.getElementById('modalB').innerHTML=suAdminsListaHTML();
+  document.getElementById('modal').classList.add('on');
+}
+function suAdminsListaHTML(){
+  const admins=window._suAdmins||[];
+  return `<div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="wbtn wbtn-d" onclick="window._suVolverALista=true;suFormAdmin(null)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Nuevo administrador</button></div>
+  ${admins.length?admins.map(a=>`<div style="padding:10px 0;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px">
+    <div style="flex:1"><b>${a.nombre}</b> ${a.activo?'':'<span style="color:var(--red);font-size:11px">(inactivo)</span>'}<div style="font-size:12px;color:var(--muted)">${a.usuario} · ${a.correo}${a.telefono?' · '+a.telefono:''}</div></div>
+    <button class="wbtn wbtn-g" onclick="window._suVolverALista=true;suFormAdmin(${a.id})">Editar</button>
+    <button class="wbtn ${a.activo?'wbtn-gr':'wbtn-g'}" onclick="suToggleAdmin(${a.id},${!!a.activo})">${a.activo?'Inactivar':'Activar'}</button>
+    <button class="wbtn wbtn-gr" style="color:var(--red)" onclick="suEliminarAdmin(${a.id},'${(a.nombre||'').replace(/'/g,"\\'")}')">🗑 Eliminar</button>
+  </div>`).join(''):'<div style="color:var(--muted);font-size:13px">Este taller aún no tiene administradores.</div>'}`;
+}
+function suFormAdmin(uid){
+  const a=uid?(window._suAdmins||[]).find(x=>x.id===uid):null;
+  const tallerActualId=a?(a.talleres&&a.talleres[0]):(window._suTallerActual||'');
+  const talleresList=window._TALLERES_SU||[];
+  const esSuper=ME&&ME.rol==='superadmin';
+  document.getElementById('modalH').innerHTML=`<h2>${a?'Editar administrador':'Nuevo administrador'}</h2>`;
+  document.getElementById('modalB').innerHTML=`
+    ${esSuper?`<div class="fld"><label>Taller</label><select id="saTaller">${talleresList.map(t=>`<option value="${t.id}" ${t.id===tallerActualId?'selected':''}>${t.nombre}</option>`).join('')}</select></div>`:''}
+    <div class="fld"><label>Nombre</label><input id="saN" value="${a?a.nombre:''}"></div>
+    <div class="fld"><label>Documento</label><input id="saD" value="${a?(a.documento||''):''}"></div>
+    <div class="fld"><label>Usuario (nick de acceso)</label><input id="saU" value="${a?a.usuario:''}" autocomplete="off"></div>
+    <div class="fld"><label>Correo</label><input id="saE" value="${a?a.correo:''}"></div>
+    <div class="fld"><label>Teléfono / Celular</label><input id="saT" value="${a?(a.telefono||''):''}"></div>
+    <div style="display:flex;gap:10px"><div class="fld" style="flex:1"><label>${a?'Nueva contraseña':'Contraseña'}</label>${campoClaveHTML('saP',a?'Dejar vacío para no cambiar':'mínimo 6 caracteres')}</div><div class="fld" style="flex:1"><label>Confirmar</label>${campoClaveHTML('saP2','')}</div></div>
+    <div id="saErr" style="color:var(--red);font-size:12px;margin-bottom:8px"></div>
+    <button class="wbtn wbtn-d" style="width:100%;justify-content:center" onclick="suGuardarAdmin(${uid||0})">${a?'Guardar cambios':'Crear administrador'}</button>
+    ${esSuper&&window._suTallerActual&&window._suVolverALista?`<button class="wbtn wbtn-g" style="width:100%;justify-content:center;margin-top:8px" onclick="suAbrirTaller(window._suTallerActual)">← Volver a la lista</button>`:''}`;
+  document.getElementById('modal').classList.add('on');
+}
+function suNuevoAdminDesdeFiltros(){
+  window._suTallerActual=BUSCA.suFiltroTaller?+BUSCA.suFiltroTaller:((window._TALLERES_SU||[])[0]||{}).id;
+  window._suAdmins=[];window._suVolverALista=false;
+  document.getElementById('modalH').innerHTML=`<h2>Nuevo administrador</h2>`;
+  suFormAdmin(null);
+}
+function suEditarAdminGlobal(uid){
+  const a=(window._SU_ADMINS||[]).find(x=>x.id===uid);if(!a)return;
+  window._suTallerActual=(a.talleres&&a.talleres[0])||null;window._suAdmins=[a];window._suVolverALista=false;
+  document.getElementById('modalH').innerHTML=`<h2>Editar administrador</h2>`;
+  suFormAdmin(uid);
+}
+async function suGuardarAdmin(uid){
+  const esSuper=ME&&ME.rol==='superadmin';
+  const tallerSel=esSuper?+val('saTaller'):window._suTallerActual;
+  const n=val('saN').trim(),d=val('saD').trim(),u=val('saU').trim(),e=val('saE').trim(),tel=val('saT').trim(),p=val('saP'),p2=val('saP2');
+  const err=document.getElementById('saErr');err.textContent='';
+  if(!tallerSel){err.textContent='Selecciona un taller';return;}
+  if(!n||!u||!e){err.textContent='Nombre, usuario y correo son obligatorios';return;}
+  if(!uid&&!p){err.textContent='La contraseña es obligatoria al crear';return;}
+  if(p&&p!==p2){err.textContent='Las contraseñas no coinciden';return;}
+  if(p&&p.length<6){err.textContent='La contraseña debe tener al menos 6 caracteres';return;}
+  try{
+    if(uid){
+      await apiReq('/api/talleres/'+tallerSel+'/admins/'+uid,{method:'PUT',body:JSON.stringify({nombre:n,usuario:u,correo:e,telefono:tel,documento:d,password:p||undefined})});
+      if(esSuper&&tallerSel!==window._suTallerActual)await apiReq('/api/talleres/admins/'+uid+'/talleres',{method:'PUT',body:JSON.stringify({talleres:[tallerSel]})});
+      toast('✅ Administrador actualizado con éxito');
+    }else{
+      await apiReq('/api/talleres/'+tallerSel+'/admins',{method:'POST',body:JSON.stringify({nombre:n,usuario:u,correo:e,telefono:tel,documento:d,password:p})});
+      toast('✅ Administrador creado con éxito');
+    }
+  }catch(ex){err.textContent=ex.message;return;}
+  if(esSuper){await suAbrirTaller(window._suTallerActual);}else{closeModal();renderUsuariosView();}
+}
+async function suToggleAdmin(uid,act){try{await apiReq('/api/talleres/'+window._suTallerActual+'/admins/'+uid+'/estado',{method:'PUT',body:JSON.stringify({activo:!act})});toast('Actualizado ✓');if(ME&&ME.rol==='superadmin'){await suAbrirTaller(window._suTallerActual);}else{renderUsuariosView();}}catch(e){toast(e.message);}}
+async function suEliminarAdmin(uid,nombre){
+  if(!confirm('¿Eliminar por completo la cuenta de "'+nombre+'"? Esta acción no se puede deshacer — perderá el acceso a todos los talleres, no solo a este.'))return;
+  try{await apiReq('/api/talleres/users/'+uid,{method:'DELETE'});toast('Administrador eliminado');await suAbrirTaller(window._suTallerActual);}catch(e){toast(e.message);}
+}
 function suPermisos(id){const row=document.getElementById('suPm_'+id);if(!row)return;if(row.style.display!=='none'){row.style.display='none';return;}
   const u=(window._USERS||[]).find(x=>x.id===id);if(!u){toast('No se encontró el usuario');return;}
   const P=u.permisos||{};
@@ -2430,14 +2690,9 @@ async function renderAuditoria(){const cont=document.getElementById('w-audit');i
   const disp=s=>{s=s||'';if(/Android/i.test(s))return'Android';if(/iPhone|iPad|iOS/i.test(s))return'iPhone/iPad';if(/Windows/i.test(s))return'Windows';if(/Mac/i.test(s))return'Mac';if(/Linux/i.test(s))return'Linux';return s.slice(0,24)||'—';};
   const body=rows.map(r=>`<tr><td style="font-size:12px;white-space:nowrap">${fmt(r.fecha)}</td><td style="font-size:12px">${r.usuario_nombre||''} <span style="color:var(--muted)">(${r.rol||''})</span></td><td style="font-size:12px">${r.accion||''}</td><td style="font-size:12px">${r.modulo||''}</td><td style="font-size:12px;color:var(--muted)">${r.detalle||''}</td><td style="font-size:11px;color:var(--muted)">${r.ip||''}</td><td style="font-size:11px;color:var(--muted)">${disp(r.dispositivo)}</td></tr>`).join('');
   cont.innerHTML=`<div class="tablecard"><table><thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Módulo</th><th>Detalle</th><th>IP</th><th>Dispositivo</th></tr></thead><tbody>${body||'<tr><td colspan="7" style="color:var(--muted)">Sin registros todavía.</td></tr>'}</tbody></table></div>`;}
-async function suToggle(id,act){try{await apiReq('/api/talleres/users/'+id+'/estado',{method:'PUT',body:JSON.stringify({activo:!act})});toast('Usuario actualizado ✓');renderUsuariosView();}catch(e){toast(e.message);}}
-async function suGuardar(id){const g=x=>document.getElementById(x+id).value;try{await apiReq('/api/talleres/users/'+id,{method:'PUT',body:JSON.stringify({nombre:g('seN_'),correo:g('seE_'),rol:g('seR_'),password:document.getElementById('seP_'+id).value||undefined})});toast('Usuario modificado ✓');renderUsuariosView();}catch(e){toast(e.message);}}
 function admEdit(id){const e=document.getElementById('admEd_'+id);if(e)e.style.display=e.style.display==='none'?'':'none';}
 async function admToggle(id,act){try{await apiReq('/api/talleres/'+CURRENT_TALLER+'/admins/'+id+'/estado',{method:'PUT',body:JSON.stringify({activo:!act})});toast('Administrador actualizado ✓');renderUsuariosView();}catch(e){toast(e.message);}}
 async function admGuardar(id){const g=x=>document.getElementById(x+id).value;try{await apiReq('/api/talleres/'+CURRENT_TALLER+'/admins/'+id,{method:'PUT',body:JSON.stringify({nombre:g('aeN_'),correo:g('aeE_'),password:document.getElementById('aeP_'+id).value||undefined})});toast('Administrador modificado ✓');renderUsuariosView();}catch(e){toast(e.message);}}
-async function suCrearUsuario(){const g=x=>(document.getElementById(x).value||'').trim();const nombre=g('nuN'),usuario=g('nuU'),correo=g('nuE'),rol=document.getElementById('nuR').value;const password=document.getElementById('nuP').value;const err=document.getElementById('nuErr');
-  if(!nombre||!usuario||!correo||!password){err.textContent='Completa todos los campos';return;}
-  try{await apiReq('/api/talleres/users/new',{method:'POST',body:JSON.stringify({nombre,usuario,correo,password,rol})});toast('Usuario creado ✓');renderUsuariosView();}catch(e){err.textContent=e.message;}}
 async function admCrearAdmin(){const g=x=>(document.getElementById(x).value||'').trim();const nombre=g('auN'),usuario=g('auU'),correo=g('auE');const password=document.getElementById('auP').value;const err=document.getElementById('auErr');
   if(!nombre||!usuario||!correo||!password){err.textContent='Completa todos los campos';return;}
   try{await apiReq('/api/talleres/'+CURRENT_TALLER+'/admins',{method:'POST',body:JSON.stringify({nombre,usuario,correo,password})});toast('Administrador creado para este taller ✓');renderUsuariosView();}catch(e){err.textContent=e.message;}}
@@ -2459,37 +2714,23 @@ function renderNoTaller(){removeSuper();const el=document.createElement('div');e
 function showTallerInactivo(t){removeSuper();const el=document.createElement('div');el.id='superPanel';el.className='pickerwrap';el.innerHTML=`<div class="pickcard"><div style="padding:26px;text-align:center"><div style="font-size:34px;margin-bottom:4px">🔒</div><h3>Taller desactivado</h3><div class="sub" style="margin:8px 0 6px">El taller <b>${t.nombre}</b> está desactivado por el Super Administrador.</div><div style="background:#fdecec;color:#b91c1c;border-radius:10px;padding:11px 13px;font-size:13px;margin:8px 0 16px;text-align:left">Motivo: ${t.motivo_inactivo||'No especificado.'}</div><button class="lbtn lbtn-p" onclick="cerrarInactivo()">Cerrar</button><span class="llink" onclick="logout()">Cerrar sesión</span></div></div>`;document.body.appendChild(el);}
 function cerrarInactivo(){removeSuper();if(CURRENT_TALLER){document.getElementById('stage').style.display='';renderTallerSelector();}else{renderTallerPicker();}}
 function renderTallerPicker(){removeSuper();const el=document.createElement('div');el.id='superPanel';el.className='pickerwrap';el.innerHTML=`<div class="pickcard"><div style="padding:22px"><h3>Selecciona un taller</h3><div class="sub" style="margin:4px 0 14px">Hola ${ME.nombre}, tienes varios talleres. ¿Con cuál deseas trabajar?</div>${TALLERES.map(t=>{const inact=(t.activo===0||t.activo===false);return `<button class="lbtn lbtn-g" style="justify-content:flex-start;margin-bottom:8px;${inact?'opacity:.6':''}" onclick="enterTaller(${t.id},'${(t.nombre||'').replace(/'/g,'')}')">${inact?'🔒':'🏭'} ${t.nombre}${inact?' (inactivo)':''}</button>`;}).join('')}<span class="llink" onclick="logout()">Cerrar sesión</span></div></div>`;document.body.appendChild(el);}
-async function renderSuperPanel(){const _cont=document.getElementById('w-talleres');if(!_cont)return;let talleres=[],admins=[];try{talleres=await apiReq('/api/talleres');window._talleresCache=talleres;}catch(e){}try{admins=await apiReq('/api/talleres/admins/all');}catch(e){}
+async function renderSuperPanel(){const _cont=document.getElementById('w-talleres');if(!_cont)return;let talleres=[];try{talleres=await apiReq('/api/talleres');window._talleresCache=talleres;window._TALLERES_SU=talleres;}catch(e){}
+  let contacto={};try{contacto=await apiReq('/api/config/contacto');}catch(e){}
   _cont.innerHTML=`
    <div class="supermain" style="max-width:none;padding:0">
-     <div class="dcard"><h3 style="font-size:15px;margin-bottom:10px">Crear nuevo taller</h3>
-       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
-         <div class="fld" style="flex:1;min-width:180px;margin:0"><label>Nombre del taller</label><input id="spNombre" placeholder="ej. Taller Experto"></div>
-         <div class="fld" style="min-width:130px;margin:0"><label>RIF (opcional)</label><input id="spRif" placeholder="J-..."></div>
-         <div class="fld" style="min-width:150px;margin:0"><label>Teléfono (opcional)</label><input id="spTel" placeholder="+58 ..."></div>
-         <button class="wbtn wbtn-d" onclick="spCrearTaller()">Crear taller</button>
-       </div><div id="spErr" style="color:var(--red);font-size:12.5px;margin-top:8px"></div>
-     </div>
-     <div class="dcard" style="margin-top:14px"><h3 style="font-size:15px;margin-bottom:10px">Crear administrador y asignar talleres</h3>
-       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
-         <div class="fld" style="margin:0;flex:1;min-width:130px"><label>Nombre</label><input id="caN"></div>
-         <div class="fld" style="margin:0;min-width:110px"><label>Usuario</label><input id="caU"></div>
-         <div class="fld" style="margin:0;min-width:150px"><label>Correo</label><input id="caE"></div>
-         <div class="fld" style="margin:0;min-width:110px"><label>Contraseña</label><input id="caP" type="password"></div>
-       </div>
-       <div style="margin-top:10px"><div style="font-size:12px;font-weight:600;margin-bottom:6px">Asignar a talleres:</div>${talleres.length?talleres.map(t=>`<label style="display:inline-flex;align-items:center;gap:6px;margin:0 14px 6px 0;font-size:13px"><input type="checkbox" class="caTaller" value="${t.id}" style="width:auto"> ${t.nombre}</label>`).join(''):'<span style="font-size:12px;color:var(--muted)">Crea un taller primero.</span>'}</div>
-       <button class="wbtn wbtn-d" style="margin-top:10px" onclick="spCrearAdminMulti()">Crear administrador</button>
-       <div id="caErr" style="color:var(--red);font-size:12.5px;margin-top:8px"></div>
-     </div>
-     <h3 style="font-size:15px;margin:18px 0 10px">Talleres registrados (${talleres.length})</h3>
+     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h3 style="font-size:15px;margin:0">Talleres registrados (${talleres.length})</h3><button class="wbtn wbtn-d" onclick="spAbrirCrearTaller()">＋ Crear taller</button></div>
      <div id="spList">${talleres.map(spTallerCard).join('')||'<div class="dcard" style="color:var(--muted)">Aún no hay talleres. Crea el primero arriba.</div>'}</div>
-     <h3 style="font-size:15px;margin:18px 0 10px">Administradores (${admins.length}) — editar talleres</h3>
-     <div>${admins.length?admins.map(a=>spAdminEditCard(a,talleres)).join(''):'<div class="dcard" style="color:var(--muted)">Aún no hay administradores. Créalos arriba.</div>'}</div>
      <div class="dcard" style="margin-top:14px"><h3 style="font-size:15px;margin-bottom:6px">🖼️ Imágenes del inicio de sesión</h3>
        <div style="font-size:12.5px;color:var(--muted);margin-bottom:12px">Estas fotos aparecen en el panel derecho de la pantalla de inicio de TODA la plataforma, rotando junto con los consejos de mantenimiento. Si no subes ninguna, se muestran fondos de color.</div>
        <div class="fld"><label>Agregar imagen (puedes elegir varias)</label><input id="idxFile" type="file" accept="image/*" multiple onchange="idxAgregar()"></div>
        <div id="idxLista" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-top:6px"></div>
        <button class="wbtn wbtn-d" style="margin-top:12px" onclick="idxGuardar()">Guardar imágenes</button>
+     </div>
+     <div class="dcard" style="margin-top:14px"><h3 style="font-size:15px;margin-bottom:6px">💬 Mensaje de contacto para la app</h3>
+       <div style="font-size:12.5px;color:var(--muted);margin-bottom:12px">Si alguien abre la app sin tener una cuenta todavía (la descargó de Play Store pero su taller no está registrado), en vez de solo ver el login se le muestra este mensaje con tus datos de contacto.</div>
+       <div class="fld"><label>Mensaje</label><textarea id="ctMsg" rows="2" style="width:100%;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:8px" placeholder="Ej. Para acceder, contacta a TallerOS">${(contacto.mensaje||'')}</textarea></div>
+       <div style="display:flex;gap:10px;flex-wrap:wrap"><div class="fld" style="flex:1;min-width:180px"><label>Correo</label><input id="ctCorreo" value="${(contacto.correo||'').replace(/"/g,'&quot;')}" placeholder="contacto@tallerosapp.com"></div><div class="fld" style="flex:1;min-width:150px"><label>WhatsApp / Teléfono</label><input id="ctTel" value="${(contacto.telefono||'').replace(/"/g,'&quot;')}" placeholder="+58 ..."></div></div>
+       <button class="wbtn wbtn-d" style="margin-top:8px" onclick="guardarContacto()">Guardar mensaje de contacto</button>
      </div>
      <div class="dcard" style="margin-top:14px;border:1px solid #f3c2c2;background:#fff7f7">
        <h3 style="font-size:15px;margin-bottom:6px;color:#c0392b">Zona de peligro</h3>
@@ -2498,22 +2739,141 @@ async function renderSuperPanel(){const _cont=document.getElementById('w-tallere
      </div>
    </div>`;
 }
+// Vista previa en vivo de como se veran las Condiciones del servicio y el Pie de pagina
+// en el Acta, mientras el usuario los escribe.
+function previewEncabezadoHTML(logoSrc,logoTam,nombre,rubro,telefono,sliderId,onSliderChange){
+  logoTam=logoTam||100;
+  return `<div style="border:1px dashed #c7ccd2;border-radius:8px;padding:14px;margin-top:10px;background:#fafbfc">
+    <div style="font-size:9px;color:#9aa3ad;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Así se verá el encabezado en el Acta</div>
+    <div style="display:flex;gap:14px;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:10px;background:#fff;padding:10px;border-radius:6px">
+      <div style="text-align:center;min-width:${Math.round(170*(logoTam/100))}px">
+        ${logoSrc?`<img src="${logoSrc}" style="max-height:${Math.round(44*(logoTam/100))}px;max-width:${Math.round(170*(logoTam/100))}px;display:inline-block">`:'<div style="font-size:10px;color:#c7ccd2;padding:14px 0">(sin logo)</div>'}
+        ${sliderId?`<div style="margin-top:8px"><input type="range" id="${sliderId}" min="30" max="250" value="${logoTam}" style="width:100%" oninput="document.getElementById('${sliderId}Val').textContent=this.value;${onSliderChange}"><div style="font-size:10px;color:#9aa3ad">Tamaño: <b id="${sliderId}Val">${logoTam}</b>%</div></div>`:''}
+      </div>
+      <div style="flex:1;padding-top:4px">
+        <div style="font-weight:bold;font-size:14px">${(nombre||'TallerOS').replace(/</g,'&lt;')}</div>
+        <div style="font-size:10px;color:#666;text-transform:uppercase">${(rubro||'TALLER AUTOMOTRIZ').replace(/</g,'&lt;')}</div>
+        ${telefono?`<div style="font-size:9px;color:#888;margin-top:2px">Tel: ${telefono.replace(/</g,'&lt;')}</div>`:''}
+      </div>
+    </div>
+  </div>`;
+}
+function previewActaHTML(condiciones,pie,logoSrc,logoTam){
+  logoTam=logoTam||100;
+  const nl2br=t=>(t||'').replace(/</g,'&lt;').replace(/\n/g,'<br>');
+  return `${logoSrc?`<div style="border:1px dashed #c7ccd2;border-radius:8px;padding:10px;margin-top:6px;background:#fafbfc;text-align:center">
+    <div style="font-size:9px;color:#9aa3ad;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Así se verá el logo en el Acta</div>
+    <img src="${logoSrc}" style="max-height:${Math.round(44*(logoTam/100))}px;max-width:${Math.round(170*(logoTam/100))}px;display:inline-block">
+  </div>`:''}
+  <div style="border:1px dashed #c7ccd2;border-radius:8px;padding:10px;margin-top:6px;background:#fafbfc">
+    <div style="font-size:9px;color:#9aa3ad;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Así se verán las condiciones y el pie en el Acta</div>
+    ${condiciones?`<div style="font-size:9px;color:#333;line-height:1.4;font-family:Arial,Helvetica,sans-serif"><b>Condiciones del Servicio:</b><br>${nl2br(condiciones)}</div>`:''}
+    ${pie?`<div style="font-size:9px;color:#666;margin-top:6px;text-align:center;font-family:Arial,Helvetica,sans-serif;border-top:1px solid #ddd;padding-top:6px">${nl2br(pie)}</div>`:''}
+    ${!condiciones&&!pie?'<div style="font-size:11px;color:#c7ccd2">Escribe arriba para ver el ejemplo…</div>':''}
+  </div>`;
+}
+function spAbrirCrearTaller(){
+  window._spPlanElegido='lite';
+  document.getElementById('modalH').innerHTML=`<h2>Crear nuevo taller</h2>`;
+  document.getElementById('modalB').innerHTML=`
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><div class="fld" style="flex:1;min-width:180px"><label>Nombre del taller</label><input id="spNombre" placeholder="ej. Taller Experto" oninput="spActualizarPreview()"></div><div class="fld" style="min-width:130px"><label>RIF / RUC</label><input id="spRif" placeholder="J-..."></div></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><div class="fld" style="flex:1;min-width:150px"><label>Rubro (subtítulo)</label><input id="spRubro" placeholder="TALLER AUTOMOTRIZ" oninput="spActualizarPreview()"></div><div class="fld" style="min-width:150px"><label>Teléfono</label><input id="spTel" placeholder="+58 ..." oninput="spActualizarPreview()"></div></div>
+    <div class="fld"><label>Dirección</label><input id="spDir" placeholder="Dirección del taller"></div>
+    <div class="fld"><label>Logo / foto del taller</label><input id="spLogo" type="file" accept="image/*" onchange="spLeerLogoCrear()"></div>
+    <div id="spPreview">${previewEncabezadoHTML('',100,'','','', 'spLogoTam','spActualizarPreview()')}</div>
+    <div class="fld" style="margin-top:10px"><label>Versión del taller</label>
+      <div style="display:flex;gap:8px">
+        <button type="button" class="wbtn wbtn-d" id="spPlanBtn_lite" onclick="spElegirPlan('lite')" style="flex:1;justify-content:center">Lite (solo fotos)</button>
+        <button type="button" class="wbtn wbtn-g" id="spPlanBtn_pro" onclick="spElegirPlan('pro')" style="flex:1;justify-content:center">Pro</button>
+        <button type="button" class="wbtn wbtn-g" id="spPlanBtn_premium" onclick="spElegirPlan('premium')" style="flex:1;justify-content:center">Premium</button>
+      </div>
+    </div>
+    <div class="fld" id="spVidWrap" style="display:none"><label>Minutos de video por vehículo: <b id="spVidVal">10</b> min</label>
+      <input type="range" id="spVidMin" min="1" max="60" value="10" style="width:100%" oninput="document.getElementById('spVidVal').textContent=this.value">
+    </div>
+    <div class="fld"><label>Condiciones del servicio (aparece en el Acta)</label><textarea id="spCond" rows="3" style="width:100%;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:8px" oninput="spActualizarPreviewCond()"></textarea></div>
+    <div class="fld"><label>Pie de página (aparece en el Acta)</label><textarea id="spPie" rows="2" style="width:100%;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:8px" placeholder="Ej. Gracias por su preferencia" oninput="spActualizarPreviewCond()"></textarea></div>
+    <div id="spPreviewCond">${previewActaHTML('','','',100)}</div>
+    <button class="wbtn wbtn-d" style="margin-top:12px;width:100%;justify-content:center" onclick="spCrearTaller()">Crear taller</button>
+    <div id="spErr" style="color:var(--red);font-size:12.5px;margin-top:8px"></div>`;
+  document.getElementById('modal').classList.add('on');
+}
+function spActualizarPreview(){const el=document.getElementById('spPreview');if(el)el.innerHTML=previewEncabezadoHTML(window._spLogoCrearTmp||'',+(document.getElementById('spLogoTam')||{}).value||100,val('spNombre'),val('spRubro'),val('spTel'),'spLogoTam','spActualizarPreview()');}
+function spActualizarPreviewCond(){const el=document.getElementById('spPreviewCond');if(el)el.innerHTML=previewActaHTML(val('spCond'),val('spPie'));}
+window._spLogoCrearTmp=null;
+function spLeerLogoCrear(){const f=document.getElementById('spLogo').files[0];if(!f)return;const r=new FileReader();r.onload=()=>{window._spLogoCrearTmp=r.result;spActualizarPreview();};r.readAsDataURL(f);}
 async function resetTotal(){
   if(!confirm('¿Seguro que deseas BORRAR TODOS los datos de prueba? Esto elimina talleres, clientes, vehiculos, recepciones y mecanicos. Solo se conserva tu superadmin. NO se puede deshacer.'))return;
   if(!confirm('Ultima confirmacion: ¿Borrar todo definitivamente?'))return;
   try{const r=await apiReq('/api/state/reset-total',{method:'POST'});toast(r.mensaje||'Datos borrados');setTimeout(()=>location.reload(),1200);}catch(e){toast(e.message);}
 }
-function spTallerCard(t){const nm=(t.nombre||'').replace(/'/g,'');const inactivo=!t.activo;return `<div class="dcard" style="margin-bottom:12px;${inactivo?'opacity:.72':''}"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><div class="av" style="background:var(--sidebar);color:#fff">${inits(t.nombre)}</div><div style="flex:1;min-width:140px"><div style="font-weight:700">${t.nombre} ${inactivo?'<span style="color:var(--red);font-size:11px">(inactivo)</span>':''}</div><div style="font-size:12px;color:var(--muted)">${t.rif||''} ${t.telefono||''}${inactivo&&t.motivo_inactivo?' · Motivo: '+t.motivo_inactivo:''}</div></div><button class="wbtn wbtn-g" onclick="spAdmins(${t.id},'${nm}')">Administradores</button> <button class="wbtn wbtn-g" onclick="spEditarTaller(${t.id})">Editar</button> ${t.activo?`<button class="wbtn wbtn-g" onclick="spInactivar(${t.id},'${nm}')">Inactivar</button>`:`<button class="wbtn wbtn-d" onclick="spReactivar(${t.id})">Reactivar</button>`}</div><div id="spEd_${t.id}" style="display:none"></div><div id="spAdmins_${t.id}"></div></div>`;}
-function spEditarTaller(id){const box=document.getElementById('spEd_'+id);if(!box)return;if(box.style.display!=='none'){box.style.display='none';return;}box.style.display='';const t=(window._talleresCache||[]).find(x=>x.id===id)||{};box.innerHTML=`<div style="border-top:1px solid var(--line);margin-top:10px;padding-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end"><div class="fld" style="margin:0;min-width:140px"><label>Nombre</label><input id="etN_${id}" value="${(t.nombre||'').replace(/"/g,'&quot;')}"></div><div class="fld" style="margin:0;min-width:120px"><label>RIF</label><input id="etR_${id}" value="${(t.rif||'').replace(/"/g,'&quot;')}"></div><div class="fld" style="margin:0;min-width:130px"><label>Teléfono</label><input id="etT_${id}" value="${(t.telefono||'').replace(/"/g,'&quot;')}"></div><div class="fld" style="margin:0;min-width:180px"><label>Dirección</label><input id="etD_${id}" value="${(t.direccion||'').replace(/"/g,'&quot;')}"></div><div class="fld" style="margin:0;min-width:140px"><label>Rubro (subtítulo)</label><input id="etU_${id}" placeholder="TALLER AUTOMOTRIZ" value="${(t.rubro||'').replace(/"/g,'&quot;')}"></div><div class="fld" style="margin:0;min-width:170px"><label>Logo / foto del taller</label><input id="etL_${id}" type="file" accept="image/*" onchange="spLeerLogo(${id})"></div><div class="fld" style="margin:0;flex:1;min-width:240px"><label>Condiciones del servicio (acta)</label><textarea id="etC_${id}" rows="2" style="width:100%;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:8px">${(t.condiciones||'')}</textarea></div><div class="fld" style="margin:0;flex:1;min-width:240px"><label>Pie de página (acta)</label><input id="etP_${id}" placeholder="Ej. Gracias por su preferencia" value="${(t.pie||'').replace(/"/g,'&quot;')}"></div><button class="wbtn wbtn-d" onclick="spGuardarTaller(${id})">Guardar</button></div><div id="etPrev_${id}" style="font-size:11px;color:var(--muted);margin-top:6px">${t.logo?'Logo actual cargado ✓':''}</div>`;}
+function spTallerCard(t){const nm=(t.nombre||'').replace(/'/g,'');const inactivo=!t.activo;return `<div class="dcard" style="margin-bottom:12px;${inactivo?'opacity:.72':''}"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><div class="av" style="background:var(--sidebar);color:#fff">${inits(t.nombre)}</div><div style="flex:1;min-width:140px"><div style="font-weight:700">${t.nombre} ${inactivo?'<span style="color:var(--red);font-size:11px">(inactivo)</span>':''}</div><div style="font-size:12px;color:var(--muted)">${t.rif||''} ${t.telefono||''}${inactivo&&t.motivo_inactivo?' · Motivo: '+t.motivo_inactivo:''}</div></div><button class="wbtn wbtn-g" onclick="spEditarTaller(${t.id})">Editar</button> ${t.activo?`<button class="wbtn wbtn-g" onclick="spInactivar(${t.id},'${nm}')">Inactivar</button>`:`<button class="wbtn wbtn-d" onclick="spReactivar(${t.id})">Reactivar</button>`}</div></div>`;}
+async function spEditarTaller(id){const t=(window._talleresCache||[]).find(x=>x.id===id)||{};
+  let cfg={};try{const st=await apiReq('/api/state?taller='+id);cfg=(st&&st.data&&st.data.config)||{};}catch(e){}
+  const plan=cfg.plan||'lite';const vidMin=cfg.videoMinutosPorVehiculo||10;
+  window._etPlanElegido=plan;window._etTallerActual=id;
+  document.getElementById('modalH').innerHTML=`<h2>Editar taller</h2>`;
+  document.getElementById('modalB').innerHTML=`
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><div class="fld" style="flex:1;min-width:180px"><label>Nombre del taller</label><input id="etN_${id}" value="${(t.nombre||'').replace(/"/g,'&quot;')}" oninput="spEtActualizarPreviewHead(${id})"></div><div class="fld" style="min-width:130px"><label>RIF / RUC</label><input id="etR_${id}" value="${(t.rif||'').replace(/"/g,'&quot;')}"></div></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><div class="fld" style="flex:1;min-width:150px"><label>Rubro (subtítulo)</label><input id="etU_${id}" placeholder="TALLER AUTOMOTRIZ" value="${(t.rubro||'').replace(/"/g,'&quot;')}" oninput="spEtActualizarPreviewHead(${id})"></div><div class="fld" style="min-width:150px"><label>Teléfono</label><input id="etT_${id}" value="${(t.telefono||'').replace(/"/g,'&quot;')}" oninput="spEtActualizarPreviewHead(${id})"></div></div>
+    <div class="fld"><label>Dirección</label><input id="etD_${id}" value="${(t.direccion||'').replace(/"/g,'&quot;')}"></div>
+    <div class="fld"><label>Logo / foto del taller</label><input id="etL_${id}" type="file" accept="image/*" onchange="spLeerLogo(${id})"><span id="etPrev_${id}" style="font-size:11px;color:var(--muted)">${t.logo?'Logo actual cargado ✓':''}</span></div>
+    <div id="etPreviewHead_${id}">${previewEncabezadoHTML(t.logo||'',t.logo_tam||100,t.nombre||'',t.rubro||'',t.telefono||'','etLogoTam_'+id,'spEtActualizarPreviewHead('+id+')')}</div>
+    <div class="fld" style="margin-top:10px"><label>Versión del taller</label>
+      <div style="display:flex;gap:8px">
+        <button type="button" class="wbtn ${plan==='lite'?'wbtn-d':'wbtn-g'}" id="etPlanBtn_lite_${id}" onclick="spEtElegirPlan(${id},'lite')" style="flex:1;justify-content:center">Lite (solo fotos)</button>
+        <button type="button" class="wbtn ${plan==='pro'?'wbtn-d':'wbtn-g'}" id="etPlanBtn_pro_${id}" onclick="spEtElegirPlan(${id},'pro')" style="flex:1;justify-content:center">Pro</button>
+        <button type="button" class="wbtn ${plan==='premium'?'wbtn-d':'wbtn-g'}" id="etPlanBtn_premium_${id}" onclick="spEtElegirPlan(${id},'premium')" style="flex:1;justify-content:center">Premium</button>
+      </div>
+    </div>
+    <div class="fld" id="etVidWrap_${id}" style="${plan==='lite'?'display:none':''}"><label>Minutos de video por vehículo: <b id="etVidVal_${id}">${vidMin}</b> min</label>
+      <input type="range" id="etVidMin_${id}" min="1" max="60" value="${vidMin}" style="width:100%" oninput="document.getElementById('etVidVal_${id}').textContent=this.value"></div>
+    <div class="fld"><label>Condiciones del servicio (aparece en el Acta)</label><textarea id="etC_${id}" rows="3" style="width:100%;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:8px" oninput="spEtActualizarPreview(${id})">${(t.condiciones||'')}</textarea></div>
+    <div class="fld"><label>Pie de página (aparece en el Acta)</label><textarea id="etP_${id}" rows="2" style="width:100%;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:8px" placeholder="Ej. Gracias por su preferencia" oninput="spEtActualizarPreview(${id})">${(t.pie||'')}</textarea></div>
+    <div id="etPreview_${id}">${previewActaHTML(t.condiciones||'',t.pie||'')}</div>
+    <button class="wbtn wbtn-d" style="margin-top:12px;width:100%;justify-content:center" onclick="spGuardarTaller(${id})">Guardar cambios</button>
+    <div id="etErr_${id}" style="color:var(--red);font-size:12.5px;margin-top:8px"></div>`;
+  document.getElementById('modal').classList.add('on');
+}
+function spEtActualizarPreviewHead(id){
+  const el=document.getElementById('etPreviewHead_'+id);if(!el)return;
+  const t=(window._talleresCache||[]).find(x=>x.id===id)||{};
+  const tamEl=document.getElementById('etLogoTam_'+id);
+  el.innerHTML=previewEncabezadoHTML(_logoTmp[id]||t.logo||'',tamEl?(+tamEl.value||100):(t.logo_tam||100),val('etN_'+id),val('etU_'+id),val('etT_'+id),'etLogoTam_'+id,'spEtActualizarPreviewHead('+id+')');
+}
+function spEtElegirPlan(id,p){window._etPlanElegido=p;
+  ['lite','pro','premium'].forEach(k=>{const b=document.getElementById('etPlanBtn_'+k+'_'+id);if(b)b.className=k===p?'wbtn wbtn-d':'wbtn wbtn-g';});
+  const wrap=document.getElementById('etVidWrap_'+id);if(wrap)wrap.style.display=(p==='lite')?'none':'';}
 let _logoTmp={};
-function spLeerLogo(id){const f=document.getElementById('etL_'+id).files[0];if(!f)return;if(f.size>1500000){toast('La imagen es muy grande (máx 1.5MB)');return;}const r=new FileReader();r.onload=()=>{_logoTmp[id]=r.result;document.getElementById('etPrev_'+id).innerHTML='<img src="'+r.result+'" style="width:46px;height:46px;border-radius:8px;object-fit:cover;vertical-align:middle"> Logo listo para guardar';};r.readAsDataURL(f);}
-async function spGuardarTaller(id){const g=x=>(document.getElementById(x+id).value||'').trim();const body={nombre:g('etN_')||undefined,rif:g('etR_')||undefined,telefono:g('etT_')||undefined,direccion:g('etD_')||undefined,rubro:g('etU_')||undefined,condiciones:g('etC_')||undefined,pie:g('etP_')||undefined};if(_logoTmp[id])body.logo=_logoTmp[id];try{await apiReq('/api/talleres/'+id,{method:'PUT',body:JSON.stringify(body)});delete _logoTmp[id];toast('Taller actualizado ✓');renderSuperPanel();}catch(e){toast(e.message);}}
+function spLeerLogo(id){const f=document.getElementById('etL_'+id).files[0];if(!f)return;if(f.size>1500000){toast('La imagen es muy grande (máx 1.5MB)');return;}const r=new FileReader();r.onload=()=>{_logoTmp[id]=r.result;document.getElementById('etPrev_'+id).textContent='Logo nuevo cargado ✓';spEtActualizarPreviewHead(id);};r.readAsDataURL(f);}
+function spEtActualizarPreview(id){
+  const el=document.getElementById('etPreview_'+id);if(!el)return;
+  el.innerHTML=previewActaHTML(val('etC_'+id),val('etP_'+id));
+}
+async function spGuardarTaller(id){const g=x=>(document.getElementById(x+id).value||'').trim();const body={nombre:g('etN_')||undefined,rif:g('etR_')||undefined,telefono:g('etT_')||undefined,direccion:g('etD_')||undefined,rubro:g('etU_')||undefined,condiciones:g('etC_')||undefined,pie:g('etP_')||undefined,logoTam:+g('etLogoTam_')||undefined};if(_logoTmp[id])body.logo=_logoTmp[id];
+  const plan=window._etPlanElegido||'lite';const vidMin=+val('etVidMin_'+id)||10;
+  try{
+    await apiReq('/api/talleres/'+id,{method:'PUT',body:JSON.stringify(body)});
+    await apiReq('/api/state?taller='+id,{method:'PUT',body:JSON.stringify({data:{config:{plan,videoMinutosPorVehiculo:plan==='lite'?0:vidMin}}})});
+    delete _logoTmp[id];closeModal();toast('✅ Taller actualizado con éxito');renderSuperPanel();
+  }catch(e){const err=document.getElementById('etErr_'+id);if(err)err.textContent=e.message;else toast(e.message);}}
 async function spInactivar(id,nombre){const motivo=prompt('Motivo de la desactivación de '+nombre+':','');if(motivo===null)return;try{await apiReq('/api/talleres/'+id,{method:'PUT',body:JSON.stringify({activo:false,motivo_inactivo:motivo||'Taller desactivado'})});toast('Taller desactivado');renderSuperPanel();}catch(e){toast(e.message);}}
 async function spReactivar(id){try{await apiReq('/api/talleres/'+id,{method:'PUT',body:JSON.stringify({activo:true})});toast('Taller reactivado ✓');renderSuperPanel();}catch(e){toast(e.message);}}
 function spAdminEditCard(a,talleres){return `<div class="dcard" style="margin-bottom:12px"><div style="font-weight:700">${a.nombre} <span style="color:var(--muted);font-size:12px;font-weight:400">(${a.usuario} · ${a.correo})</span></div><div style="margin:8px 0">${talleres.map(t=>`<label style="display:inline-flex;align-items:center;gap:6px;margin:0 14px 6px 0;font-size:13px"><input type="checkbox" class="edT_${a.id}" value="${t.id}" ${a.talleres.includes(t.id)?'checked':''} style="width:auto"> ${t.nombre}${t.activo?'':' (inactivo)'}</label>`).join('')}</div><button class="wbtn wbtn-d" onclick="spGuardarAdminTalleres(${a.id})">Guardar talleres</button></div>`;}
 async function spGuardarAdminTalleres(uid){const talleres=[...document.querySelectorAll('.edT_'+uid+':checked')].map(c=>+c.value);try{await apiReq('/api/talleres/admins/'+uid+'/talleres',{method:'PUT',body:JSON.stringify({talleres})});toast('Talleres del administrador actualizados ✓');}catch(e){toast(e.message);}}
+window._spPlanElegido='lite';
+function spElegirPlan(p){
+  window._spPlanElegido=p;
+  ['lite','pro','premium'].forEach(k=>{const b=document.getElementById('spPlanBtn_'+k);if(b){b.className=k===p?'wbtn wbtn-d':'wbtn wbtn-g';}});
+  const wrap=document.getElementById('spVidWrap');if(wrap)wrap.style.display=(p==='lite')?'none':'';
+}
 async function spCrearTaller(){const nombre=(document.getElementById('spNombre').value||'').trim();if(!nombre){document.getElementById('spErr').textContent='Escribe el nombre del taller';return;}
-  try{await apiReq('/api/talleres',{method:'POST',body:JSON.stringify({nombre,rif:document.getElementById('spRif').value,telefono:document.getElementById('spTel').value})});toast('Taller creado: '+nombre);renderSuperPanel();}catch(e){document.getElementById('spErr').textContent=e.message;}}
+  const plan=window._spPlanElegido||'lite';const vidMin=+val('spVidMin')||10;
+  let nuevo;
+  try{nuevo=await apiReq('/api/talleres',{method:'POST',body:JSON.stringify({nombre,rif:val('spRif'),telefono:val('spTel'),direccion:val('spDir'),rubro:val('spRubro'),condiciones:val('spCond'),pie:val('spPie'),logo:window._spLogoCrearTmp||undefined,logoTam:+val('spLogoTam')||undefined})});}
+  catch(e){document.getElementById('spErr').textContent=e.message;return;}
+  try{await apiReq('/api/state?taller='+nuevo.id,{method:'PUT',body:JSON.stringify({data:{config:{plan,videoMinutosPorVehiculo:plan==='lite'?0:vidMin}}})});}catch(e){}
+  window._spLogoCrearTmp=null;closeModal();toast('✅ Taller creado: '+nombre+' (versión '+plan.toUpperCase()+')');renderSuperPanel();}
 async function spAdmins(id,nombre){const cont=document.getElementById('spAdmins_'+id);if(!cont)return;if(cont.dataset.open==='admins'){cont.dataset.open='';cont.innerHTML='';return;}cont.dataset.open='admins';
   let admins=[];try{admins=await apiReq('/api/talleres/'+id+'/admins');}catch(e){}
   cont.innerHTML=`<div style="border-top:1px solid var(--line);margin-top:10px;padding-top:10px"><div style="font-size:12px;font-weight:600;margin-bottom:6px">Administradores de ${nombre}</div>${admins.map(a=>`<div style="font-size:12.5px;padding:3px 0">• ${a.nombre} <span style="color:var(--muted)">(${a.usuario} · ${a.correo})</span></div>`).join('')||'<div style="font-size:12px;color:var(--muted)">Sin administradores aún.</div>'}<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:10px"><div class="fld" style="margin:0;flex:1;min-width:110px"><label>Nombre</label><input id="adN_${id}"></div><div class="fld" style="margin:0;min-width:100px"><label>Usuario</label><input id="adU_${id}"></div><div class="fld" style="margin:0;min-width:130px"><label>Correo</label><input id="adE_${id}"></div><div class="fld" style="margin:0;min-width:100px"><label>Contraseña</label><input id="adP_${id}" type="password"></div><button class="wbtn wbtn-d" onclick="spCrearAdmin(${id},'${nombre}')">Agregar admin</button></div><div id="adErr_${id}" style="color:var(--red);font-size:12px;margin-top:6px"></div></div>`;}
@@ -2573,6 +2933,7 @@ loginView();
 (async function restaurarSesion(){
   const d=leerSesion();
   if(!d||!d.t)return;
+  if(d.me&&(d.me.rol==='mecanico'||d.me.rol==='cliente')){borrarSesion();return;}
   TOKEN=d.t;ME=d.me;TALLERES=d.ts||[];
   try{
     await apiReq('/api/talleres'); // valida que el token siga vivo

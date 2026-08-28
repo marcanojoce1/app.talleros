@@ -54,13 +54,13 @@ export async function clearSession() {
 
 export async function api(path, options = {}) {
   if (!_apiUrl) throw new Error('SIN_SERVIDOR');
-  // El servidor gratuito puede estar "dormido" y tardar en despertar.
-  // Hacemos hasta 2 intentos con un tiempo de espera generoso y mensajes claros.
-  const intentos = options._reintento === false ? 1 : 2;
+  // El servidor gratuito puede estar "dormido" y tardar en despertar (a veces más de un minuto
+  // la primera vez). Hacemos varios intentos, cada uno con más tiempo de espera que el anterior.
+  const tiempos = options._reintento === false ? [30000] : [30000, 45000, 60000];
   let ultimoError;
-  for (let i = 0; i < intentos; i++) {
+  for (let i = 0; i < tiempos.length; i++) {
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 45000); // 45 s por intento
+    const timer = setTimeout(() => ctrl.abort(), tiempos[i]);
     try {
       const res = await fetch(_apiUrl + path, {
         ...options,
@@ -80,8 +80,8 @@ export async function api(path, options = {}) {
       ultimoError = e;
       // Si fue por tiempo agotado y aún quedan intentos, reintenta (el servidor puede estar despertando)
       const esTimeout = e.name === 'AbortError';
-      if (i < intentos - 1 && (esTimeout || (e.message || '').includes('Network'))) continue;
-      if (esTimeout) throw new Error('El servidor tardó demasiado en responder. Puede estar iniciando; intenta de nuevo en un momento.');
+      if (i < tiempos.length - 1 && (esTimeout || (e.message || '').includes('Network'))) continue;
+      if (esTimeout) throw new Error('El servidor está tardando en despertar (puede pasar la primera vez en un rato). Espera un momento y presiona Reintentar — no hace falta cerrar la app.');
       if ((e.message || '').includes('Network request failed')) throw new Error('Sin conexión con el servidor. Revisa tu internet o la dirección del servidor.');
       throw e;
     }
@@ -92,7 +92,19 @@ export async function api(path, options = {}) {
 // ==== Estado por taller (mismo documento que usa la web para sincronizar) ====
 export async function getState(tallerId) {
   const r = await api('/api/state?taller=' + tallerId);
-  return (r && r.data) || {};
+  const d = (r && r.data) || {};
+  // Guarda una copia local para poder mostrarla al instante la próxima vez que se abra
+  // la app, mientras confirma en segundo plano si hay algo nuevo.
+  try { await AsyncStorage.setItem('t_cache_' + tallerId, JSON.stringify(d)); } catch (e) {}
+  return d;
+}
+// Lee la última copia guardada de este taller, sin tocar la red — para mostrarla de
+// inmediato mientras getState() confirma en segundo plano si hay cambios.
+export async function getStateCache(tallerId) {
+  try {
+    const raw = await AsyncStorage.getItem('t_cache_' + tallerId);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
 }
 export async function putState(tallerId, data) {
   return api('/api/state?taller=' + tallerId, { method: 'PUT', body: JSON.stringify({ data }) });

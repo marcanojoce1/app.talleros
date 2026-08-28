@@ -1,5 +1,41 @@
 import { Alert, Linking, Platform } from 'react-native';
+import * as FileSystem from 'expo-file-system';
 import { getApiUrl, getToken } from './api';
+
+// Sube una foto o video directo a R2 (Cloudflare) usando una URL firmada que pide al
+// backend — el archivo nunca pasa por el servidor, solo el link final.
+// Usamos FileSystem.uploadAsync (no fetch+blob) porque fetch+blob es poco confiable en
+// React Native para archivos grandes como video — es la causa típica de "Network request
+// failed" al subir videos.
+export async function subirMedia(localUri, tipo, contentType, onProgreso) {
+  const base = getApiUrl();
+  if (!base) throw new Error('Servidor no configurado');
+  const token = await getToken();
+  const ext = tipo === 'video' ? 'mp4' : 'jpg';
+  const r = await fetch(base + '/api/media/upload-url', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+    body: JSON.stringify({ tipo, ext, contentType }),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || 'No se pudo preparar la subida');
+  const { uploadUrl, publicUrl } = data;
+  if (onProgreso) onProgreso(0.2);
+  try {
+    const resultado = await FileSystem.uploadAsync(uploadUrl, localUri, {
+      httpMethod: 'PUT',
+      headers: { 'Content-Type': contentType },
+      uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+    });
+    if (resultado.status < 200 || resultado.status >= 300) {
+      throw new Error('El servidor de almacenamiento respondió con error ' + resultado.status);
+    }
+  } catch (e) {
+    throw new Error('No se pudo subir el archivo — revisa tu conexión a internet e intenta de nuevo. (' + (e.message || '') + ')');
+  }
+  if (onProgreso) onProgreso(1);
+  return publicUrl;
+}
 
 // Carga perezosa: si el módulo nativo no está en el APK, no rompe la app.
 function cargarModulo(nombre) {
@@ -71,7 +107,7 @@ export async function compartirCotizacionPDF(tallerId, cot) {
 
     let uri;
     try {
-      const out = await Print.printToFileAsync({ html, base64: false });
+      const out = await Print.printToFileAsync({ html, base64: false, width: 595, height: 842 }); // A4 en puntos
       uri = out && out.uri;
     } catch (pdfErr) {
       Alert.alert('No se pudo crear el PDF', (pdfErr.message || '') + '\n\nPuedes abrirlo en el navegador.', [
@@ -143,7 +179,7 @@ export async function compartirResumenEsperaPDF(tallerId) {
     if (!html || html.length < 100) { Alert.alert(titulo, 'El documento aún no tiene contenido.'); return; }
     let uri;
     try {
-      const out = await Print.printToFileAsync({ html, base64: false });
+      const out = await Print.printToFileAsync({ html, base64: false, width: 595, height: 842 }); // A4 en puntos
       uri = out && out.uri;
     } catch (pdfErr) {
       Alert.alert('No se pudo crear el PDF', (pdfErr.message || '') + '\n\nPuedes abrirlo en el navegador.', [
@@ -223,7 +259,7 @@ export async function compartirActaPDF(tallerId, veh, tipo = 'acta') {
     // 2) Convertir a PDF
     let uri;
     try {
-      const out = await Print.printToFileAsync({ html, base64: false });
+      const out = await Print.printToFileAsync({ html, base64: false, width: 595, height: 842 }); // A4 en puntos
       uri = out && out.uri;
     } catch (pdfErr) {
       Alert.alert('No se pudo crear el PDF', (pdfErr.message || '') + '\n\nPuedes abrirlo en el navegador.', [

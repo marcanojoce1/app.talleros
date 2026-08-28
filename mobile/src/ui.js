@@ -9,7 +9,7 @@ export const etiqueta = (o) => (typeof o === 'string' ? o : (o && (o.marca || o.
    - Se abre como lista vertical, con buscador
    - Opción "＋ Agregar…" al final para crear uno nuevo ahí mismo
 */
-export function Dropdown({ label, value, onChange, options, onAdd, placeholder, obligatorio, deshabilitado, textoVacio, meta }) {
+export function Dropdown({ label, value, onChange, options, onAdd, placeholder, obligatorio, deshabilitado, textoVacio, meta, error }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   const [nuevo, setNuevo] = useState('');
@@ -35,7 +35,7 @@ export function Dropdown({ label, value, onChange, options, onAdd, placeholder, 
     <View>
       {!!label && <Text style={d.label}>{label}{obligatorio ? ' *' : ''}</Text>}
       <TouchableOpacity
-        style={[d.select, deshabilitado && { backgroundColor: '#f1f3f5' }]}
+        style={[d.select, deshabilitado && { backgroundColor: '#f1f3f5' }, error && { borderWidth: 2, borderColor: '#dc2626', backgroundColor: '#fff5f5' }]}
         activeOpacity={0.7}
         onPress={() => { if (!deshabilitado) setOpen(true); }}>
         <Text style={[d.selectT, !value && { color: '#9aa3ad' }]} numberOfLines={1}>
@@ -158,6 +158,17 @@ export function FirmaPad({ visible, titulo, onClose, onGuardar }) {
 
 /* Muestra una firma ya guardada (miniatura) */
 // Calcula el rectángulo que ocupa la firma para que nunca se vea cortada
+// Convierte los trazos de la firma (rutas SVG) en una imagen real (data URI) que el Acta
+// en PDF sí puede mostrar con <img> — antes se guardaban los trazos "en crudo" y el PDF
+// (generado en el servidor) no sabía leerlos, por eso la firma salía en blanco.
+export function firmaADataUri(trazos) {
+  if (!trazos || !trazos.length) return '';
+  const c = cajaFirma(trazos);
+  const paths = trazos.map((p) => `<path d="${p}" stroke="#16191d" stroke-width="2.2" fill="none" stroke-linecap="round"/>`).join('');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${c.x} ${c.y} ${c.w} ${c.h}">${paths}</svg>`;
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+
 export function cajaFirma(trazos) {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   (trazos || []).forEach((p) => {
@@ -419,6 +430,17 @@ export function AjustesModal({ visible, onClose }) {
       const res = await dl.downloadAsync();
       setBajando(false);
       if (!res || !res.uri) { Alert.alert('Error', 'No se pudo descargar la actualización.'); return; }
+      // El servidor puede responder 404 (el APK no está publicado ahí todavía) y aun así
+      // "descargar" una página de error como si fuera el archivo — validamos antes de instalar.
+      if (res.status && res.status !== 200) {
+        Alert.alert('El servidor no tiene el APK publicado', 'La descarga respondió con error ' + res.status + ' — verifica que backend/apk/talleros.apk exista en el servidor y coincida con version.json.');
+        return;
+      }
+      const info = await FS.getInfoAsync(res.uri);
+      if (!info.exists || info.size < 1000000) { // un APK real pesa varios MB, no unos pocos KB
+        Alert.alert('El archivo descargado no es válido', 'Parece que el servidor no está sirviendo el APK correctamente (el archivo descargado pesa muy poco). Revisa que el APK esté subido en backend/apk/talleros.apk.');
+        return;
+      }
       // Abrir el instalador de Android con el APK descargado
       const contentUri = await FS.getContentUriAsync(res.uri);
       await IntentLauncher.startActivityAsync('android.intent.action.INSTALL_PACKAGE', {
@@ -426,9 +448,10 @@ export function AjustesModal({ visible, onClose }) {
       });
     } catch (e) {
       setBajando(false);
-      // Si algo falla, ofrecer el navegador como respaldo
-      Alert.alert('Descarga', 'No se pudo instalar automáticamente. Abriremos la descarga en el navegador.', [
-        { text: 'OK', onPress: () => Linking.openURL(estado.apk).catch(() => {}) },
+      // Mostramos el error real (antes se ocultaba) para poder diagnosticar qué falló de verdad
+      Alert.alert('No se pudo instalar automáticamente', (e && e.message) || 'Error desconocido', [
+        { text: 'Abrir en el navegador', onPress: () => Linking.openURL(estado.apk).catch(() => {}) },
+        { text: 'Cerrar', style: 'cancel' },
       ]);
     }
   };

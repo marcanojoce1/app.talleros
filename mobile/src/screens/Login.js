@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert, Modal } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert, Modal, Linking } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { api, saveSession, getApiUrl, guardarApiUrl, cargarApiUrl, despertarServidor } from '../api';
 
@@ -33,6 +33,8 @@ export default function LoginScreen({ navigation }) {
   const [nv2, setNv2] = useState('');
   const [verNv, setVerNv] = useState(false);
   const [errCambio, setErrCambio] = useState('');
+  const [contactoOpen, setContactoOpen] = useState(false);
+  const [contacto, setContacto] = useState(null);
   const HERO = [
     { t: 'Tu taller en el bolsillo', s: 'Órdenes, avances y clientes al instante.' },
     { t: 'Recepción con evidencia', s: 'Marca daños, firma y genera el acta.' },
@@ -50,6 +52,16 @@ export default function LoginScreen({ navigation }) {
     Alert.alert('Servidor guardado', 'Ahora puedes iniciar sesión.\n\n' + u);
   };
 
+  const abrirContacto = async () => {
+    setContactoOpen(true);
+    if (contacto) return;
+    try {
+      const d = await api('/api/config/contacto');
+      setContacto(d);
+    } catch (e) {
+      setContacto({ mensaje: 'Para acceder a TallerOS, contáctanos.', correo: '', telefono: '' });
+    }
+  };
   const login = async () => {
     setError(''); setLoading(true);
     const avisoLento = setTimeout(() => setError('⏳ El servidor está iniciando, puede tardar unos segundos la primera vez…'), 4000);
@@ -138,28 +150,9 @@ export default function LoginScreen({ navigation }) {
             <TouchableOpacity onPress={() => { setRecovering(true); setStep(1); }}>
               <Text style={s.link}>¿Olvidaste tu contraseña?</Text>
             </TouchableOpacity>
-
-            {srvOpen ? (
-              <View style={s.srvBox}>
-                <Text style={s.srvTit}>Dirección del servidor</Text>
-                <Text style={s.srvSub}>Es la misma dirección web donde entras desde la computadora.</Text>
-                <TextInput style={s.input} value={srvUrl} onChangeText={setSrvUrl}
-                  placeholder="app-talleros.onrender.com" placeholderTextColor="#7b838d"
-                  autoCapitalize="none" autoCorrect={false} keyboardType="url" />
-                <TouchableOpacity style={s.srvBtn} onPress={guardarServidor}>
-                  <Text style={s.srvBtnT}>Guardar servidor</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setSrvOpen(false)}>
-                  <Text style={[s.link, { marginTop: 8 }]}>Cerrar</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <TouchableOpacity onPress={() => setSrvOpen(true)}>
-                <Text style={[s.link, { fontSize: 11.5, opacity: 0.75, marginTop: 4 }]}>
-                  ⚙ Servidor: {getApiUrl() ? getApiUrl().replace(/^https?:\/\//, '') : 'sin configurar'}
-                </Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity onPress={abrirContacto} style={{ marginTop: 6 }}>
+              <Text style={s.link}>¿No tienes cuenta? Contáctanos</Text>
+            </TouchableOpacity>
           </>
         ) : step === 1 ? (
           <>
@@ -210,6 +203,35 @@ export default function LoginScreen({ navigation }) {
 
             <TouchableOpacity style={[s.btn, { marginTop: 16 }]} onPress={confirmarCambioObl}>
               <Text style={s.btnT}>Guardar y entrar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={contactoOpen} transparent animationType="fade" onRequestClose={() => setContactoOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,.6)', justifyContent: 'center', padding: 24 }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 26, alignItems: 'center' }}>
+            <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#FEF3C7', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
+              <Text style={{ fontSize: 26 }}>🔧</Text>
+            </View>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: '#16191d', textAlign: 'center' }}>TallerOS</Text>
+            <Text style={{ fontSize: 14, color: '#4b5563', textAlign: 'center', marginTop: 10, lineHeight: 20 }}>
+              {contacto ? (contacto.mensaje || 'Para acceder a TallerOS, contáctanos.') : 'Cargando…'}
+            </Text>
+            {contacto && contacto.correo ? (
+              <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#F3F4F6', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16, marginTop: 16, width: '100%', justifyContent: 'center' }} onPress={() => Linking.openURL('mailto:' + contacto.correo)}>
+                <Text style={{ fontSize: 16 }}>✉️</Text>
+                <Text style={{ color: '#16191d', fontWeight: '700', fontSize: 13.5 }}>{contacto.correo}</Text>
+              </TouchableOpacity>
+            ) : null}
+            {contacto && contacto.telefono ? (
+              <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#DCFCE7', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16, marginTop: 10, width: '100%', justifyContent: 'center' }} onPress={() => Linking.openURL('https://wa.me/' + contacto.telefono.replace(/[^0-9]/g, ''))}>
+                <Text style={{ fontSize: 16 }}>💬</Text>
+                <Text style={{ color: '#166534', fontWeight: '700', fontSize: 13.5 }}>{contacto.telefono}</Text>
+              </TouchableOpacity>
+            ) : null}
+            <TouchableOpacity style={{ marginTop: 18 }} onPress={() => setContactoOpen(false)}>
+              <Text style={{ color: '#6b7480', fontWeight: '700', fontSize: 13.5 }}>Cerrar</Text>
             </TouchableOpacity>
           </View>
         </View>
