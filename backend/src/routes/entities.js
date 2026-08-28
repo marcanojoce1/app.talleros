@@ -8,7 +8,7 @@ const router = express.Router();
 // Definición de columnas editables por entidad
 const TABLES = {
   clientes: ['nombre', 'tipo_doc', 'documento', 'telefono', 'correo', 'direccion', 'activo'],
-  vehiculos: ['cliente_id', 'marca', 'modelo', 'anio', 'placa', 'color', 'tipo_seguro', 'nro_poliza', 'activo'],
+  vehiculos: ['cliente_id', 'marca', 'modelo', 'anio', 'placa', 'vin', 'color', 'tipo_seguro', 'nro_poliza', 'activo'],
   mecanicos: ['nombre', 'especialidad', 'documento', 'telefono', 'rating', 'activo'],
 };
 
