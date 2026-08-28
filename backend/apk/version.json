@@ -1,6 +1,6 @@
 {
-  "appVersion": "1.0.1",
-  "appBuild": 84,
+  "appVersion": "1.1.0",
+  "appBuild": 138,
   "apk": "/apk/talleros.apk",
-  "notas": "Actualización por OTA disponible."
+  "notas": "Actualizacion disponible."
 }
