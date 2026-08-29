@@ -39,6 +39,11 @@ async function init() {
   await pool.query('ALTER TABLE talleres ADD COLUMN IF NOT EXISTS condiciones TEXT');
   await pool.query('ALTER TABLE talleres ADD COLUMN IF NOT EXISTS pie TEXT');
   await pool.query('ALTER TABLE talleres ADD COLUMN IF NOT EXISTS logo_tam INTEGER DEFAULT 100');
+  // Corrige una columna que se creó como TEXT por error y debía ser fecha/hora real
+  // (rompía la comparación "expira_en > now()" al recuperar contraseña).
+  try {
+    await pool.query(`ALTER TABLE reset_codes ALTER COLUMN expira_en TYPE TIMESTAMPTZ USING expira_en::timestamptz`);
+  } catch (e) { /* ya estaba corregida, o la tabla aún no existe la primera vez */ }
   await pool.query(`CREATE TABLE IF NOT EXISTS config_global (
     id INTEGER PRIMARY KEY DEFAULT 1, mensaje TEXT, correo TEXT, telefono TEXT,
     CONSTRAINT solo_una_fila CHECK (id = 1))`);

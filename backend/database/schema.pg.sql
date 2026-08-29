@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS reset_codes (
   usuario_id INTEGER REFERENCES usuarios(id),
   codigo     TEXT NOT NULL,
   metodo     TEXT NOT NULL,
-  expira_en  TEXT NOT NULL,
+  expira_en  TIMESTAMPTZ NOT NULL,
   usado      INTEGER NOT NULL DEFAULT 0
 );
 
