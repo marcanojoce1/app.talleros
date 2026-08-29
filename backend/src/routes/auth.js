@@ -137,7 +137,7 @@ router.post('/reset', async (req, res) => {
   const { identificador, codigo, nueva } = req.body;
   if (!nueva || nueva.length < 4) return res.status(400).json({ error: 'Contraseña muy corta' });
   const { rows } = await query(
-    `SELECT rc.*, u.usuario AS u_usuario, u.correo AS u_correo FROM reset_codes rc
+    `SELECT rc.id, rc.usuario_id, u.usuario AS u_usuario, u.correo AS u_correo FROM reset_codes rc
      JOIN usuarios u ON u.id = rc.usuario_id
      WHERE (u.usuario=$1 OR u.correo=$1 OR u.telefono=$1) AND rc.codigo=$2
        AND rc.usado=0 AND rc.expira_en > now()
@@ -150,16 +150,20 @@ router.post('/reset', async (req, res) => {
   await query('UPDATE usuarios SET password=$1 WHERE id=$2', [hash, rc.usuario_id]);
   await query('UPDATE reset_codes SET usado=1 WHERE id=$1', [rc.id]);
   // Aviso de confirmación al correo del usuario, con su usuario y la contraseña nueva
-  try {
-    if (rc.u_correo) {
-      await sendEmail(
+  console.log('[reset] usuario_id=' + rc.usuario_id + ' u_usuario=' + rc.u_usuario + ' u_correo=' + rc.u_correo);
+  if (rc.u_correo) {
+    try {
+      const envio = await sendEmail(
         rc.u_correo,
         'Tu contraseña de TallerOS fue cambiada',
         `Hola,\n\nTu contraseña de TallerOS se actualizó correctamente.\n\nUsuario: ${rc.u_usuario}\nContraseña nueva: ${nueva}\n\nSi no fuiste tú quien hizo este cambio, contacta al administrador de tu taller de inmediato.`
       );
+      console.log('[reset] correo de confirmacion enviado ->', envio);
+    } catch (e) {
+      console.error('[reset] No se pudo enviar el correo de confirmación:', e.message);
     }
-  } catch (e) {
-    console.error('No se pudo enviar el correo de confirmación:', e.message);
+  } else {
+    console.warn('[reset] el usuario no tiene correo registrado, no se envió confirmación');
   }
   res.json({ ok: true, mensaje: 'Contraseña actualizada. Ya puedes iniciar sesión.' });
 });
