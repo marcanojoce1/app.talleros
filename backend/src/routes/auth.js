@@ -92,28 +92,44 @@ router.post('/login', async (req, res) => {
 // Genera un código de 6 dígitos y lo envía.
 router.post('/recover', async (req, res) => {
   const { identificador, metodo = 'correo' } = req.body;
+  if (!identificador || !identificador.trim()) return res.status(400).json({ error: 'Escribe tu correo, usuario o teléfono' });
   const { rows } = await query(
-    'SELECT * FROM usuarios WHERE usuario=$1 OR correo=$1',
-    [identificador]
+    'SELECT * FROM usuarios WHERE usuario=$1 OR correo=$1 OR telefono=$1',
+    [identificador.trim()]
   );
   const u = rows[0];
-  // Respuesta uniforme aunque no exista (no revelar cuentas)
-  if (u) {
-    const codigo = String(Math.floor(100000 + Math.random() * 900000));
-    const expira = new Date(Date.now() + 10 * 60 * 1000); // 10 min
-    await query(
-      'INSERT INTO reset_codes (usuario_id, codigo, metodo, expira_en) VALUES ($1,$2,$3,$4)',
-      [u.id, codigo, metodo, expira]
-    );
-    const msg = `TallerOS: tu código de verificación es ${codigo}. Vence en 10 minutos.`;
-    try {
-      if (metodo === 'whatsapp' && u.telefono) await sendWhatsApp(u.telefono, msg);
-      else await sendEmail(u.correo, 'Recuperación de contraseña — TallerOS', msg);
-    } catch (e) {
-      console.error('Error enviando código:', e.message);
-    }
+  if (!u) return res.status(404).json({ error: 'Ese correo, usuario o teléfono no está registrado.' });
+  const codigo = String(Math.floor(100000 + Math.random() * 900000));
+  const expira = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+  await query(
+    'INSERT INTO reset_codes (usuario_id, codigo, metodo, expira_en) VALUES ($1,$2,$3,$4)',
+    [u.id, codigo, metodo, expira]
+  );
+  const msg = `TallerOS: tu código de verificación es ${codigo}. Vence en 10 minutos.`;
+  try {
+    if (metodo === 'whatsapp' && u.telefono) await sendWhatsApp(u.telefono, msg);
+    else await sendEmail(u.correo, 'Recuperación de contraseña — TallerOS', msg);
+  } catch (e) {
+    console.error('Error enviando código:', e.message);
+    return res.status(500).json({ error: 'No se pudo enviar el código. Intenta de nuevo en un momento.' });
   }
-  res.json({ ok: true, mensaje: 'Si la cuenta existe, se envió un código de verificación.' });
+  res.json({ ok: true, mensaje: 'Se envió un código de verificación.' });
+});
+
+// POST /api/auth/verify-code  { identificador, codigo } — valida el código SIN gastarlo,
+// para que la app solo muestre el paso de "contraseña nueva" si el código es correcto.
+router.post('/verify-code', async (req, res) => {
+  const { identificador, codigo } = req.body;
+  const { rows } = await query(
+    `SELECT rc.* FROM reset_codes rc
+     JOIN usuarios u ON u.id = rc.usuario_id
+     WHERE (u.usuario=$1 OR u.correo=$1 OR u.telefono=$1) AND rc.codigo=$2
+       AND rc.usado=0 AND rc.expira_en > now()
+     ORDER BY rc.id DESC LIMIT 1`,
+    [identificador, codigo]
+  );
+  if (!rows[0]) return res.status(400).json({ error: 'Código inválido o vencido' });
+  res.json({ ok: true });
 });
 
 // POST /api/auth/reset  { identificador, codigo, nueva }
@@ -121,9 +137,9 @@ router.post('/reset', async (req, res) => {
   const { identificador, codigo, nueva } = req.body;
   if (!nueva || nueva.length < 4) return res.status(400).json({ error: 'Contraseña muy corta' });
   const { rows } = await query(
-    `SELECT rc.* FROM reset_codes rc
+    `SELECT rc.*, u.usuario AS u_usuario, u.correo AS u_correo FROM reset_codes rc
      JOIN usuarios u ON u.id = rc.usuario_id
-     WHERE (u.usuario=$1 OR u.correo=$1) AND rc.codigo=$2
+     WHERE (u.usuario=$1 OR u.correo=$1 OR u.telefono=$1) AND rc.codigo=$2
        AND rc.usado=0 AND rc.expira_en > now()
      ORDER BY rc.id DESC LIMIT 1`,
     [identificador, codigo]
@@ -133,6 +149,18 @@ router.post('/reset', async (req, res) => {
   const hash = await hashPassword(nueva);
   await query('UPDATE usuarios SET password=$1 WHERE id=$2', [hash, rc.usuario_id]);
   await query('UPDATE reset_codes SET usado=1 WHERE id=$1', [rc.id]);
+  // Aviso de confirmación al correo del usuario, con su usuario y la contraseña nueva
+  try {
+    if (rc.u_correo) {
+      await sendEmail(
+        rc.u_correo,
+        'Tu contraseña de TallerOS fue cambiada',
+        `Hola,\n\nTu contraseña de TallerOS se actualizó correctamente.\n\nUsuario: ${rc.u_usuario}\nContraseña nueva: ${nueva}\n\nSi no fuiste tú quien hizo este cambio, contacta al administrador de tu taller de inmediato.`
+      );
+    }
+  } catch (e) {
+    console.error('No se pudo enviar el correo de confirmación:', e.message);
+  }
   res.json({ ok: true, mensaje: 'Contraseña actualizada. Ya puedes iniciar sesión.' });
 });
 
