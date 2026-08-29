@@ -4,8 +4,15 @@ const { query } = require('../db');
 const { hashPassword, checkPassword, signToken, auth } = require('../auth');
 const { sendWhatsApp } = require('../services/whatsapp');
 const { sendEmail } = require('../services/email');
+const { plantillaCorreo } = require('../services/emailTemplate');
 const { resolverPerms } = require('../permisos');
 const { registrar } = require('../audit');
+
+// Evita que alguien presione "enviar código" varias veces seguidas — eso es lo que
+// hace que Gmail bloquee la conexión temporalmente (error 421). Con esto, avisamos
+// claro cuánto falta en vez de dejar que el intento choque con el bloqueo de Google.
+const ULTIMO_ENVIO = new Map(); // identificador -> timestamp del último envío
+const ESPERA_REENVIO_MS = 30 * 1000; // 30 segundos
 
 const router = express.Router();
 
@@ -93,12 +100,19 @@ router.post('/login', async (req, res) => {
 router.post('/recover', async (req, res) => {
   const { identificador, metodo = 'correo' } = req.body;
   if (!identificador || !identificador.trim()) return res.status(400).json({ error: 'Escribe tu correo, usuario o teléfono' });
+  const clave = identificador.trim().toLowerCase();
+  const ultimo = ULTIMO_ENVIO.get(clave);
+  if (ultimo && Date.now() - ultimo < ESPERA_REENVIO_MS) {
+    const faltan = Math.ceil((ESPERA_REENVIO_MS - (Date.now() - ultimo)) / 1000);
+    return res.status(429).json({ error: `Espera ${faltan} segundo${faltan === 1 ? '' : 's'} antes de volver a intentar.` });
+  }
   const { rows } = await query(
     'SELECT * FROM usuarios WHERE usuario=$1 OR correo=$1 OR telefono=$1',
     [identificador.trim()]
   );
   const u = rows[0];
   if (!u) return res.status(404).json({ error: 'Ese correo, usuario o teléfono no está registrado.' });
+  ULTIMO_ENVIO.set(clave, Date.now());
   const codigo = String(Math.floor(100000 + Math.random() * 900000));
   const expira = new Date(Date.now() + 10 * 60 * 1000); // 10 min
   await query(
@@ -106,9 +120,15 @@ router.post('/recover', async (req, res) => {
     [u.id, codigo, metodo, expira]
   );
   const msg = `TallerOS: tu código de verificación es ${codigo}. Vence en 10 minutos.`;
+  const html = plantillaCorreo({
+    titulo: 'Código de verificación',
+    nombre: u.nombre,
+    mensaje: 'Usa este código para recuperar el acceso a tu cuenta. Vence en 10 minutos.',
+    destacado: [`<span style="font-size:26px;letter-spacing:.15em">${codigo}</span>`],
+  });
   try {
     if (metodo === 'whatsapp' && u.telefono) await sendWhatsApp(u.telefono, msg);
-    else await sendEmail(u.correo, 'Recuperación de contraseña — TallerOS', msg);
+    else await sendEmail(u.correo, 'Código de verificación — TallerOS', msg, html);
   } catch (e) {
     console.error('Error enviando código:', e.message);
     return res.status(500).json({ error: 'No se pudo enviar el código. Intenta de nuevo en un momento.' });
@@ -153,10 +173,23 @@ router.post('/reset', async (req, res) => {
   console.log('[reset] usuario_id=' + rc.usuario_id + ' u_usuario=' + rc.u_usuario + ' u_correo=' + rc.u_correo);
   if (rc.u_correo) {
     try {
+      let contactoCorreo = 'soporte@mjservices.app', contactoTel = '+51 917 024 656';
+      try {
+        const cg = (await query('SELECT correo, telefono FROM config_global WHERE id=1')).rows[0];
+        if (cg && cg.correo) contactoCorreo = cg.correo;
+        if (cg && cg.telefono) contactoTel = cg.telefono;
+      } catch (e) {}
+      const html = plantillaCorreo({
+        titulo: '¡Tu contraseña fue actualizada con éxito!',
+        nombre: rc.u_usuario,
+        destacado: [`USUARIO: ${rc.u_usuario}`, `CONTRASEÑA NUEVA: ${nueva}`],
+        contacto: `Si no fuiste tú quien hizo este cambio, contacta al administrador de tu taller de inmediato — <a href="mailto:${contactoCorreo}" style="color:#16406b">${contactoCorreo}</a> · ${contactoTel}`,
+      });
       const envio = await sendEmail(
         rc.u_correo,
         'Tu contraseña de TallerOS fue cambiada',
-        `Hola,\n\nTu contraseña de TallerOS se actualizó correctamente.\n\nUsuario: ${rc.u_usuario}\nContraseña nueva: ${nueva}\n\nSi no fuiste tú quien hizo este cambio, contacta al administrador de tu taller de inmediato.`
+        `Hola,\n\nTu contraseña de TallerOS se actualizó correctamente.\n\nUsuario: ${rc.u_usuario}\nContraseña nueva: ${nueva}\n\nSi no fuiste tú quien hizo este cambio, contacta al administrador de tu taller de inmediato: ${contactoCorreo} / ${contactoTel}`,
+        html
       );
       console.log('[reset] correo de confirmacion enviado ->', envio);
     } catch (e) {

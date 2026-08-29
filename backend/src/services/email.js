@@ -13,7 +13,7 @@ if (process.env.SMTP_HOST) {
   });
 }
 
-async function sendEmail(to, subject, text) {
+async function sendEmail(to, subject, text, html) {
   if (process.env.RESEND_API_KEY) {
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -26,6 +26,7 @@ async function sendEmail(to, subject, text) {
         to: [to],
         subject,
         text,
+        html: html || undefined,
       }),
     });
     const data = await r.json().catch(() => ({}));
@@ -41,6 +42,7 @@ async function sendEmail(to, subject, text) {
     to,
     subject,
     text,
+    html: html || undefined,
   });
   return { ok: true, provider: 'smtp' };
 }
