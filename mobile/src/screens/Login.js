@@ -23,9 +23,11 @@ export default function LoginScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [recovering, setRecovering] = useState(false);
   const [ident, setIdent] = useState('');
-  const [metodo, setMetodo] = useState('whatsapp');
+  const [metodo, setMetodo] = useState('correo');
   const [codigo, setCodigo] = useState('');
   const [nueva, setNueva] = useState('');
+  const [nuevaConfirmar, setNuevaConfirmar] = useState('');
+  const [errorRecuperar, setErrorRecuperar] = useState('');
   const [step, setStep] = useState(1);
   const [srvOpen, setSrvOpen] = useState(false);
   const [cambioObl, setCambioObl] = useState(null); // {user, talleres, actual}
@@ -87,17 +89,28 @@ export default function LoginScreen({ navigation }) {
   };
 
   const enviarCodigo = async () => {
+    setErrorRecuperar('');
     try {
       await api('/api/auth/recover', { method: 'POST', body: JSON.stringify({ identificador: ident, metodo }) });
       setStep(2);
-    } catch (e) { Alert.alert('Error', e.message); }
+    } catch (e) { setErrorRecuperar(e.message || 'No se pudo enviar el código.'); }
+  };
+  const verificarCodigo = async () => {
+    setErrorRecuperar('');
+    try {
+      await api('/api/auth/verify-code', { method: 'POST', body: JSON.stringify({ identificador: ident, codigo }) });
+      setStep(3);
+    } catch (e) { setErrorRecuperar(e.message || 'Código inválido o vencido.'); }
   };
   const cambiar = async () => {
+    setErrorRecuperar('');
+    if (nueva.length < 6) { setErrorRecuperar('La contraseña debe tener al menos 6 caracteres.'); return; }
+    if (nueva !== nuevaConfirmar) { setErrorRecuperar('Las contraseñas no coinciden.'); return; }
     try {
       await api('/api/auth/reset', { method: 'POST', body: JSON.stringify({ identificador: ident, codigo, nueva }) });
-      Alert.alert('Listo', 'Contraseña actualizada. Inicia sesión.');
-      setRecovering(false); setStep(1);
-    } catch (e) { Alert.alert('Error', e.message); }
+      Alert.alert('Listo', 'Contraseña actualizada. Ya puedes iniciar sesión con tu contraseña nueva.');
+      setRecovering(false); setStep(1); setIdent(''); setCodigo(''); setNueva(''); setNuevaConfirmar('');
+    } catch (e) { setErrorRecuperar(e.message || 'No se pudo cambiar la contraseña.'); }
   };
 
   const confirmarCambioObl = async () => {
@@ -157,28 +170,32 @@ export default function LoginScreen({ navigation }) {
         ) : step === 1 ? (
           <>
             <Text style={s.h}>Recuperar contraseña</Text>
-            <Text style={s.label}>Usuario o correo</Text>
-            <TextInput style={s.input} value={ident} onChangeText={setIdent} autoCapitalize="none" />
-            <Text style={s.label}>¿Cómo recibir el código?</Text>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              {['whatsapp', 'correo'].map((m) => (
-                <TouchableOpacity key={m} style={[s.method, metodo === m && s.methodOn]} onPress={() => setMetodo(m)}>
-                  <Text style={{ fontWeight: '700', color: metodo === m ? '#16191d' : '#6b7480' }}>{m === 'whatsapp' ? 'WhatsApp' : 'Correo'}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <TouchableOpacity style={s.btn} onPress={enviarCodigo}><Text style={s.btnT}>Enviar código</Text></TouchableOpacity>
-            <TouchableOpacity onPress={() => setRecovering(false)}><Text style={s.link}>Volver</Text></TouchableOpacity>
+            <Text style={s.label}>Correo de la cuenta</Text>
+            <TextInput style={s.input} value={ident} onChangeText={setIdent} autoCapitalize="none" keyboardType="email-address" />
+            {errorRecuperar ? <Text style={{ color: '#dc2626', fontSize: 12.5, marginTop: 8 }}>{errorRecuperar}</Text> : null}
+            <TouchableOpacity style={[s.btn, { marginTop: 10 }]} onPress={enviarCodigo}><Text style={s.btnT}>Siguiente</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => { setRecovering(false); setErrorRecuperar(''); }}><Text style={s.link}>Volver</Text></TouchableOpacity>
+          </>
+        ) : step === 2 ? (
+          <>
+            <Text style={s.h}>Verifica el código</Text>
+            <Text style={{ fontSize: 12.5, color: '#6b7480', marginBottom: 10 }}>Te enviamos un código de 6 dígitos. Vence en 10 minutos.</Text>
+            <Text style={s.label}>Código de 6 dígitos</Text>
+            <TextInput style={s.input} value={codigo} onChangeText={setCodigo} keyboardType="number-pad" maxLength={6} />
+            {errorRecuperar ? <Text style={{ color: '#dc2626', fontSize: 12.5, marginTop: 8 }}>{errorRecuperar}</Text> : null}
+            <TouchableOpacity style={[s.btn, { marginTop: 10 }]} onPress={verificarCodigo}><Text style={s.btnT}>Siguiente</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => { setStep(1); setErrorRecuperar(''); }}><Text style={s.link}>Volver</Text></TouchableOpacity>
           </>
         ) : (
           <>
-            <Text style={s.h}>Verifica e ingresa nueva clave</Text>
-            <Text style={s.label}>Código de 6 dígitos</Text>
-            <TextInput style={s.input} value={codigo} onChangeText={setCodigo} keyboardType="number-pad" />
+            <Text style={s.h}>Nueva contraseña</Text>
             <Text style={s.label}>Nueva contraseña</Text>
-            <TextInput style={s.input} value={nueva} onChangeText={setNueva} secureTextEntry />
-            <TouchableOpacity style={s.btn} onPress={cambiar}><Text style={s.btnT}>Cambiar contraseña</Text></TouchableOpacity>
-            <TouchableOpacity onPress={() => setRecovering(false)}><Text style={s.link}>Volver</Text></TouchableOpacity>
+            <TextInput style={s.input} value={nueva} onChangeText={setNueva} secureTextEntry placeholder="mínimo 6 caracteres" />
+            <Text style={s.label}>Confirmar nueva contraseña</Text>
+            <TextInput style={s.input} value={nuevaConfirmar} onChangeText={setNuevaConfirmar} secureTextEntry />
+            {errorRecuperar ? <Text style={{ color: '#dc2626', fontSize: 12.5, marginTop: 8 }}>{errorRecuperar}</Text> : null}
+            <TouchableOpacity style={[s.btn, { marginTop: 10 }]} onPress={cambiar}><Text style={s.btnT}>Cambiar contraseña</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => { setRecovering(false); setErrorRecuperar(''); }}><Text style={s.link}>Cancelar</Text></TouchableOpacity>
           </>
         )}
       </View>
