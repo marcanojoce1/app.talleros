@@ -28,6 +28,7 @@ CREATE TABLE usuarios (
   taller_id INTEGER,
   permisos  TEXT,
   must_change INTEGER NOT NULL DEFAULT 0,
+  push_token TEXT,
   creado_en TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

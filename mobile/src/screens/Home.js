@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, RefreshControl, Alert, ScrollView, TextInput, Image, Modal, Linking, Share, ActivityIndicator, AppState } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as VideoThumbnails from 'expo-video-thumbnails';
-import { api, getState, getStateCache, putState, clearSession, getApiUrl } from '../api';
+import { api, getState, getStateCache, putState, clearSession, getApiUrl, registrarNotificacionesPush } from '../api';
 import { compartirActaPDF, abrirEnNavegador, urlDocumento, subirMedia } from '../acta';
 import { ProgressSlider , colorMarca, marcaDe, BotonAjustes, AjustesModal, Calendario } from '../ui';
 
@@ -134,6 +134,7 @@ export default function HomeScreen({ navigation, route }) {
     } catch (e) { setError(e.message); } finally { setLoading(false); }
   }, [taller, esTécnico]);
   useEffect(() => { cargar(); }, [cargar]);
+  useEffect(() => { registrarNotificacionesPush(); }, []);
 
   // Al volver de segundo plano después de un rato, el servidor gratuito puede haberse
   // "dormido" y cualquier conexión a medias se pierde, dejando la app pegada en "cargando".

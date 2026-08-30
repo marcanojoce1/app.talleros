@@ -115,3 +115,25 @@ export async function getToken() {
   if (!token) token = await AsyncStorage.getItem('t_token');
   return token;
 }
+
+// Pide permiso de notificaciones y registra el teléfono en el servidor, para
+// que le puedan llegar avisos (nueva cita, nuevo avance) arriba de la pantalla
+// aunque la app esté cerrada. Se llama después de iniciar sesión.
+export async function registrarNotificacionesPush() {
+  try {
+    const Notifications = require('expo-notifications');
+    const Device = require('expo-device');
+    if (!Device.isDevice) return; // los emuladores no reciben push reales
+    const permisoActual = await Notifications.getPermissionsAsync();
+    let estado = permisoActual.status;
+    if (estado !== 'granted') {
+      const pedido = await Notifications.requestPermissionsAsync();
+      estado = pedido.status;
+    }
+    if (estado !== 'granted') return; // el usuario no dio permiso, no insistimos
+    const { data: expoPushToken } = await Notifications.getExpoPushTokenAsync();
+    await api('/api/auth/push-token', { method: 'POST', body: JSON.stringify({ token: expoPushToken }) });
+  } catch (e) {
+    console.log('No se pudo registrar notificaciones push:', e.message);
+  }
+}

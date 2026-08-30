@@ -46,6 +46,14 @@ router.get('/rescate', async (req, res) => {
 });
 
 // POST /api/auth/mi-clave  { actual, nueva }  — cualquier usuario cambia SU propia contraseña
+// Guarda el identificador de notificaciones push del teléfono del usuario logueado.
+router.post('/push-token', auth, async (req, res) => {
+  const { token } = req.body;
+  if (!token) return res.status(400).json({ error: 'Falta el token' });
+  await query('UPDATE usuarios SET push_token=$1 WHERE id=$2', [token, req.user.id]);
+  res.json({ ok: true });
+});
+
 router.post('/mi-clave', auth, async (req, res) => {
   const { actual, nueva } = req.body;
   if (!actual || !nueva) return res.status(400).json({ error: 'Indica tu contraseña actual y la nueva' });

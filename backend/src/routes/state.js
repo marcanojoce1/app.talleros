@@ -2,6 +2,7 @@
 const express = require('express');
 const { query, db } = require('../db');
 const { auth } = require('../auth');
+const { enviarPush, enviarPushVarios } = require('../services/push');
 
 const router = express.Router();
 router.use(auth); // requiere sesión
@@ -134,7 +135,49 @@ router.put('/', async (req, res) => {
      ON CONFLICT (taller_id) DO UPDATE SET data=$2, updated_at=CURRENT_TIMESTAMP`,
     [tallerId, data]);
   res.json({ ok: true });
+
+  // Notificaciones push (arriba del teléfono, sin abrir la app) — se mandan DESPUÉS de
+  // responder, para no hacer esperar al usuario que guardó los datos.
+  try { await notificarCambios(tallerId, actual, fusionado); } catch (e) { console.error('[push] Error detectando cambios para notificar:', e.message); }
 });
+
+// Compara el estado antes/después de guardar para detectar citas nuevas y avances
+// nuevos, y manda la notificación push correspondiente.
+async function notificarCambios(tallerId, antes, despues) {
+  const idsAntes = new Set((antes.citas || []).map((c) => c.id));
+  const citasNuevas = (despues.citas || []).filter((c) => !idsAntes.has(c.id));
+  const avancesNuevos = [];
+  (despues.vehicles || []).forEach((vNuevo) => {
+    const vViejo = (antes.vehicles || []).find((x) => x.id === vNuevo.id);
+    const antesLen = (vViejo && vViejo.advances) ? vViejo.advances.length : 0;
+    const nuevos = (vNuevo.advances || []).slice(antesLen);
+    nuevos.forEach((a) => avancesNuevos.push({ vehiculo: vNuevo, avance: a }));
+  });
+  if (!citasNuevas.length && !avancesNuevos.length) return;
+
+  const admins = (await query(
+    `SELECT u.id, u.nombre FROM usuarios u JOIN taller_admins ta ON ta.usuario_id=u.id WHERE ta.taller_id=$1 AND u.activo=1`,
+    [tallerId]
+  )).rows;
+
+  for (const c of citasNuevas) {
+    await enviarPushVarios(admins.map((a) => a.id), '📅 Nueva cita', `${c.cliente || 'Un cliente'} solicitó una cita`, { tipo: 'cita', id: c.id });
+  }
+  for (const { vehiculo, avance } of avancesNuevos) {
+    const titulo = `🔧 Avance en ${vehiculo.model || 'un vehículo'}`;
+    const cuerpo = avance.t || 'Se registró un nuevo avance';
+    await enviarPushVarios(admins.map((a) => a.id), titulo, cuerpo, { tipo: 'avance', vehiculoId: vehiculo.id });
+    // Si el dueño del vehículo tiene su propia cuenta de cliente en este taller, se le
+    // avisa también (coincidencia por nombre — es lo único que hay disponible hoy).
+    if (vehiculo.owner) {
+      const cli = (await query(
+        `SELECT id FROM usuarios WHERE taller_id=$1 AND rol='cliente' AND activo=1 AND LOWER(nombre)=LOWER($2) LIMIT 1`,
+        [tallerId, vehiculo.owner]
+      )).rows[0];
+      if (cli) await enviarPush(cli.id, titulo, cuerpo, { tipo: 'avance', vehiculoId: vehiculo.id });
+    }
+  }
+}
 
 // POST /api/state/mis-notifs-leidas?taller=ID — el cliente/mecánico marca SUS avisos como leídos
 // (no requiere permiso de escritura completa; solo toca sus propias notificaciones)

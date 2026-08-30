@@ -47,7 +47,14 @@
           "locationAlwaysAndWhenInUsePermission": "Permite compartir tu ubicación cuando solicitas auxilio vial."
         }
       ],
-      "./plugins/withGradleFix.js"
+      "./plugins/withGradleFix.js",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#F5B700"
+        }
+      ]
     ]
   }
 }

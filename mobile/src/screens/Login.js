@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert, Modal, Linking } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { api, saveSession, getApiUrl, guardarApiUrl, cargarApiUrl, despertarServidor } from '../api';
+import { api, saveSession, getApiUrl, guardarApiUrl, cargarApiUrl, despertarServidor, registrarNotificacionesPush } from '../api';
 
 const GRADS = [
   ['#0f2027', '#203a43', '#2c5364'],
@@ -71,6 +71,7 @@ export default function LoginScreen({ navigation }) {
       const d = await api('/api/auth/login', { method: 'POST', body: JSON.stringify({ usuario, password }) });
       clearTimeout(avisoLento); setError('');
       await saveSession(d.token, d.user, d.talleres);
+      registrarNotificacionesPush(); // no bloquea el ingreso si falla o si el usuario no da permiso
       // Si la contraseña es temporal, obligar a cambiarla antes de entrar
       if (d.user && d.user.mustChange) {
         setCambioObl({ user: d.user, talleres: d.talleres || [], actual: password });

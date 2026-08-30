@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Alert, ScrollView, TextInput, Image, Modal, Pressable, Linking, BackHandler, ActivityIndicator, AppState } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { api, getState, getStateCache, putState, clearSession, getApiUrl } from '../api';
+import { api, getState, getStateCache, putState, clearSession, getApiUrl, registrarNotificacionesPush } from '../api';
 import { compartirActaPDF, abrirEnNavegador, compartirCotizacionPDF, compartirResumenEsperaPDF } from '../acta';
 import { Dropdown, FirmaPad, FirmaVista, CarroSVG, etiqueta, colorMarca, marcaDe, Calendario, BotonAjustes, AjustesModal, firmaADataUri } from '../ui';
 
@@ -127,6 +127,7 @@ export default function AdminHomeScreen({ navigation, route }) {
   const [tab, setTab] = useState('inicio');
   const [passPrompt, setPassPrompt] = useState(null); // { item, rol, rolTxt } | null
   const [passPromptValor, setPassPromptValor] = useState('');
+  useEffect(() => { registrarNotificacionesPush(); }, []);
   // El botón/gesto ATRÁS del teléfono: desde un menú vuelve al inicio; desde el inicio, comportamiento normal (salir)
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {

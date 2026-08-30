@@ -50,6 +50,7 @@ async function init() {
     try { db.exec('ALTER TABLE talleres ADD COLUMN demo_pais TEXT'); } catch (e) {}
     try { db.exec('ALTER TABLE talleres ADD COLUMN demo_volumen TEXT'); } catch (e) {}
     try { db.exec('ALTER TABLE talleres ADD COLUMN demo_interes TEXT'); } catch (e) {}
+    try { db.exec('ALTER TABLE usuarios ADD COLUMN push_token TEXT'); } catch (e) {}
     try { db.exec(`CREATE TABLE IF NOT EXISTS config_global (id INTEGER PRIMARY KEY CHECK (id = 1), mensaje TEXT, correo TEXT, telefono TEXT)`); } catch (e) {}
     try { db.exec('INSERT OR IGNORE INTO config_global (id) VALUES (1)'); } catch (e) {}
     try { db.exec('CREATE TABLE IF NOT EXISTS auditoria (id INTEGER PRIMARY KEY AUTOINCREMENT, usuario_id INTEGER, usuario_nombre TEXT, rol TEXT, accion TEXT, modulo TEXT, detalle TEXT, ip TEXT, dispositivo TEXT, taller_id INTEGER, fecha TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)'); } catch (e) {}
