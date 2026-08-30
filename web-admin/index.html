@@ -2718,7 +2718,7 @@ async function renderSuperPanel(){const _cont=document.getElementById('w-tallere
   let contacto={};try{contacto=await apiReq('/api/config/contacto');}catch(e){}
   _cont.innerHTML=`
    <div class="supermain" style="max-width:none;padding:0">
-     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h3 style="font-size:15px;margin:0">Talleres registrados (${talleres.length})</h3><button class="wbtn wbtn-d" onclick="spAbrirCrearTaller()">＋ Crear taller</button></div>
+     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h3 style="font-size:15px;margin:0">Talleres registrados (${talleres.length})</h3><div style="display:flex;gap:8px"><button class="wbtn wbtn-g" onclick="spVerDemos()">🎁 Solicitudes de Demo</button><button class="wbtn wbtn-d" onclick="spAbrirCrearTaller()">＋ Crear taller</button></div></div>
      <div id="spList">${talleres.map(spTallerCard).join('')||'<div class="dcard" style="color:var(--muted)">Aún no hay talleres. Crea el primero arriba.</div>'}</div>
      <div class="dcard" style="margin-top:14px"><h3 style="font-size:15px;margin-bottom:6px">🖼️ Imágenes del inicio de sesión</h3>
        <div style="font-size:12.5px;color:var(--muted);margin-bottom:12px">Estas fotos aparecen en el panel derecho de la pantalla de inicio de TODA la plataforma, rotando junto con los consejos de mantenimiento. Si no subes ninguna, se muestran fondos de color.</div>
@@ -2771,6 +2771,26 @@ function previewActaHTML(condiciones,pie,logoSrc,logoTam){
     ${pie?`<div style="font-size:9px;color:#666;margin-top:6px;text-align:center;font-family:Arial,Helvetica,sans-serif;border-top:1px solid #ddd;padding-top:6px">${nl2br(pie)}</div>`:''}
     ${!condiciones&&!pie?'<div style="font-size:11px;color:#c7ccd2">Escribe arriba para ver el ejemplo…</div>':''}
   </div>`;
+}
+async function spVerDemos(){
+  let demos=[];try{demos=await apiReq('/api/talleres/demos');}catch(e){toast(e.message);return;}
+  const ahora=new Date();
+  document.getElementById('modalH').innerHTML=`<h2>🎁 Solicitudes de Demo (${demos.length})</h2>`;
+  document.getElementById('modalB').innerHTML=demos.length?demos.map(d=>{
+    const expira=new Date(d.demo_expira);const vencido=expira<ahora;
+    const diasRestantes=Math.ceil((expira-ahora)/(1000*60*60*24));
+    return `<div style="border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;${vencido?'opacity:.6':''}">
+      <div style="display:flex;justify-content:space-between;align-items:center"><b>${d.nombre}</b><span style="font-size:11px;padding:3px 8px;border-radius:20px;background:${vencido?'#fee2e2':'#dcfce7'};color:${vencido?'#b91c1c':'#166534'}">${vencido?'Vencido':diasRestantes+' día(s) restante(s)'}</span></div>
+      <div style="font-size:12.5px;color:var(--muted);margin-top:4px">${d.admin_nombre} · ${d.admin_correo}${d.admin_telefono?' · '+d.admin_telefono:''}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px">${d.demo_pais||'—'} · ${d.demo_volumen||'—'} vehículos/mes</div>
+      ${d.demo_interes?`<div style="font-size:12px;color:#374151;margin-top:6px;background:#f7f8fa;border-radius:6px;padding:8px">${d.demo_interes}</div>`:''}
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="wbtn wbtn-g" onclick="window.open('mailto:${d.admin_correo}')">✉️ Escribirle</button>
+        ${d.admin_telefono?`<button class="wbtn wbtn-g" onclick="window.open('https://wa.me/${d.admin_telefono.replace(/[^0-9]/g,'')}')">💬 WhatsApp</button>`:''}
+      </div>
+    </div>`;
+  }).join(''):'<div style="color:var(--muted);text-align:center;padding:20px">Aún no hay solicitudes de demo.</div>';
+  document.getElementById('modal').classList.add('on');
 }
 function spAbrirCrearTaller(){
   window._spPlanElegido='lite';

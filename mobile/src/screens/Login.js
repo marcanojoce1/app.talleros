@@ -247,6 +247,10 @@ export default function LoginScreen({ navigation }) {
                 <Text style={{ color: '#166534', fontWeight: '700', fontSize: 13.5 }}>{contacto.telefono}</Text>
               </TouchableOpacity>
             ) : null}
+            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#DBEAFE', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16, marginTop: 10, width: '100%', justifyContent: 'center' }} onPress={() => { setContactoOpen(false); Linking.openURL(getApiUrl() + '/demo.html'); }}>
+              <Text style={{ fontSize: 16 }}>🎁</Text>
+              <Text style={{ color: '#1e40af', fontWeight: '700', fontSize: 13.5 }}>Probar demo gratis por 3 días</Text>
+            </TouchableOpacity>
             <TouchableOpacity style={{ marginTop: 18 }} onPress={() => setContactoOpen(false)}>
               <Text style={{ color: '#6b7480', fontWeight: '700', fontSize: 13.5 }}>Cerrar</Text>
             </TouchableOpacity>
