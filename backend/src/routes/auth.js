@@ -173,12 +173,8 @@ router.post('/reset', async (req, res) => {
   console.log('[reset] usuario_id=' + rc.usuario_id + ' u_usuario=' + rc.u_usuario + ' u_correo=' + rc.u_correo);
   if (rc.u_correo) {
     try {
-      let contactoCorreo = 'soporte@mjservices.app', contactoTel = '+51 917 024 656';
-      try {
-        const cg = (await query('SELECT correo, telefono FROM config_global WHERE id=1')).rows[0];
-        if (cg && cg.correo) contactoCorreo = cg.correo;
-        if (cg && cg.telefono) contactoTel = cg.telefono;
-      } catch (e) {}
+      const contactoCorreo = 'soporte@mjservices.app';
+      const contactoTel = '+51 917 024 656';
       const html = plantillaCorreo({
         titulo: '¡Tu contraseña fue actualizada con éxito!',
         nombre: rc.u_usuario,
