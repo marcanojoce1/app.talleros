@@ -29,8 +29,14 @@ function versionActual() {
   const def = { appVersion: '1.0.1', appBuild: 84, apk: '', notas: '' };
   try {
     const p = path.join(APK_DIR, 'version.json');
-    if (fs.existsSync(p)) return { ...def, ...JSON.parse(fs.readFileSync(p, 'utf8')) };
-  } catch (e) {}
+    if (fs.existsSync(p)) {
+      let contenido = fs.readFileSync(p, 'utf8');
+      if (contenido.charCodeAt(0) === 0xFEFF) contenido = contenido.slice(1); // quita el BOM si lo trae
+      return { ...def, ...JSON.parse(contenido) };
+    }
+  } catch (e) {
+    console.error('[version] No se pudo leer/parsear apk/version.json, usando valores por defecto:', e.message);
+  }
   return def;
 }
 app.get('/api/version', (req, res) => {
