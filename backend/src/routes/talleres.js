@@ -362,4 +362,19 @@ router.put('/:id/cuenta', async (req, res) => {
   res.json({ ok: true, id: existente.id, actualizado: true });
 });
 
+// Lista de solicitudes de demo (solo superadmin) — con los datos del taller, su
+// administrador (nombre/correo/teléfono), y si sigue vigente o ya venció.
+router.get('/demos', requireRole('superadmin'), async (req, res) => {
+  const { rows } = await query(
+    `SELECT t.id, t.nombre, t.demo_expira, t.demo_pais, t.demo_volumen, t.demo_interes, t.creado_en,
+            u.nombre AS admin_nombre, u.correo AS admin_correo, u.telefono AS admin_telefono, u.usuario AS admin_usuario
+     FROM talleres t
+     JOIN taller_admins ta ON ta.taller_id = t.id
+     JOIN usuarios u ON u.id = ta.usuario_id
+     WHERE t.demo_expira IS NOT NULL
+     ORDER BY t.id DESC`
+  );
+  res.json(rows);
+});
+
 module.exports = router;

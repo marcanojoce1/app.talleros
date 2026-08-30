@@ -40,6 +40,9 @@ async function init() {
   await pool.query('ALTER TABLE talleres ADD COLUMN IF NOT EXISTS pie TEXT');
   await pool.query('ALTER TABLE talleres ADD COLUMN IF NOT EXISTS logo_tam INTEGER DEFAULT 100');
   await pool.query('ALTER TABLE talleres ADD COLUMN IF NOT EXISTS demo_expira TIMESTAMPTZ');
+  await pool.query('ALTER TABLE talleres ADD COLUMN IF NOT EXISTS demo_pais TEXT');
+  await pool.query('ALTER TABLE talleres ADD COLUMN IF NOT EXISTS demo_volumen TEXT');
+  await pool.query('ALTER TABLE talleres ADD COLUMN IF NOT EXISTS demo_interes TEXT');
   // Corrige una columna que se creó como TEXT por error y debía ser fecha/hora real
   // (rompía la comparación "expira_en > now()" al recuperar contraseña).
   try {

@@ -35,8 +35,8 @@ router.post('/solicitar', async (req, res) => {
 
   // Crea el taller de demo (versión Premium, para que se vean todas las funciones)
   const t = (await query(
-    'INSERT INTO talleres (nombre, activo, demo_expira) VALUES ($1,1,$2) RETURNING id',
-    [nombreTaller, expira]
+    'INSERT INTO talleres (nombre, activo, demo_expira, demo_pais, demo_volumen, demo_interes) VALUES ($1,1,$2,$3,$4,$5) RETURNING id',
+    [nombreTaller, expira, pais || null, volumen || null, interes || null]
   )).rows[0];
 
   // Crea el usuario administrador de ese taller
