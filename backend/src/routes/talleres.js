@@ -37,6 +37,31 @@ router.post('/', requireRole('superadmin'), async (req, res) => {
 // Editar taller — el Super Administrador puede editar todo; el administrador dueño del
 // taller puede editar sus propios datos (logo, contacto, condiciones), pero no el nombre
 // ni activar/inactivar, que quedan solo para el Super Administrador.
+// Eliminar un taller por completo (solo Super Administrador) — borra sus datos
+// (clientes, vehículos, órdenes, todo lo que vive en app_state), los técnicos y
+// clientes asociados directamente, y desvincula/limpia a sus administradores.
+// Pensado sobre todo para limpiar talleres de demo o de prueba. Es irreversible.
+router.delete('/:id', requireRole('superadmin'), async (req, res) => {
+  const id = req.params.id;
+  const t = (await query('SELECT nombre FROM talleres WHERE id=$1', [id])).rows[0];
+  if (!t) return res.status(404).json({ error: 'Taller no encontrado' });
+
+  await query('DELETE FROM app_state WHERE taller_id=$1', [id]);
+  // Técnicos y clientes creados directamente dentro de este taller
+  await query("DELETE FROM usuarios WHERE taller_id=$1 AND rol IN ('mecanico','cliente')", [id]);
+  // Administradores: se desvinculan de este taller; si con eso se quedan sin
+  // ningún taller, se elimina la cuenta por completo (evita huérfanos de demo).
+  const adminIds = (await query('SELECT usuario_id FROM taller_admins WHERE taller_id=$1', [id])).rows.map(r => r.usuario_id);
+  await query('DELETE FROM taller_admins WHERE taller_id=$1', [id]);
+  for (const uid of adminIds) {
+    const quedan = (await query('SELECT 1 FROM taller_admins WHERE usuario_id=$1', [uid])).rows[0];
+    if (!quedan) await query('DELETE FROM usuarios WHERE id=$1', [uid]);
+  }
+  await query('DELETE FROM talleres WHERE id=$1', [id]);
+  registrar({ req, accion: 'Eliminó taller', modulo: 'talleres', detalle: t.nombre });
+  res.json({ ok: true });
+});
+
 router.put('/:id', async (req, res) => {
   const esSuper = req.user.rol === 'superadmin';
   if (!esSuper) {
