@@ -57,11 +57,27 @@
     <div class="msg" id="msg"></div>
   </div>
 
+  <div id="modalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);align-items:center;justify-content:center;padding:20px;z-index:99">
+    <div style="background:#16202c;border-radius:16px;padding:30px 26px;max-width:400px;width:100%;text-align:center">
+      <div style="font-size:36px;margin-bottom:10px">✅</div>
+      <h1 style="font-size:19px;margin-bottom:6px">¡Tu demo está lista!</h1>
+      <div class="sub" style="margin-bottom:18px">Acceso completo por 3 días. Guarda estos datos:</div>
+      <div style="background:#0f1720;border-radius:10px;padding:16px;margin-bottom:18px">
+        <div style="font-size:13px;color:#9aa5b1">Usuario</div>
+        <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:10px" id="modalUsuario"></div>
+        <div style="font-size:13px;color:#9aa5b1">Contraseña</div>
+        <div style="font-size:16px;font-weight:800;color:#fff" id="modalClave"></div>
+      </div>
+      <a id="btnWhatsapp" href="#" target="_blank" style="display:block;text-align:center;background:#16a34a;color:#fff;text-decoration:none;border-radius:10px;padding:13px;font-weight:700;margin-bottom:10px">📱 Enviar mis datos por WhatsApp</a>
+      <button onclick="document.getElementById('modalOverlay').style.display='none'" style="background:transparent;color:#9aa5b1;border:none;font-size:13px;margin-top:6px;cursor:pointer">Cerrar</button>
+    </div>
+  </div>
+
   <script>
     document.getElementById('f').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = document.getElementById('btn'); const msg = document.getElementById('msg');
-      msg.className = 'msg'; btn.disabled = true; btn.textContent = 'Creando tu demo…';
+      msg.className = 'msg'; msg.textContent = ''; btn.disabled = true; btn.textContent = 'Creando tu demo…';
       const datos = {
         nombre: document.getElementById('nombre').value,
         correo: document.getElementById('correo').value,
@@ -78,8 +94,14 @@
         });
         const j = await r.json();
         if (!r.ok) throw new Error(j.error || 'No se pudo crear el demo');
-        msg.textContent = '✅ ' + j.mensaje;
-        msg.className = 'msg ok';
+        if (j.usuario && j.clave) {
+          document.getElementById('modalUsuario').textContent = j.usuario;
+          document.getElementById('modalClave').textContent = j.clave;
+          const numero = (datos.telefono || '').replace(/[^0-9]/g, '');
+          const texto = encodeURIComponent(`¡Tu demo de TallerOS está lista!\n\nUsuario: ${j.usuario}\nContraseña: ${j.clave}\n\nEntra en https://taller.mjservices.app o descarga la app.`);
+          document.getElementById('btnWhatsapp').href = 'https://wa.me/' + (numero || '') + '?text=' + texto;
+          document.getElementById('modalOverlay').style.display = 'flex';
+        }
         document.getElementById('f').reset();
         btn.textContent = 'Crear mi demo gratis';
       } catch (err) {

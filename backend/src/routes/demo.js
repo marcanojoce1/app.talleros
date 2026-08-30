@@ -54,6 +54,7 @@ router.post('/solicitar', async (req, res) => {
     destacado: [`USUARIO: ${usuario}`, `CONTRASEÑA: ${clave}`],
     contacto: `¿Preguntas o quieres continuar después del demo? Escríbenos — <a href="mailto:soporte@mjservices.app" style="color:#16406b">soporte@mjservices.app</a> · +51 917 024 656`,
   });
+  let correoEnviado = true;
   try {
     await sendEmail(
       correo.trim(),
@@ -63,7 +64,10 @@ router.post('/solicitar', async (req, res) => {
     );
   } catch (e) {
     console.error('[demo] No se pudo enviar el correo:', e.message);
-    return res.status(500).json({ error: 'Se creó tu demo pero no se pudo enviar el correo. Contáctanos directamente.' });
+    correoEnviado = false;
+    // No cortamos aquí: la cuenta ya está creada, seguimos y devolvemos las
+    // credenciales igual — el usuario las puede recibir por WhatsApp en la
+    // misma pantalla en vez de depender solo del correo.
   }
   // Avisa al super administrador de la nueva solicitud (nuevo lead)
   try {
@@ -86,7 +90,11 @@ router.post('/solicitar', async (req, res) => {
   } catch (e) {
     console.error('[demo] No se pudo notificar al super administrador:', e.message);
   }
-  res.json({ ok: true, mensaje: 'Revisa tu correo — te enviamos tu usuario y contraseña.' });
+  res.json({
+    ok: true,
+    mensaje: correoEnviado ? 'Revisa tu correo — te enviamos tu usuario y contraseña.' : 'Tu demo ya está lista. No pudimos enviarte el correo, pero aquí están tus datos — guárdalos o mándalos a tu WhatsApp.',
+    correoEnviado, usuario, clave,
+  });
 });
 
 module.exports = router;
