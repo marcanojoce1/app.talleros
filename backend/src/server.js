@@ -64,7 +64,10 @@ app.use('/api/media', require('./routes/media'));
 
 // Servir la web del administrador y las apps (PWA) desde el mismo servidor
 const pick = (a, b) => (fs.existsSync(a) ? a : b);
-app.use('/', express.static(pick(path.join(__dirname, '..', 'web-admin'), path.join(__dirname, '..', '..', 'web-admin'))));
+// Una sola copia de la plataforma web (antes había una copia duplicada en
+// backend/web-admin que causaba que los cambios "no se vieran" si solo se
+// actualizaba la de la raíz — ahora hay una sola fuente real).
+app.use('/', express.static(path.join(__dirname, '..', '..', 'web-admin')));
 app.use('/app', express.static(pick(path.join(__dirname, '..', 'apps'), path.join(__dirname, '..', '..', 'apps'))));
 
 app.use((err, req, res, next) => { console.error(err); res.status(500).json({ error: err.message || 'Error interno' }); });
