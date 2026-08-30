@@ -87,6 +87,21 @@ router.post('/login', async (req, res) => {
     talleres = (await query(
       'SELECT id, nombre, activo, motivo_inactivo, logo FROM talleres WHERE id=$1', [u.taller_id])).rows;
   }
+  // Si es una cuenta de demo y ya venció, no dejar entrar (evita que un demo de prueba
+  // quede activo para siempre).
+  if (u.rol !== 'superadmin' && talleres.length) {
+    const ahora = new Date();
+    const vigentes = [];
+    for (const t of talleres) {
+      const info = (await query('SELECT demo_expira FROM talleres WHERE id=$1', [t.id])).rows[0];
+      if (info && info.demo_expira && new Date(info.demo_expira) < ahora) continue; // demo vencido, se excluye
+      vigentes.push(t);
+    }
+    if (!vigentes.length && talleres.length) {
+      return res.status(403).json({ error: 'Tu demo de TallerOS ya venció. Escríbenos a soporte@mjservices.app si quieres continuar.' });
+    }
+    talleres = vigentes;
+  }
   registrar({ req, user: { id: u.id, nombre: u.nombre, rol: u.rol }, accion: 'Inicio de sesión', modulo: 'auth', taller_id: (talleres[0] && talleres[0].id) || null });
   res.json({
     token: signToken(u),

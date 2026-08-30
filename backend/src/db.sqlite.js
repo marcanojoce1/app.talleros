@@ -46,6 +46,7 @@ async function init() {
     try { db.exec('ALTER TABLE talleres ADD COLUMN condiciones TEXT'); } catch (e) {}
     try { db.exec('ALTER TABLE talleres ADD COLUMN pie TEXT'); } catch (e) {}
     try { db.exec('ALTER TABLE talleres ADD COLUMN logo_tam INTEGER DEFAULT 100'); } catch (e) {}
+    try { db.exec('ALTER TABLE talleres ADD COLUMN demo_expira TEXT'); } catch (e) {}
     try { db.exec(`CREATE TABLE IF NOT EXISTS config_global (id INTEGER PRIMARY KEY CHECK (id = 1), mensaje TEXT, correo TEXT, telefono TEXT)`); } catch (e) {}
     try { db.exec('INSERT OR IGNORE INTO config_global (id) VALUES (1)'); } catch (e) {}
     try { db.exec('CREATE TABLE IF NOT EXISTS auditoria (id INTEGER PRIMARY KEY AUTOINCREMENT, usuario_id INTEGER, usuario_nombre TEXT, rol TEXT, accion TEXT, modulo TEXT, detalle TEXT, ip TEXT, dispositivo TEXT, taller_id INTEGER, fecha TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)'); } catch (e) {}

@@ -18,6 +18,8 @@ app.set('io', io);
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
 app.use(express.json({ limit: '5mb' }));
 app.use('/uploads', express.static(path.join(__dirname, '..', process.env.UPLOAD_DIR || 'uploads')));
+// Política de privacidad (requerida por Google Play Console)
+app.use(express.static(path.join(__dirname, '..', 'public')));
 // Carpeta con el APK para actualización OTA (descarga directa)
 const APK_DIR = path.join(__dirname, '..', 'apk');
 try { if (!fs.existsSync(APK_DIR)) fs.mkdirSync(APK_DIR, { recursive: true }); } catch (e) {}
@@ -51,6 +53,7 @@ app.get('/api/version', (req, res) => {
 app.get('/api/health', (req, res) => { const v = versionActual(); res.json({ ok: true, servicio: 'TallerOS API', hora: new Date(), appVersion: v.appVersion, appBuild: v.appBuild }); });
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/talleres', require('./routes/talleres'));
+app.use('/api/demo', require('./routes/demo'));
 app.use('/api/state', require('./routes/state'));
 app.use('/api', require('./routes/acta'));
 app.use('/api', require('./routes/entities'));

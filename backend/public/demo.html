@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solicita tu demo de TallerOS</title>
+<style>
+  body { font-family: Arial, Helvetica, sans-serif; background: #0f1720; margin: 0; padding: 20px; color: #e5e7eb; }
+  .card { max-width: 480px; margin: 30px auto; background: #16202c; border-radius: 16px; padding: 34px 30px; box-shadow: 0 4px 24px rgba(0,0,0,.4); }
+  h1 { color: #fff; font-size: 22px; margin-bottom: 6px; }
+  .sub { color: #9aa5b1; font-size: 13.5px; margin-bottom: 26px; line-height: 1.5; }
+  label { display: block; font-size: 12.5px; font-weight: 700; color: #cbd2d9; margin: 14px 0 5px; }
+  input, select, textarea { width: 100%; box-sizing: border-box; padding: 11px 13px; border: 1px solid #2b3947; border-radius: 9px; font-size: 14px; background: #0f1720; color: #fff; font-family: inherit; }
+  textarea { min-height: 70px; resize: vertical; }
+  .row2 { display: flex; gap: 10px; }
+  .row2 > div { flex: 1; }
+  button { width: 100%; background: #2563eb; color: #fff; border: none; border-radius: 10px; padding: 13px; font-size: 15px; font-weight: 700; margin-top: 22px; cursor: pointer; }
+  button:disabled { opacity: .6; }
+  .msg { margin-top: 16px; padding: 12px 14px; border-radius: 9px; font-size: 13.5px; display: none; }
+  .msg.ok { background: #103a24; color: #86efac; display: block; }
+  .msg.err { background: #3b1a1a; color: #fca5a5; display: block; }
+</style>
+</head>
+<body>
+  <div class="card" id="pasoForm">
+    <h1>🔧 Solicita tu demo de TallerOS</h1>
+    <div class="sub">Acceso completo por 3 días. Completa el formulario y te enviamos tu usuario y contraseña al instante.</div>
+    <form id="f">
+      <label>Nombre completo *</label>
+      <input id="nombre" required placeholder="Juan Pérez">
+      <label>Correo *</label>
+      <input id="correo" type="email" required placeholder="tucorreo@empresa.com">
+      <label>Nombre del taller / empresa *</label>
+      <input id="tallerNombre" required placeholder="Taller Pérez">
+      <div class="row2">
+        <div>
+          <label>País *</label>
+          <select id="pais" required>
+            <option value="">Seleccionar…</option>
+            <option>Perú</option><option>Venezuela</option><option>Colombia</option><option>México</option><option>Chile</option><option>Ecuador</option><option>Otro</option>
+          </select>
+        </div>
+        <div>
+          <label>Teléfono</label>
+          <input id="telefono" placeholder="+51 ...">
+        </div>
+      </div>
+      <label>Vehículos que atienden al mes (aprox.)</label>
+      <select id="volumen">
+        <option value="">Seleccionar…</option>
+        <option>Menos de 20</option><option>20 a 50</option><option>50 a 150</option><option>Más de 150</option>
+      </select>
+      <label>¿Qué te interesa o qué necesitas?</label>
+      <textarea id="interes" placeholder="Cuéntanos sobre tu taller y qué te gustaría ver en la demo…"></textarea>
+      <button type="submit" id="btn">Crear mi demo gratis</button>
+    </form>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <script>
+    document.getElementById('f').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btn'); const msg = document.getElementById('msg');
+      msg.className = 'msg'; btn.disabled = true; btn.textContent = 'Creando tu demo…';
+      const datos = {
+        nombre: document.getElementById('nombre').value,
+        correo: document.getElementById('correo').value,
+        telefono: document.getElementById('telefono').value,
+        tallerNombre: document.getElementById('tallerNombre').value,
+        pais: document.getElementById('pais').value,
+        volumen: document.getElementById('volumen').value,
+        interes: document.getElementById('interes').value,
+      };
+      try {
+        const r = await fetch('/api/demo/solicitar', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(datos),
+        });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.error || 'No se pudo crear el demo');
+        msg.textContent = '✅ ' + j.mensaje;
+        msg.className = 'msg ok';
+        document.getElementById('f').reset();
+        btn.textContent = 'Crear mi demo gratis';
+      } catch (err) {
+        msg.textContent = err.message;
+        msg.className = 'msg err';
+        btn.textContent = 'Crear mi demo gratis';
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
