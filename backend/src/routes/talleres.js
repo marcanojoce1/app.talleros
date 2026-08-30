@@ -65,10 +65,12 @@ router.put('/:id', async (req, res) => {
 router.get('/admins/all', requireRole('superadmin'), async (req, res) => {
   const us = (await query("SELECT id,nombre,usuario,correo,telefono,documento,activo FROM usuarios WHERE rol='administrador' ORDER BY nombre")).rows;
   const rels = (await query('SELECT taller_id, usuario_id FROM taller_admins')).rows;
-  const talleres = (await query('SELECT id, nombre FROM talleres')).rows;
+  const talleres = (await query('SELECT id, nombre, demo_expira FROM talleres')).rows;
   res.json(us.map(u => {
     const tIds = rels.filter(r => r.usuario_id === u.id).map(r => r.taller_id);
-    return { ...u, talleres: tIds, talleresNombres: tIds.map(id => (talleres.find(t => t.id === id) || {}).nombre).filter(Boolean) };
+    const tallerObjs = tIds.map(id => talleres.find(t => t.id === id)).filter(Boolean);
+    const esDemo = tallerObjs.some(t => t.demo_expira);
+    return { ...u, talleres: tIds, talleresNombres: tallerObjs.map(t => t.nombre), esDemo, demoExpira: (tallerObjs.find(t => t.demo_expira) || {}).demo_expira || null };
   }));
 });
 

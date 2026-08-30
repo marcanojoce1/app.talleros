@@ -74,14 +74,15 @@ router.post('/solicitar', async (req, res) => {
         `TALLER: ${nombreTaller}`, `PAÍS: ${pais || '—'}`, `VOLUMEN: ${volumen || '—'}`,
       ],
       mensaje: interes ? `Interés: ${interes}` : '',
-      contacto: 'Recuerda revisar si agendó una reunión virtual en Calendly.',
+      contacto: 'Contáctalo pronto — su demo dura solo 3 días.',
     });
-    await sendEmail(
+    const envioLead = await sendEmail(
       'soporte@mjservices.app',
       'Nueva solicitud de demo de TallerOS',
       `Nueva solicitud de demo:\n\nNombre: ${nombre.trim()}\nCorreo: ${correo.trim()}\nTeléfono: ${telefono || '—'}\nTaller: ${nombreTaller}\nPaís: ${pais || '—'}\nVolumen: ${volumen || '—'}\nInterés: ${interes || '—'}`,
       htmlLead
     );
+    console.log('[demo] notificacion al superadministrador enviada ->', envioLead);
   } catch (e) {
     console.error('[demo] No se pudo notificar al super administrador:', e.message);
   }
