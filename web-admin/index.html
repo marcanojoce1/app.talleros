@@ -2559,24 +2559,27 @@ async function renderUsuariosView(){const cont=document.getElementById('w-usuari
     try{talleresList=await apiReq('/api/talleres');}catch(e){}
     try{admins=await apiReq('/api/talleres/admins/all');}catch(e){}
     window._TALLERES_SU=talleresList;window._SU_ADMINS=admins;
-    const fTaller=BUSCA.suFiltroTaller||'';const fEstado=BUSCA.suFiltroEstado||'';const q=(BUSCA.suBusqueda||'').trim();
+    const fTaller=BUSCA.suFiltroTaller||'';const fEstado=BUSCA.suFiltroEstado||'';const fTipo=BUSCA.suFiltroTipo||'';const q=(BUSCA.suBusqueda||'').trim();
     const norm=t=>(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
     const nombreTaller=id=>{const t=talleresList.find(x=>x.id===id);return t?t.nombre:'';};
     let filtrados=admins;
     if(fTaller)filtrados=filtrados.filter(a=>(a.talleres||[]).includes(+fTaller));
     if(fEstado==='activo')filtrados=filtrados.filter(a=>a.activo!==false&&a.activo!==0);
     if(fEstado==='inactivo')filtrados=filtrados.filter(a=>a.activo===false||a.activo===0);
+    if(fTipo==='demo')filtrados=filtrados.filter(a=>a.esDemo);
+    if(fTipo==='normal')filtrados=filtrados.filter(a=>!a.esDemo);
     if(q)filtrados=filtrados.filter(a=>norm(a.nombre+' '+(a.documento||'')+' '+(a.correo||'')+' '+(a.usuario||'')).includes(norm(q)));
     cont.innerHTML=`<div class="dcard">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:15px;margin:0">Filtros</h3><button class="wbtn wbtn-d" onclick="suNuevoAdminDesdeFiltros()">＋ Nuevo administrador</button></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px">
         <div class="fld" style="margin:0"><label>Empresa / Taller</label><select onchange="BUSCA.suFiltroTaller=this.value;renderUsuariosView()"><option value="">Todos los talleres</option>${talleresList.map(t=>`<option value="${t.id}" ${String(t.id)===fTaller?'selected':''}>${t.nombre}</option>`).join('')}</select></div>
         <div class="fld" style="margin:0"><label>Estado</label><select onchange="BUSCA.suFiltroEstado=this.value;renderUsuariosView()"><option value="" ${!fEstado?'selected':''}>Todos</option><option value="activo" ${fEstado==='activo'?'selected':''}>Activo</option><option value="inactivo" ${fEstado==='inactivo'?'selected':''}>Inactivo</option></select></div>
+        <div class="fld" style="margin:0"><label>Tipo</label><select onchange="BUSCA.suFiltroTipo=this.value;renderUsuariosView()"><option value="" ${!fTipo?'selected':''}>Todos</option><option value="demo" ${fTipo==='demo'?'selected':''}>🎁 Solo demos</option><option value="normal" ${fTipo==='normal'?'selected':''}>Solo permanentes</option></select></div>
         <div class="fld" style="margin:0"><label>Búsqueda</label><input value="${q.replace(/"/g,'&quot;')}" placeholder="Nombre, documento, correo, usuario…" oninput="BUSCA.suBusqueda=this.value;renderUsuariosView()"></div>
       </div>
     </div>
     <div class="tablecard" style="margin-top:14px"><table><thead><tr><th>Nombre</th><th>Documento</th><th>Celular</th><th>Nick / Usuario</th><th>Taller</th><th>Estado</th><th></th></tr></thead><tbody>${filtrados.length?filtrados.map(a=>`<tr>
-      <td><b>${a.nombre}</b></td>
+      <td><b>${a.nombre}</b>${a.esDemo?`<div style="margin-top:2px"><span style="font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:20px;background:${a.demoExpira&&new Date(a.demoExpira)<new Date()?'#fee2e2':'#dbeafe'};color:${a.demoExpira&&new Date(a.demoExpira)<new Date()?'#b91c1c':'#1e40af'}">🎁 DEMO</span></div>`:''}</td>
       <td class="mono" style="font-size:12px">${a.documento||'—'}</td>
       <td class="mono" style="font-size:12px">${a.telefono||'—'}</td>
       <td class="mono" style="font-size:12px">${a.usuario}</td>
@@ -2827,7 +2830,17 @@ async function resetTotal(){
   if(!confirm('Ultima confirmacion: ¿Borrar todo definitivamente?'))return;
   try{const r=await apiReq('/api/state/reset-total',{method:'POST'});toast(r.mensaje||'Datos borrados');setTimeout(()=>location.reload(),1200);}catch(e){toast(e.message);}
 }
-function spTallerCard(t){const nm=(t.nombre||'').replace(/'/g,'');const inactivo=!t.activo;return `<div class="dcard" style="margin-bottom:12px;${inactivo?'opacity:.72':''}"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><div class="av" style="background:var(--sidebar);color:#fff">${inits(t.nombre)}</div><div style="flex:1;min-width:140px"><div style="font-weight:700">${t.nombre} ${inactivo?'<span style="color:var(--red);font-size:11px">(inactivo)</span>':''}</div><div style="font-size:12px;color:var(--muted)">${t.rif||''} ${t.telefono||''}${inactivo&&t.motivo_inactivo?' · Motivo: '+t.motivo_inactivo:''}</div></div><button class="wbtn wbtn-g" onclick="spEditarTaller(${t.id})">Editar</button> ${t.activo?`<button class="wbtn wbtn-g" onclick="spInactivar(${t.id},'${nm}')">Inactivar</button>`:`<button class="wbtn wbtn-d" onclick="spReactivar(${t.id})">Reactivar</button>`}</div></div>`;}
+function spTallerCard(t){const nm=(t.nombre||'').replace(/'/g,'');const inactivo=!t.activo;
+  const esDemo=!!t.demo_expira;
+  let badgeDemo='';
+  if(esDemo){
+    const inicio=t.creado_en?new Date(t.creado_en):null;
+    const fin=new Date(t.demo_expira);
+    const vencido=fin<new Date();
+    const fmt=d=>d?d.toLocaleDateString('es',{day:'numeric',month:'short'}):'—';
+    badgeDemo=`<div style="margin-top:4px"><span style="font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;background:${vencido?'#fee2e2':'#dbeafe'};color:${vencido?'#b91c1c':'#1e40af'}">🎁 DEMO ${vencido?'VENCIDO':'ACTIVO'}</span> <span style="font-size:11px;color:var(--muted)">${fmt(inicio)} → ${fmt(fin)}</span></div>`;
+  }
+  return `<div class="dcard" style="margin-bottom:12px;${inactivo?'opacity:.72':''}"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><div class="av" style="background:${esDemo?'#2563eb':'var(--sidebar)'};color:#fff">${inits(t.nombre)}</div><div style="flex:1;min-width:140px"><div style="font-weight:700">${t.nombre} ${inactivo?'<span style="color:var(--red);font-size:11px">(inactivo)</span>':''}</div><div style="font-size:12px;color:var(--muted)">${t.rif||''} ${t.telefono||''}${inactivo&&t.motivo_inactivo?' · Motivo: '+t.motivo_inactivo:''}</div>${badgeDemo}</div><button class="wbtn wbtn-g" onclick="spEditarTaller(${t.id})">Editar</button> ${t.activo?`<button class="wbtn wbtn-g" onclick="spInactivar(${t.id},'${nm}')">Inactivar</button>`:`<button class="wbtn wbtn-d" onclick="spReactivar(${t.id})">Reactivar</button>`}</div></div>`;}
 async function spEditarTaller(id){const t=(window._talleresCache||[]).find(x=>x.id===id)||{};
   let cfg={};try{const st=await apiReq('/api/state?taller='+id);cfg=(st&&st.data&&st.data.config)||{};}catch(e){}
   const plan=cfg.plan||'lite';const vidMin=cfg.videoMinutosPorVehiculo||10;
