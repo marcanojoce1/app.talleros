@@ -18,7 +18,7 @@ if ($contenido -notmatch "APP_BUILD\s*=\s*(\d+)") {
 $buildAnterior = [int]$matches[1]
 $build = $buildAnterior + 1
 $contenidoNuevo = $contenido -replace "APP_BUILD\s*=\s*\d+", "APP_BUILD = $build"
-Set-Content -Path $versionFile -Value $contenidoNuevo -Encoding UTF8 -NoNewline
+[System.IO.File]::WriteAllText($versionFile, $contenidoNuevo, (New-Object System.Text.UTF8Encoding $false))
 Write-Host "Numero de version subido automaticamente: $buildAnterior -> $build" -ForegroundColor Green
 
 if ($contenidoNuevo -notmatch "APP_VERSION\s*=\s*'([^']+)'") {
@@ -67,7 +67,7 @@ $versionJson = @{
 } | ConvertTo-Json
 
 $versionJsonPath = Join-Path $raiz "backend\apk\version.json"
-Set-Content -Path $versionJsonPath -Value $versionJson -Encoding UTF8
+[System.IO.File]::WriteAllText($versionJsonPath, $versionJson, (New-Object System.Text.UTF8Encoding $false))
 Write-Host "version.json actualizado -> build $build (v$version)" -ForegroundColor Green
 
 # 7) Sube TODO a git (el numero de version, el APK, y cualquier otro cambio pendiente).
