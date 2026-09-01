@@ -288,11 +288,14 @@ export default function AdminHomeScreen({ navigation, route }) {
   };
   const confirmarAsignarTecnicoYProceso = () => {
     if (!tecnicoElegido) { Alert.alert('Falta', 'Selecciona un técnico.'); return; }
+    const vActual = (data.vehicles || []).find((v) => v.id === asignarTecnicoOpen);
     const vs = (data.vehicles || []).map((v) => (v.id === asignarTecnicoOpen ? { ...v, mech: tecnicoElegido } : v));
     guardar({ ...data, vehicles: vs });
     const id = asignarTecnicoOpen;
     setAsignarTecnicoOpen(null);
     setTimeout(() => cambiarEstadoOrden(id, 'rep'), 60);
+    const numTxt = vActual && vActual.numOrden ? 'OS' + String(vActual.numOrden).padStart(4, '0') : ('#' + id);
+    setTimeout(() => Alert.alert('✅ Orden actualizada', `Orden ${numTxt} fue trasladada a estado Reparación.`), 120);
   };
 
   const avancesPendientes = vehicles.reduce((a, v) => a + (v.advances || []).filter((ad) => ad.pendienteRevision).length, 0);
