@@ -270,7 +270,13 @@ export default function AdminHomeScreen({ navigation, route }) {
     setFCod(''); setFMonto(''); setFFoto(null); Alert.alert('Enviada', 'Factura enviada al Super Administrador.');
   };
   const marcarPagada = async (fid) => guardar({ ...data, facturas: (data.facturas || []).map((f) => (f.id === fid ? { ...f, estado: 'pagada' } : f)) });
+  const [asignarTecnicoOpen, setAsignarTecnicoOpen] = useState(null); // id del vehiculo, o null
+  const [tecnicoElegido, setTecnicoElegido] = useState('');
   const cambiarEstadoOrden = (id, code) => {
+    if (code === 'rep') {
+      const veh = (data.vehicles || []).find((v) => v.id === id);
+      if (veh && !veh.mech) { setTecnicoElegido(''); setAsignarTecnicoOpen(id); return; }
+    }
     const vs = (data.vehicles || []).map((v) => {
       if (v.id !== id) return v;
       const nv = { ...v, status: code };
@@ -279,6 +285,14 @@ export default function AdminHomeScreen({ navigation, route }) {
       return nv;
     });
     guardar({ ...data, vehicles: vs });
+  };
+  const confirmarAsignarTecnicoYProceso = () => {
+    if (!tecnicoElegido) { Alert.alert('Falta', 'Selecciona un técnico.'); return; }
+    const vs = (data.vehicles || []).map((v) => (v.id === asignarTecnicoOpen ? { ...v, mech: tecnicoElegido } : v));
+    guardar({ ...data, vehicles: vs });
+    const id = asignarTecnicoOpen;
+    setAsignarTecnicoOpen(null);
+    setTimeout(() => cambiarEstadoOrden(id, 'rep'), 60);
   };
 
   const avancesPendientes = vehicles.reduce((a, v) => a + (v.advances || []).filter((ad) => ad.pendienteRevision).length, 0);
@@ -570,6 +584,26 @@ export default function AdminHomeScreen({ navigation, route }) {
               </TouchableOpacity>
               <TouchableOpacity style={{ flex: 1, padding: 12, borderRadius: 10, backgroundColor: '#F5B700', alignItems: 'center' }} onPress={() => passPrompt && regenerarYCompartir(passPrompt.item, passPrompt.rol, passPrompt.rolTxt)}>
                 <Text style={{ fontWeight: '700', color: '#16191d' }}>Guardar y compartir</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={!!asignarTecnicoOpen} transparent animationType="fade" onRequestClose={() => setAsignarTecnicoOpen(null)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,.5)', justifyContent: 'center', padding: 24 }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 20 }}>
+            <Text style={{ fontSize: 16, fontWeight: '800', color: '#16191d', marginBottom: 6 }}>Asignar técnico</Text>
+            <Text style={{ fontSize: 13, color: '#6b7480', marginBottom: 14 }}>
+              Antes de pasar este vehículo a "En proceso", indica qué técnico lo va a atender.
+            </Text>
+            <Dropdown value={tecnicoElegido} options={mecanicos.filter((m) => m.activo !== false).map((m) => m.n)} onChange={setTecnicoElegido} placeholder="Selecciona el técnico" textoVacio="No hay técnicos activos. Regístralos en el módulo Técnicos." />
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
+              <TouchableOpacity style={{ flex: 1, padding: 12, borderRadius: 10, backgroundColor: '#eef0f2', alignItems: 'center' }} onPress={() => setAsignarTecnicoOpen(null)}>
+                <Text style={{ fontWeight: '700', color: '#6b7480' }}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={{ flex: 1, padding: 12, borderRadius: 10, backgroundColor: '#F5B700', alignItems: 'center' }} onPress={confirmarAsignarTecnicoYProceso}>
+                <Text style={{ fontWeight: '700', color: '#16191d' }}>Asignar y continuar</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -877,7 +911,6 @@ function Recepcion({ data, guardar, onListo, editarItem, onEditarConsumido, tall
     if (!vehId) { Alert.alert('Falta', 'Selecciona un vehículo.'); return; }
     if (!motivo.trim()) { setCampoFaltante('motivo'); Alert.alert('Falta un dato obligatorio', 'Indica el motivo de ingreso — está resaltado en rojo más arriba.'); return; }
     if (!trabajo.trim()) { setCampoFaltante('trabajo'); Alert.alert('Falta un dato obligatorio', 'Indica el trabajo a realizar — está resaltado en rojo más arriba.'); return; }
-    if (!mech || mech === '(Por asignar)') { setCampoFaltante('mech'); Alert.alert('Falta un dato obligatorio', 'Selecciona el técnico asignado — está resaltado en rojo más arriba.'); return; }
     if (!color.trim()) { setCampoFaltante('color'); Alert.alert('Falta un dato obligatorio', 'Indica el color del vehículo — está resaltado en rojo más arriba.'); if (colorRef.current) colorRef.current.focus(); return; }
     if (!km.trim()) { setCampoFaltante('km'); Alert.alert('Falta un dato obligatorio', 'Indica el kilometraje — está resaltado en rojo más arriba.'); if (kmRef.current) kmRef.current.focus(); return; }
     if (bateria && !bateriaMarca.trim() && !bateriaAmperaje.trim() && !bateriaColor.trim() && !bateriaObs.trim()) { Alert.alert('Falta un dato obligatorio', 'Marcaste "Batería" — indica al menos la observación (ej. dónde está ubicada) si no vas a llenar marca/amperaje/color.'); return; }
@@ -1014,13 +1047,6 @@ function Recepcion({ data, guardar, onListo, editarItem, onEditarConsumido, tall
             textoVacio="Este cliente no tiene vehículos. Regístralos en el módulo Vehículos." />
         </>
       )}
-
-
-      <Dropdown label="Técnico responsable" value={mech} placeholder="Selecciona el técnico" error={campoFaltante === 'mech'}
-        options={mecanicos.map((m) => m.n)}
-        meta={Object.fromEntries(mecanicos.map((m) => [m.n, [m.esp, m.tel, m.doc].filter(Boolean).join(' · ')]))}
-        onChange={setMech}
-        textoVacio="No hay técnicos activos. Regístralos en el módulo Técnicos." />
 
       <Text style={s.label}>Color del vehículo</Text>
       <TextInput ref={colorRef} style={[s.input, campoFaltante === 'color' && s.inputError]} value={color} onChangeText={setColor} placeholder="ej. Plata" />

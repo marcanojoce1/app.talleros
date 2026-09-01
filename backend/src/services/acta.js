@@ -180,7 +180,7 @@ function generarActaHTML(o = {}) {
         <div class="fld"><span>Placa:</span> ${esc(veh.plate || '')}</div>
         ${veh.vin ? `<div class="fld"><span>VIN:</span> ${esc(veh.vin)}</div>` : ''}
         <div class="fld"><span>Tipo:</span> ${esc(r.tipoVeh || veh.tipoVeh || '')} &nbsp; <span>Color:</span> ${esc(r.color || veh.color || '')}</div>
-        <div class="fld"><span>Kilometraje:</span> ${esc(r.km || '')} &nbsp; <span>Técnico:</span> ${esc(veh.mech || '')}</div>
+        <div class="fld"><span>Kilometraje:</span> ${esc(r.km || '')}</div>
       </div>
     </div>
 
