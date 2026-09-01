@@ -954,7 +954,7 @@ function Recepcion({ data, guardar, onListo, editarItem, onEditarConsumido, tall
     // Número de orden de servicio correlativo (va aumentando)
     const nOrden = ((data.config && data.config.ultimoNumOrden) || 0) + 1;
     const vs = vehicles.map((v) => v.id !== vehId ? v : {
-      ...v, status: 'espera', progress: 0, cerrada: false, cost: cotizacionId ? (+montoCotizacion || 0) : 0, pending: null, entregado: false, motivo: trabajo, mech: mech || v.mech || null,
+      ...v, status: 'espera', progress: 0, cerrada: false, cost: cotizacionId ? (+montoCotizacion || 0) : 0, pending: null, entregado: false, motivo: trabajo, mech: null,
       color: color || v.color, tipoVeh, numOrden: nOrden,
       ingreso: now.toISOString().slice(0, 10), recepDamages: dmgs, recepLados: ladosCon,
       recepcion: { fecha: now.toLocaleDateString('es-VE'), hora: now.toTimeString().slice(0, 5), tipoVeh, color, motivo, trabajo, prioridad: prio, combustible: comb, km: km || '—', accesorios: acc, documentos: docs, obs, via: 'App', firmaCli, firmaRec, firmaCliImg: firmaADataUri(firmaCli), firmaRecImg: firmaADataUri(firmaRec), numOrden: nOrden, cotizacionId: cotizacionId || null, cotizacionNum: cotizacionNum || null, montoCotizacion: cotizacionId ? (+montoCotizacion || 0) : 0, cotizacionItems: cotizacionId ? cotizacionItems : [], bateria: !!bateria, bateriaMarca: bateria ? bateriaMarca : '', bateriaAmperaje: bateria ? bateriaAmperaje : '', bateriaColor: bateria ? bateriaColor : '', bateriaObs: bateria ? bateriaObs : '' },
