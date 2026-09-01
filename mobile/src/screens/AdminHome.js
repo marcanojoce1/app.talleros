@@ -1047,9 +1047,6 @@ function Recepcion({ data, guardar, onListo, editarItem, onEditarConsumido, tall
         </>
       )}
 
-      <Text style={s.label}>Color del vehículo <Text style={{ fontWeight: '400', color: '#9aa3ad', fontSize: 11.5 }}>(se toma del registro del vehículo)</Text></Text>
-      <TextInput style={[s.input, { backgroundColor: '#f7f8fa', color: '#6b7480' }]} value={color || '(sin color registrado)'} editable={false} />
-
       <Dropdown label="Motivo de ingreso" value={motivo} placeholder="Selecciona el motivo" error={campoFaltante === 'motivo'}
         options={motivos} onChange={setMotivo} onAdd={(t) => setMotivos([...motivos, t])} />
 
@@ -2782,8 +2779,13 @@ function FormModal({ modal, close, data, guardar, cur, pickFoto, taller }) {
       else if (!claveCliNueva) Alert.alert('✅ Cliente registrado con éxito');
       if (!item && claveCliNueva) setTimeout(() => ofrecerCompartir(f.n, f.usuario, claveCliNueva, 'cliente', f.tel), 350);
     } else if (tipo === 'vehiculo') {
-      if (!f.marca || !f.plate) { Alert.alert('Falta', 'Marca y placa.'); return; }
-      if (!f.owner) { Alert.alert('Falta', 'Selecciona el propietario.'); return; }
+      if (!f.marca) { Alert.alert('Falta un dato obligatorio', 'Indica la marca.'); return; }
+      if (!f.modelo) { Alert.alert('Falta un dato obligatorio', 'Indica el modelo.'); return; }
+      if (!f.plate) { Alert.alert('Falta un dato obligatorio', 'Indica la placa.'); return; }
+      if (!f.anio) { Alert.alert('Falta un dato obligatorio', 'Indica el año.'); return; }
+      if (!f.color) { Alert.alert('Falta un dato obligatorio', 'Indica el color.'); return; }
+      if (!f.owner) { Alert.alert('Falta un dato obligatorio', 'Selecciona el propietario.'); return; }
+      f.tipoVeh = f.tipoVeh || 'Automóvil';
       const model = (f.marca + ' ' + f.modelo + (f.anio ? ' ' + f.anio : '')).trim();
       let arr = data.vehicles || [];
       if (item) arr = arr.map((v) => (v.id === item.id ? { ...v, ...f, model } : v));
