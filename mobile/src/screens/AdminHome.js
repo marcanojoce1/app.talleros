@@ -911,7 +911,6 @@ function Recepcion({ data, guardar, onListo, editarItem, onEditarConsumido, tall
     if (!vehId) { Alert.alert('Falta', 'Selecciona un vehículo.'); return; }
     if (!motivo.trim()) { setCampoFaltante('motivo'); Alert.alert('Falta un dato obligatorio', 'Indica el motivo de ingreso — está resaltado en rojo más arriba.'); return; }
     if (!trabajo.trim()) { setCampoFaltante('trabajo'); Alert.alert('Falta un dato obligatorio', 'Indica el trabajo a realizar — está resaltado en rojo más arriba.'); return; }
-    if (!color.trim()) { setCampoFaltante('color'); Alert.alert('Falta un dato obligatorio', 'Indica el color del vehículo — está resaltado en rojo más arriba.'); if (colorRef.current) colorRef.current.focus(); return; }
     if (!km.trim()) { setCampoFaltante('km'); Alert.alert('Falta un dato obligatorio', 'Indica el kilometraje — está resaltado en rojo más arriba.'); if (kmRef.current) kmRef.current.focus(); return; }
     if (bateria && !bateriaMarca.trim() && !bateriaAmperaje.trim() && !bateriaColor.trim() && !bateriaObs.trim()) { Alert.alert('Falta un dato obligatorio', 'Marcaste "Batería" — indica al menos la observación (ej. dónde está ubicada) si no vas a llenar marca/amperaje/color.'); return; }
     if (!editandoVehId) {
@@ -1048,8 +1047,8 @@ function Recepcion({ data, guardar, onListo, editarItem, onEditarConsumido, tall
         </>
       )}
 
-      <Text style={s.label}>Color del vehículo</Text>
-      <TextInput ref={colorRef} style={[s.input, campoFaltante === 'color' && s.inputError]} value={color} onChangeText={setColor} placeholder="ej. Plata" />
+      <Text style={s.label}>Color del vehículo <Text style={{ fontWeight: '400', color: '#9aa3ad', fontSize: 11.5 }}>(se toma del registro del vehículo)</Text></Text>
+      <TextInput style={[s.input, { backgroundColor: '#f7f8fa', color: '#6b7480' }]} value={color || '(sin color registrado)'} editable={false} />
 
       <Dropdown label="Motivo de ingreso" value={motivo} placeholder="Selecciona el motivo" error={campoFaltante === 'motivo'}
         options={motivos} onChange={setMotivo} onAdd={(t) => setMotivos([...motivos, t])} />
