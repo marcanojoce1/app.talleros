@@ -208,14 +208,9 @@ function generarActaHTML(o = {}) {
           const textColor = ['#d8dadd', '#9aa0a6', '#c9a227'].includes(bodyColor) ? '#111' : '#fff';
           return `<div style="margin-top:8px;padding-top:6px;border-top:1.5px solid #111;text-align:center;width:160px">
           <div style="font-size:11px"><b>🔋 Batería</b>${r.bateriaMarca ? ': ' + esc(r.bateriaMarca) : ''}${r.bateriaColor ? ' · ' + esc(r.bateriaColor) : ''}</div>
-          <svg width="60" height="45" viewBox="0 0 80 60" style="display:block;margin:6px auto 0">
-            <rect x="10" y="10" width="10" height="8" rx="2" fill="#8a8d91"/><rect x="60" y="10" width="10" height="8" rx="2" fill="#8a8d91"/>
-            <circle cx="15" cy="9" r="4" fill="#a9adb3"/><circle cx="65" cy="9" r="4" fill="#a9adb3"/>
-            <rect x="4" y="16" width="72" height="40" rx="5" fill="${bodyColor}" stroke="#111" stroke-width="1.5"/>
-            <circle cx="16" cy="23" r="2" fill="#00000030"/><circle cx="30" cy="23" r="2" fill="#00000030"/><circle cx="44" cy="23" r="2" fill="#00000030"/><circle cx="58" cy="23" r="2" fill="#00000030"/>
-            <text x="40" y="42" text-anchor="middle" font-size="12" font-weight="bold" font-family="Arial" fill="${textColor}">${esc(r.bateriaAmperaje || '')}${r.bateriaAmperaje ? 'A' : ''}</text>
-            <text x="15" y="14" font-size="11" font-weight="bold" fill="#16a34a">+</text><text x="63" y="14" font-size="13" font-weight="bold" fill="#dc2626">−</text>
-          </svg>
+          <table style="margin:6px auto 0;border-collapse:collapse"><tr>
+            <td style="width:60px;height:38px;background:${bodyColor};border:1.5px solid #111;border-radius:4px;text-align:center;vertical-align:middle;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;color:${textColor}">${r.bateriaAmperaje ? esc(r.bateriaAmperaje) + 'A' : '—'}</td>
+          </tr></table>
           ${r.bateriaObs ? `<div style="font-size:9.5px;color:#444;margin-top:5px;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;text-align:left">${esc(r.bateriaObs)}</div>` : ''}
           </div>`;
         })() : ''}
