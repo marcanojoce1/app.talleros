@@ -413,7 +413,7 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover{background:var(--surface-2)}
   <div class="web-wrap"><div class="web">
     <div class="wsideBackdrop" id="wSideBackdrop" onclick="toggleWSide(false)"></div>
     <div class="wside">
-      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v169</span></div>
+      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v170</span></div>
       <div class="wlbl op-item">Operación</div>
       <a class="on op-item" data-w="dash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
       <a class="op-item" data-w="recep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-6 0v4"/><rect x="2" y="9" width="20" height="11" rx="2"/></svg>Recepción digital</a>
@@ -2473,7 +2473,7 @@ function confirmPago(){const v=veh(window._pgVeh);const cod=(val('pgCod')||'').t
   else{const partes=+val('pgPartes');const total=+val('pgTotal');const ahora=+val('pgAhora');const prox=val('pgProx');if(!partes||partes<2){toast('Indica al menos 2 partes');return;}if(!total||!ahora){toast('Ingresa monto total y lo que paga ahora');return;}const restante=Math.max(0,total-ahora);const montoCuota=(partes-1)>0?restante/(partes-1):0;pago={tipoPago:'partes',total,pagado:ahora,cuotas:partes,cuotasPagadas:1,montoCuota,proximoPago:prox,pagos:[{n:1,monto:ahora,codigo:cod,fecha,hora,fechaISO:fecha,foto}]};}
   v.status='ent';v.progress=100;v.cost=pago.total;v.cerrada=true;v.entregado=true;v.fechaEntrega=new Date().toLocaleDateString('es-VE');v.advances.push({t:'Vehículo entregado · pago '+pago.tipoPago,m:v.mech||'Administración',type:'check',ago:'ahora'});
   pushHistory(v,'Vehículo entregado',pago);
-  closeModal();renderWeb();renderPhone();notify(v,`Tu ${v.model} fue entregado. Pago registrado.`);toast('Vehículo entregado · pasó a Trabajos realizados ✓');
+  closeModal();renderWeb();renderPhone();notify(v,`Tu ${v.model} fue entregado. Pago registrado.`);persistNow();toast('Vehículo entregado · pasó a Trabajos realizados ✓');
 }
 
 /* ===== SESIÓN Y PERSISTENCIA POR TALLER (vía API con token) ===== */

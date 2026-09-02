@@ -341,7 +341,7 @@ function generarTrabajoHTML(o = {}) {
       .bit { border-left: 3px solid #F5B700; padding: 8px 12px; margin-bottom: 12px; background: #fafafa; }
       .bit-t { font-weight: bold; font-size: 13px; }
       .bit-m { color: #666; font-size: 11px; margin-top: 2px; }
-      .bit-foto { max-width: 100%; max-height: 260px; border-radius: 8px; margin-top: 8px; display: block; }
+      .bit-foto { max-width: 14cm; max-height: 14cm; width: auto; height: auto; border-radius: 8px; margin-top: 8px; display: block; }
     </style>`;
 
   // Insertar la bitácora antes de cerrar el body
