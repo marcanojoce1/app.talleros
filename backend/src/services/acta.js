@@ -195,7 +195,7 @@ function generarActaHTML(o = {}) {
           ${docsMarcados.map((a) => `<div class="item"><span>${checkbox(true)} ${esc(a)}</span></div>`).join('')}
         </div>` : `<div style="padding:6px 10px;color:#888;font-size:11px">Ninguno marcado.</div>`}
       </div>
-      <div class="col fuel" style="width:170px">
+      <div class="col fuel" style="width:3.5cm;min-width:3.5cm;max-width:3.5cm;min-height:4cm;padding:6px 8px">
         <h3>Combustible</h3>
         <div style="margin-top:8px;font-size:20px;font-weight:bold">${esc(r.combustible || '½')}</div>
         <div style="height:7px;background:#eee;border-radius:4px;margin-top:6px;overflow:hidden"><div style="height:7px;width:${combPct}%;background:#F5B700"></div></div>
@@ -206,7 +206,7 @@ function generarActaHTML(o = {}) {
           const colorTxt = (r.bateriaColor || '').toLowerCase().trim();
           const bodyColor = coloresMap[colorTxt] || '#2b2d31';
           const textColor = ['#d8dadd', '#9aa0a6', '#c9a227'].includes(bodyColor) ? '#111' : '#fff';
-          return `<div style="margin-top:8px;padding-top:6px;border-top:1.5px solid #111;text-align:center;width:160px">
+          return `<div style="margin-top:8px;padding-top:6px;border-top:1.5px solid #111;text-align:center;width:100%">
           <div style="font-size:11px"><b>🔋 Batería</b>${r.bateriaMarca ? ': ' + esc(r.bateriaMarca) : ''}${r.bateriaColor ? ' · ' + esc(r.bateriaColor) : ''}</div>
           <table style="margin:8px auto 0;border-collapse:collapse"><tr>
             <td style="width:14px"></td>
