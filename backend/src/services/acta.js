@@ -195,7 +195,7 @@ function generarActaHTML(o = {}) {
           ${docsMarcados.map((a) => `<div class="item"><span>${checkbox(true)} ${esc(a)}</span></div>`).join('')}
         </div>` : `<div style="padding:6px 10px;color:#888;font-size:11px">Ninguno marcado.</div>`}
       </div>
-      <div class="col fuel" style="max-width:150px">
+      <div class="col fuel" style="max-width:150px;flex-shrink:0">
         <h3>Combustible</h3>
         <div style="margin-top:8px;font-size:20px;font-weight:bold">${esc(r.combustible || '½')}</div>
         <div style="height:7px;background:#eee;border-radius:4px;margin-top:6px;overflow:hidden"><div style="height:7px;width:${combPct}%;background:#F5B700"></div></div>
@@ -208,7 +208,7 @@ function generarActaHTML(o = {}) {
           const textColor = ['#d8dadd', '#9aa0a6', '#c9a227'].includes(bodyColor) ? '#111' : '#fff';
           return `<div style="margin-top:8px;padding-top:6px;border-top:1.5px solid #111;text-align:center">
           <div style="font-size:11px"><b>🔋 Batería</b>${r.bateriaMarca ? ': ' + esc(r.bateriaMarca) : ''}${r.bateriaColor ? ' · ' + esc(r.bateriaColor) : ''}</div>
-          <svg width="84" height="62" viewBox="0 0 80 60" style="display:block;margin:6px auto 0">
+          <svg width="62" height="46" viewBox="0 0 80 60" style="display:block;margin:6px auto 0;max-width:100%">
             <rect x="10" y="10" width="10" height="8" rx="2" fill="#8a8d91"/><rect x="60" y="10" width="10" height="8" rx="2" fill="#8a8d91"/>
             <circle cx="15" cy="9" r="4" fill="#a9adb3"/><circle cx="65" cy="9" r="4" fill="#a9adb3"/>
             <rect x="4" y="16" width="72" height="40" rx="5" fill="${bodyColor}" stroke="#111" stroke-width="1.5"/>
