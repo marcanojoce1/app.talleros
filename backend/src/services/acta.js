@@ -490,13 +490,17 @@ function generarCotizacionHTML(o = {}) {
 function generarResumenEsperaHTML(o = {}) {
   const taller = o.taller || {};
   const items = o.items || [];
+  const STATUS_LABEL = { espera: 'En espera', reprog: 'Reprogramado', rep: 'En proceso', wait: 'Espera de repuesto', term: 'Terminado', ent: 'Entregado' };
+  const TITULOS = { espera: 'Vehículos en espera', rep: 'Vehículos en reparación', term: 'Vehículos terminados', todos: 'Todos los vehículos' };
+  const titulo = TITULOS[o.estado] || TITULOS.espera;
   const fila = (v) => `<tr>
     <td>${esc(v.model || '')}</td><td>${esc(v.plate || '')}</td><td>${esc(v.owner || '')}</td>
-    <td>${esc(v.motivo || '')}</td><td>${esc(v.dias || 0)} día(s)</td>
+    <td>${esc(v.motivo || '')}</td><td>${esc(STATUS_LABEL[v.status] || 'En espera')}</td>
+    <td>${v.ingreso ? esc(new Date(v.ingreso).toLocaleDateString('es-VE')) : '—'}</td><td>${esc(v.dias || 0)} día(s)</td>
   </tr>`;
   return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Resumen de espera</title>
+<title>Resumen de vehículos</title>
 <style>
   * { box-sizing: border-box; }
   @page { size: A4; margin: 8mm; }
@@ -515,9 +519,9 @@ function generarResumenEsperaHTML(o = {}) {
 <body>
   <!--TOOLBAR_START--><div class="toolbar noprint"><button onclick="window.print()">🖨️ Imprimir / Guardar PDF</button></div><!--TOOLBAR_END-->
   <div class="sheet">
-    <div class="head"><h1>${esc(taller.nombre || 'TallerOS')} — Vehículos en espera</h1><div class="sub">Generado el ${new Date().toLocaleString('es-VE')} · ${items.length} vehículo(s)</div></div>
-    <table><tr><th>Vehículo</th><th>Placa</th><th>Cliente</th><th>Motivo</th><th>Días en taller</th></tr>
-      ${items.length ? items.map(fila).join('') : '<tr><td colspan="5" style="text-align:center;color:#888;padding:14px">No hay vehículos en espera.</td></tr>'}
+    <div class="head"><h1>${esc(taller.nombre || 'TallerOS')} — ${titulo}</h1><div class="sub">Generado el ${new Date().toLocaleString('es-VE')} · ${items.length} vehículo(s)</div></div>
+    <table><tr><th>Vehículo</th><th>Placa</th><th>Cliente</th><th>Motivo</th><th>Estado</th><th>Fecha de ingreso</th><th>Días en taller</th></tr>
+      ${items.length ? items.map(fila).join('') : `<tr><td colspan="7" style="text-align:center;color:#888;padding:14px">No hay vehículos en este estado.</td></tr>`}
     </table>
   </div>
 </body></html>`;

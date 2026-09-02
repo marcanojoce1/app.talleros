@@ -161,7 +161,7 @@ export default function HomeScreen({ navigation, route }) {
   const cur = (data.config && data.config.currency && data.config.currency.sym) || 'Bs.';
 
   // Trabajos del técnico: los asignados a él y no cerrados
-  const misTrabajos = vehicles.filter((v) => v.recepcion && !v.cerrada && (v.mech === me.nombre || !v.mech));
+  const misTrabajos = vehicles.filter((v) => v.recepcion && !v.cerrada && v.mech === me.nombre);
   // Vehículos del cliente
   const misVehiculos = vehicles.filter((v) => (v.owner || '') === me.nombre);
   const todasCitas = data.citas || [];

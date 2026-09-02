@@ -13,12 +13,20 @@ router.get('/resumen-espera/:tallerId', async (req, res) => {
     const st = (await query('SELECT data FROM app_state WHERE taller_id=$1', [tallerId])).rows[0];
     let d = st ? st.data : {}; if (typeof d === 'string') { try { d = JSON.parse(d); } catch { d = {}; } }
     const hoy = new Date();
-    const items = (d.vehicles || []).filter((v) => v.activo !== false && v.recepcion && (!v.status || v.status === 'espera' || v.status === 'reprog')).map((v) => {
+    const estado = req.query.estado || 'espera';
+    const FILTROS = {
+      espera: (v) => !v.status || v.status === 'espera' || v.status === 'reprog',
+      rep: (v) => v.status === 'rep' || v.status === 'wait',
+      term: (v) => v.status === 'term' || v.status === 'ent',
+      todos: () => true,
+    };
+    const filtro = FILTROS[estado] || FILTROS.espera;
+    const items = (d.vehicles || []).filter((v) => v.activo !== false && v.recepcion && filtro(v)).map((v) => {
       const ing = v.ingreso ? new Date(v.ingreso) : hoy;
       const dias = Math.max(0, Math.round((hoy - ing) / 86400000));
       return { ...v, dias };
     });
-    let html = generarResumenEsperaHTML({ taller, items });
+    let html = generarResumenEsperaHTML({ taller, items, estado });
     if (req.query.raw) html = html.replace(/<!--TOOLBAR_START-->[\s\S]*?<!--TOOLBAR_END-->/, '');
     res.set('Content-Type', 'text/html; charset=utf-8').send(html);
   } catch (e) {
