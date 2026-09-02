@@ -98,6 +98,14 @@ function fusionarPorId(actual, entrante, fusionarItem) {
 // arreglo de avances en vez de reemplazarlo — nunca se pierde uno que un lado no conocía.
 function fusionarVehiculo(actualV, entranteV) {
   const merged = { ...actualV, ...entranteV };
+  // Si el número de orden cambió, es una recepción NUEVA (el carro volvió por otro
+  // trabajo) — hay que confiar en los avances que manda esta versión tal cual (aunque
+  // vengan vacíos), NO "rescatar" los avances del trabajo anterior ya cerrado.
+  const esRecepcionNueva = entranteV.numOrden != null && entranteV.numOrden !== actualV.numOrden;
+  if (esRecepcionNueva) {
+    merged.advances = entranteV.advances || [];
+    return merged;
+  }
   const advA = actualV.advances || [];
   const advE = entranteV.advances || [];
   if (advA.length || advE.length) {
