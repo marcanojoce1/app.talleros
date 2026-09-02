@@ -200,6 +200,15 @@ export default function HomeScreen({ navigation, route }) {
             </TouchableOpacity>
           </>
         )}
+        {route.params?.modoAdminOriginal ? (
+          <TouchableOpacity
+            onPress={() => navigation.replace('AdminHome', { me: route.params.modoAdminOriginal, talleres: talleresParam })}
+            style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: esTécnico ? 'rgba(0,0,0,.08)' : 'rgba(255,255,255,.15)', alignItems: 'center', justifyContent: 'center' }}
+            accessibilityLabel="Volver a modo administrador"
+          >
+            <Text style={{ fontSize: 16 }}>🔄</Text>
+          </TouchableOpacity>
+        ) : null}
         <BotonAjustes color={esTécnico ? '#16191d' : '#fff'} onPress={() => setAjustesOpen(true)} />
         <TouchableOpacity style={s.hbtn} onPress={salir}><Text style={s.hbtnT}>Salir</Text></TouchableOpacity>
       </View>
@@ -1174,7 +1183,7 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
           <TouchableOpacity style={[s.actaBtn, { backgroundColor: '#2563EB', marginTop: 8 }]} onPress={() => compartirActaPDF(tallerId, v, 'trabajo')}>
             <Text style={s.actaBtnT}>📋 Trabajo realizado con fotos (PDF)</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[s.actaBtn, { backgroundColor: '#16191d', marginTop: 8 }]} onPress={() => abrirEnNavegador(tallerId, v, 'acta')}>
+          <TouchableOpacity style={[s.actaBtn, { backgroundColor: '#16191d', marginTop: 8 }]} onPress={() => abrirEnNavegador(tallerId, v, 'trabajo')}>
             <Text style={s.actaBtnT}>🌐 Ver acta en el navegador</Text>
           </TouchableOpacity>
 

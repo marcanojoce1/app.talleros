@@ -113,7 +113,7 @@ router.post('/login', async (req, res) => {
   registrar({ req, user: { id: u.id, nombre: u.nombre, rol: u.rol }, accion: 'Inicio de sesión', modulo: 'auth', taller_id: (talleres[0] && talleres[0].id) || null });
   res.json({
     token: signToken(u),
-    user: { id: u.id, nombre: u.nombre, rol: u.rol, usuario: u.usuario, permisos: resolverPerms(u.rol, u.permisos), mustChange: !!u.must_change },
+    user: { id: u.id, nombre: u.nombre, rol: u.rol, usuario: u.usuario, permisos: resolverPerms(u.rol, u.permisos), mustChange: !!u.must_change, esMech: !!u.es_mech, notificarAutomatico: !!u.notificar_automatico },
     talleres,
   });
 });

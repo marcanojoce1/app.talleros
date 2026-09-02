@@ -336,6 +336,15 @@ export default function AdminHomeScreen({ navigation, route }) {
         </View>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        {me.esMech ? (
+          <TouchableOpacity
+            onPress={() => navigation.replace('Home', { me: { ...me, rol: 'mecanico' }, talleres, tallerSel: taller && taller.id, modoAdminOriginal: me })}
+            style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: 'rgba(255,255,255,.15)', alignItems: 'center', justifyContent: 'center' }}
+            accessibilityLabel="Cambiar a modo técnico"
+          >
+            <Text style={{ fontSize: 16 }}>🔄</Text>
+          </TouchableOpacity>
+        ) : null}
         <BotonAjustes onPress={() => setAjustesOpen(true)} />
         <TouchableOpacity style={s.logout} onPress={salir}><Text style={{ color: '#fff', fontSize: 12 }}>Salir</Text></TouchableOpacity>
       </View>

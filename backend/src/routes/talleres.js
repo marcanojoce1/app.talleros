@@ -88,14 +88,14 @@ router.put('/:id', async (req, res) => {
 
 // Lista de TODOS los administradores con los talleres que tiene cada uno (superadmin)
 router.get('/admins/all', requireRole('superadmin'), async (req, res) => {
-  const us = (await query("SELECT id,nombre,usuario,correo,telefono,documento,activo FROM usuarios WHERE rol='administrador' ORDER BY nombre")).rows;
+  const us = (await query("SELECT id,nombre,usuario,correo,telefono,documento,activo,es_mech,notificar_automatico FROM usuarios WHERE rol='administrador' ORDER BY nombre")).rows;
   const rels = (await query('SELECT taller_id, usuario_id FROM taller_admins')).rows;
   const talleres = (await query('SELECT id, nombre, demo_expira FROM talleres')).rows;
   res.json(us.map(u => {
     const tIds = rels.filter(r => r.usuario_id === u.id).map(r => r.taller_id);
     const tallerObjs = tIds.map(id => talleres.find(t => t.id === id)).filter(Boolean);
     const esDemo = tallerObjs.some(t => t.demo_expira);
-    return { ...u, talleres: tIds, talleresNombres: tallerObjs.map(t => t.nombre), esDemo, demoExpira: (tallerObjs.find(t => t.demo_expira) || {}).demo_expira || null };
+    return { ...u, talleres: tIds, talleresNombres: tallerObjs.map(t => t.nombre), esDemo, demoExpira: (tallerObjs.find(t => t.demo_expira) || {}).demo_expira || null, esMech: !!u.es_mech, notificarAutomatico: !!u.notificar_automatico };
   }));
 });
 
@@ -118,7 +118,7 @@ router.get('/:id/admins', async (req, res) => {
     if (req.user.rol !== 'administrador' || !own) return res.status(403).json({ error: 'Sin permiso para este taller' });
   }
   const { rows } = await query(
-    `SELECT u.id,u.nombre,u.usuario,u.correo,u.telefono,u.documento,u.activo FROM usuarios u
+    `SELECT u.id,u.nombre,u.usuario,u.correo,u.telefono,u.documento,u.activo,u.es_mech AS "esMech",u.notificar_automatico AS "notificarAutomatico" FROM usuarios u
      JOIN taller_admins ta ON ta.usuario_id=u.id
      WHERE ta.taller_id=$1 ORDER BY u.nombre`, [req.params.id]);
   res.json(rows);
@@ -138,7 +138,7 @@ router.post('/:id/admins', async (req, res) => {
   let usuarioId = req.body.usuario_id;
 
   if (!usuarioId) {
-    const { nombre, usuario, correo, telefono, documento, password } = req.body;
+    const { nombre, usuario, correo, telefono, documento, password, esMech, notificarAutomatico } = req.body;
     if (!nombre || !usuario || !correo || !password)
       return res.status(400).json({ error: 'Faltan datos del administrador (nombre, usuario, correo, contraseña)' });
     // VALIDACIÓN DE DUPLICADOS
@@ -149,8 +149,8 @@ router.post('/:id/admins', async (req, res) => {
     }
     const hash = await hashPassword(password);
     const ins = await query(
-      'INSERT INTO usuarios (nombre,usuario,correo,telefono,documento,password,rol) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id',
-      [nombre, usuario, correo, telefono || null, documento || null, hash, 'administrador']);
+      'INSERT INTO usuarios (nombre,usuario,correo,telefono,documento,password,rol,es_mech,notificar_automatico) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id',
+      [nombre, usuario, correo, telefono || null, documento || null, hash, 'administrador', esMech ? 1 : 0, notificarAutomatico ? 1 : 0]);
     usuarioId = ins.rows[0].id;
   } else {
     const u = (await query('SELECT id FROM usuarios WHERE id=$1', [usuarioId])).rows[0];
@@ -266,7 +266,7 @@ router.put('/:id/admins/:uid', async (req, res) => {
     const own = (await query('SELECT 1 FROM taller_admins WHERE taller_id=$1 AND usuario_id=$2', [req.params.id, req.user.id])).rows[0];
     if (req.user.rol !== 'administrador' || !own) return res.status(403).json({ error: 'Sin permiso' });
   }
-  const { nombre, usuario, correo, telefono, documento, password } = req.body;
+  const { nombre, usuario, correo, telefono, documento, password, esMech, notificarAutomatico } = req.body;
   if (correo) {
     const dup = (await query('SELECT id FROM usuarios WHERE correo=$1 AND id<>$2', [correo, req.params.uid])).rows[0];
     if (dup) return res.status(409).json({ error: 'Ya existe otro usuario con ese correo' });
@@ -275,8 +275,8 @@ router.put('/:id/admins/:uid', async (req, res) => {
     const dup = (await query('SELECT id FROM usuarios WHERE usuario=$1 AND id<>$2', [usuario, req.params.uid])).rows[0];
     if (dup) return res.status(409).json({ error: 'Ya existe otro usuario con ese nombre de usuario' });
   }
-  await query('UPDATE usuarios SET nombre=COALESCE($2,nombre), usuario=COALESCE($3,usuario), correo=COALESCE($4,correo), telefono=COALESCE($5,telefono), documento=COALESCE($6,documento) WHERE id=$1',
-    [req.params.uid, nombre || null, usuario || null, correo || null, telefono || null, documento || null]);
+  await query('UPDATE usuarios SET nombre=COALESCE($2,nombre), usuario=COALESCE($3,usuario), correo=COALESCE($4,correo), telefono=COALESCE($5,telefono), documento=COALESCE($6,documento), es_mech=$7, notificar_automatico=$8 WHERE id=$1',
+    [req.params.uid, nombre || null, usuario || null, correo || null, telefono || null, documento || null, esMech ? 1 : 0, notificarAutomatico ? 1 : 0]);
   if (password) await query('UPDATE usuarios SET password=$2, must_change=1 WHERE id=$1', [req.params.uid, await hashPassword(password)]);
   res.json({ ok: true });
 });
