@@ -208,10 +208,21 @@ function generarActaHTML(o = {}) {
           const textColor = ['#d8dadd', '#9aa0a6', '#c9a227'].includes(bodyColor) ? '#111' : '#fff';
           return `<div style="margin-top:8px;padding-top:6px;border-top:1.5px solid #111;text-align:center;width:160px">
           <div style="font-size:11px"><b>🔋 Batería</b>${r.bateriaMarca ? ': ' + esc(r.bateriaMarca) : ''}${r.bateriaColor ? ' · ' + esc(r.bateriaColor) : ''}</div>
-          <table style="margin:6px auto 0;border-collapse:collapse"><tr>
-            <td style="width:60px;height:38px;background:${bodyColor};border:1.5px solid #111;border-radius:4px;text-align:center;vertical-align:middle;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;color:${textColor}">${r.bateriaAmperaje ? esc(r.bateriaAmperaje) + 'A' : '—'}</td>
+          <table style="margin:8px auto 0;border-collapse:collapse"><tr>
+            <td style="width:14px"></td>
+            <td style="width:14px;height:8px;background:#8a8d91;border-radius:2px 2px 0 0"></td>
+            <td style="width:16px"></td>
+            <td style="width:14px;height:8px;background:#8a8d91;border-radius:2px 2px 0 0"></td>
+            <td style="width:14px"></td>
           </tr></table>
-          ${r.bateriaObs ? `<div style="font-size:9.5px;color:#444;margin-top:5px;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;text-align:left">${esc(r.bateriaObs)}</div>` : ''}
+          <table style="margin:0 auto;border-collapse:collapse;width:76px;height:44px;background:${bodyColor};border:1.5px solid #111;border-radius:6px">
+            <tr>
+              <td style="width:24px;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:bold;color:#16a34a">+</td>
+              <td style="text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:bold;color:${textColor}">${r.bateriaAmperaje ? esc(r.bateriaAmperaje) + 'A' : ''}</td>
+              <td style="width:24px;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#dc2626">−</td>
+            </tr>
+          </table>
+          ${r.bateriaObs ? `<div style="font-size:9.5px;color:#444;margin-top:6px;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;text-align:left">${esc(r.bateriaObs)}</div>` : ''}
           </div>`;
         })() : ''}
       </div>
