@@ -11,27 +11,31 @@ const router = express.Router();
 // aparecer en el módulo Técnicos del taller (para poder asignársele órdenes) — usa la
 // misma cuenta/clave del administrador, no crea un usuario aparte.
 async function sincronizarComoTecnico(tallerId, nombre, esMech) {
+  console.log(`[dual-role] sincronizando taller=${tallerId} nombre="${nombre}" esMech=${esMech}`);
   const st = (await query('SELECT data FROM app_state WHERE taller_id=$1', [tallerId])).rows[0];
   let data = {}; if (st && st.data) { try { data = typeof st.data === 'string' ? JSON.parse(st.data) : st.data; } catch (e) { data = {}; } }
   data.mecanicos = data.mecanicos || [];
   const idx = data.mecanicos.findIndex(m => m.n === nombre);
+  console.log(`[dual-role] mecanicos actuales antes: ${data.mecanicos.map(m => m.n).join(', ') || '(vacío)'} — encontrado en idx=${idx}`);
   if (esMech) {
     if (idx === -1) {
       const nid = Math.max(0, ...data.mecanicos.map(m => m.id || 0)) + 1;
       data.mecanicos.push({ id: nid, n: nombre, activo: true, esAdmin: true, esp: '', tel: '', doc: '' });
+      console.log(`[dual-role] agregado nuevo tecnico id=${nid} nombre="${nombre}"`);
     } else {
       data.mecanicos[idx].activo = true;
       data.mecanicos[idx].esAdmin = true;
+      console.log(`[dual-role] tecnico ya existia, marcado activo/esAdmin`);
     }
   } else if (idx !== -1 && data.mecanicos[idx].esAdmin) {
-    // Se desmarcó "Administrador y Técnico" — se retira de Técnicos (solo si fue
-    // agregado automáticamente por esta sincronización, no si ya existía como técnico normal).
     data.mecanicos.splice(idx, 1);
+    console.log(`[dual-role] removido de tecnicos (se desmarco el checkbox)`);
   }
   await query(
     `INSERT INTO app_state (taller_id, data, updated_at) VALUES ($1,$2,CURRENT_TIMESTAMP)
      ON CONFLICT (taller_id) DO UPDATE SET data=$2, updated_at=CURRENT_TIMESTAMP`,
     [tallerId, JSON.stringify(data)]);
+  console.log(`[dual-role] guardado. mecanicos ahora: ${data.mecanicos.map(m => m.n).join(', ')}`);
 }
 router.use(auth); // todas requieren sesión
 

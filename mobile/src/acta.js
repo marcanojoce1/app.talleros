@@ -147,13 +147,14 @@ export async function compartirCotizacionPDF(tallerId, cot) {
 }
 
 // Comparte el resumen en PDF de los vehículos en espera (Órdenes de Taller)
-export async function compartirResumenEsperaPDF(tallerId) {
+export async function compartirResumenEsperaPDF(tallerId, estado = 'espera') {
   const base = getApiUrl();
   if (!base) { Alert.alert('Servidor no configurado', 'Cierra sesión y escribe la dirección del servidor en la pantalla de inicio.'); return; }
-  const titulo = 'Resumen de espera';
+  const TITULOS = { espera: 'En espera', rep: 'En reparación', term: 'Terminado', todos: 'Todos los estados' };
+  const titulo = 'Resumen — ' + (TITULOS[estado] || 'En espera');
   const Print = cargarModulo('print');
   const Sharing = cargarModulo('sharing');
-  const urlDoc = `${base}/api/resumen-espera/${tallerId}`;
+  const urlDoc = `${base}/api/resumen-espera/${tallerId}?estado=${estado}`;
 
   if (!Print || !Print.printToFileAsync) {
     Alert.alert(titulo, 'Se abrirá en el navegador. Desde ahí puedes imprimirlo, guardarlo como PDF o compartirlo.', [

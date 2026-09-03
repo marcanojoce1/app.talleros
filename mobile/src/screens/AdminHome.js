@@ -141,6 +141,7 @@ export default function AdminHomeScreen({ navigation, route }) {
   const [modal, setModal] = useState(null);
   const [qOrd, setQOrd] = useState('');
   const [resumenOpen, setResumenOpen] = useState(false);
+  const [resumenEstado, setResumenEstado] = useState('espera');
   const [editarItem, setEditarItem] = useState(null);
   const [fCod, setFCod] = useState(''); const [fMonto, setFMonto] = useState(''); const [fFoto, setFFoto] = useState(null);
 
@@ -410,7 +411,7 @@ export default function AdminHomeScreen({ navigation, route }) {
               <TouchableOpacity style={[s.act, { flex: 1, backgroundColor: '#eef0f2', justifyContent: 'center' }]} onPress={() => setResumenOpen(true)}>
                 <Text style={s.actT}>👁️ Ver Resumen</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[s.act, { flex: 1, backgroundColor: '#e8f6ec', justifyContent: 'center' }]} onPress={() => taller && compartirResumenEsperaPDF(taller.id)}>
+              <TouchableOpacity style={[s.act, { flex: 1, backgroundColor: '#e8f6ec', justifyContent: 'center' }]} onPress={() => taller && compartirResumenEsperaPDF(taller.id, resumenEstado)}>
                 <Text style={[s.actT, { color: '#0F6E56' }]}>💬 Compartir Resumen</Text>
               </TouchableOpacity>
             </View>
@@ -451,15 +452,22 @@ export default function AdminHomeScreen({ navigation, route }) {
                           <TouchableOpacity style={s.act} onPress={() => cambiarEstadoOrden(item.id, 'wait')}><Text style={s.actT}>Esp. repuesto</Text></TouchableOpacity>
                           {item.status === 'term' ? (
                             <TouchableOpacity style={[s.act, s.actOk]} onPress={() => setModal({ tipo: 'pago', item })}><Text style={[s.actT, { color: '#fff' }]}>Cobrar / Culminar</Text></TouchableOpacity>
+                          ) : (item.status === 'rep' || item.status === 'wait') ? (
+                            <>
+                              <TouchableOpacity style={[s.act, { backgroundColor: '#16A34A', borderColor: '#16A34A' }]} onPress={() => cambiarEstadoOrden(item.id, 'term')}><Text style={[s.actT, { color: '#fff' }]}>Marcar listo</Text></TouchableOpacity>
+                              <TouchableOpacity style={[s.act, s.actOk]} onPress={() => setModal({ tipo: 'pago', item })}><Text style={[s.actT, { color: '#fff' }]}>Cobrar y entregar</Text></TouchableOpacity>
+                            </>
                           ) : (
                             <TouchableOpacity style={[s.act, { backgroundColor: '#16A34A', borderColor: '#16A34A' }]} onPress={() => cambiarEstadoOrden(item.id, 'term')}><Text style={[s.actT, { color: '#fff' }]}>Marcar listo</Text></TouchableOpacity>
                           )}
                         </View>
                         <View style={{ flexDirection: 'row', gap: 14, marginTop: 9, flexWrap: 'wrap' }}>
                           <TouchableOpacity onPress={() => setModal({ tipo: 'avances', item })}><Text style={[s.link, { color: '#F5B700' }]}>📸 Ver avances{(item.advances || []).filter((a) => a.foto || a.video).length ? ' (' + (item.advances || []).filter((a) => a.foto || a.video).length + ')' : ''} →</Text></TouchableOpacity>
-                          <TouchableOpacity onPress={() => abrirEnNavegador(taller.id, item, 'acta')}><Text style={s.link}>Ver acta →</Text></TouchableOpacity>
-                          <TouchableOpacity onPress={() => compartirActaPDF(taller.id, item)}><Text style={s.link}>Compartir acta (PDF) →</Text></TouchableOpacity>
-                          <TouchableOpacity onPress={() => { setEditarItem(item); setTab('recep'); }}><Text style={[s.link, { color: '#2563EB' }]}>✎ Editar acta →</Text></TouchableOpacity>
+                          <TouchableOpacity onPress={() => abrirEnNavegador(taller.id, item, item.status && item.status !== 'espera' ? 'trabajo' : 'acta')}><Text style={s.link}>Ver acta →</Text></TouchableOpacity>
+                          <TouchableOpacity onPress={() => compartirActaPDF(taller.id, item, item.status && item.status !== 'espera' ? 'trabajo' : 'acta')}><Text style={s.link}>Compartir acta (PDF) →</Text></TouchableOpacity>
+                          {(!item.status || item.status === 'espera' || item.status === 'reprog') ? (
+                            <TouchableOpacity onPress={() => { setEditarItem(item); setTab('recep'); }}><Text style={[s.link, { color: '#2563EB' }]}>✎ Editar acta →</Text></TouchableOpacity>
+                          ) : null}
                         </View>
                       </View>
                     );
@@ -472,19 +480,33 @@ export default function AdminHomeScreen({ navigation, route }) {
             <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,.5)', justifyContent: 'flex-end' }}>
               <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 18, paddingBottom: 30, maxHeight: '80%' }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <Text style={{ fontSize: 16, fontWeight: '800', color: '#16191d' }}>📋 Vehículos en espera</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '800', color: '#16191d' }}>📋 Resumen de vehículos</Text>
                   <TouchableOpacity onPress={() => setResumenOpen(false)}><Text style={{ fontSize: 22, color: '#6b7480' }}>✕</Text></TouchableOpacity>
                 </View>
-                <ScrollView>
-                  {V.filter((v) => !v.status || v.status === 'espera' || v.status === 'reprog').length ? V.filter((v) => !v.status || v.status === 'espera' || v.status === 'reprog').map((v) => {
-                    const d = v.ingreso ? Math.max(0, Math.floor((Date.now() - new Date(v.ingreso).getTime()) / 86400000)) : 0;
-                    return (
-                      <View key={v.id} style={{ paddingVertical: 10, borderBottomWidth: 1, borderColor: '#f0f2f5' }}>
-                        <Text style={{ fontWeight: '800', color: '#16191d' }}>{v.model} <Text style={{ color: '#6b7480', fontWeight: '600' }}>{v.plate}</Text></Text>
-                        <Text style={s.muted}>{v.owner} · {v.motivo} · {d} día(s) en taller</Text>
-                      </View>
-                    );
-                  }) : <Text style={s.muted}>No hay vehículos en espera.</Text>}
+                <Dropdown
+                  value={{ espera: 'En espera', rep: 'En reparación', term: 'Terminado', todos: 'Todos los estados' }[resumenEstado]}
+                  options={['En espera', 'En reparación', 'Terminado', 'Todos los estados']}
+                  onChange={(v) => setResumenEstado({ 'En espera': 'espera', 'En reparación': 'rep', 'Terminado': 'term', 'Todos los estados': 'todos' }[v])}
+                />
+                <ScrollView style={{ marginTop: 10 }}>
+                  {(() => {
+                    const FILTROS = {
+                      espera: (v) => !v.status || v.status === 'espera' || v.status === 'reprog',
+                      rep: (v) => v.status === 'rep' || v.status === 'wait',
+                      term: (v) => v.status === 'term' || v.status === 'ent',
+                      todos: () => true,
+                    };
+                    const items = V.filter(FILTROS[resumenEstado] || FILTROS.espera);
+                    return items.length ? items.map((v) => {
+                      const d = v.ingreso ? Math.max(0, Math.floor((Date.now() - new Date(v.ingreso).getTime()) / 86400000)) : 0;
+                      return (
+                        <View key={v.id} style={{ paddingVertical: 10, borderBottomWidth: 1, borderColor: '#f0f2f5' }}>
+                          <Text style={{ fontWeight: '800', color: '#16191d' }}>{v.model} <Text style={{ color: '#6b7480', fontWeight: '600' }}>{v.plate}</Text></Text>
+                          <Text style={s.muted}>{v.owner} · {v.motivo} · {d} día(s) en taller</Text>
+                        </View>
+                      );
+                    }) : <Text style={s.muted}>No hay vehículos en este estado.</Text>;
+                  })()}
                 </ScrollView>
               </View>
             </View>
@@ -2485,7 +2507,7 @@ function Usuarios({ esSuper, taller }) {
   const [loading, setLoading] = useState(false);
   const [filtroTaller, setFiltroTaller] = useState('');
   const [busqueda, setBusqueda] = useState('');
-  const vacio = { nombre: '', documento: '', usuario: '', correo: '', telefono: '', password: '', password2: '', tallerId: taller ? taller.id : null };
+  const vacio = { nombre: '', documento: '', usuario: '', correo: '', telefono: '', password: '', password2: '', tallerId: taller ? taller.id : null, esMech: false, notificarAutomatico: false };
   const [modalOpen, setModalOpen] = useState(false);
   const [f, setF] = useState(vacio);
   const [editId, setEditId] = useState(null);
@@ -2514,7 +2536,7 @@ function Usuarios({ esSuper, taller }) {
   const abrirNuevo = () => { setEditId(null); setF({ ...vacio, tallerId: esSuper ? (filtroTaller ? +filtroTaller : (talleresList[0] || {}).id) : taller.id }); setModalOpen(true); };
   const abrirEditar = (a) => {
     setEditId(a.id);
-    setF({ nombre: a.nombre, documento: a.documento || '', usuario: a.usuario, correo: a.correo, telefono: a.telefono || '', password: '', password2: '', tallerId: (a.talleres && a.talleres[0]) || (taller ? taller.id : null) });
+    setF({ nombre: a.nombre, documento: a.documento || '', usuario: a.usuario, correo: a.correo, telefono: a.telefono || '', password: '', password2: '', tallerId: (a.talleres && a.talleres[0]) || (taller ? taller.id : null), esMech: !!a.esMech, notificarAutomatico: !!a.notificarAutomatico });
     setModalOpen(true);
   };
   const guardar = async () => {
@@ -2525,9 +2547,9 @@ function Usuarios({ esSuper, taller }) {
     if (f.password && f.password.length < 6) { Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres.'); return; }
     try {
       if (editId) {
-        await api('/api/talleres/' + f.tallerId + '/admins/' + editId, { method: 'PUT', body: JSON.stringify({ nombre: f.nombre, usuario: f.usuario, correo: f.correo, telefono: f.telefono, documento: f.documento, password: f.password || undefined }) });
+        await api('/api/talleres/' + f.tallerId + '/admins/' + editId, { method: 'PUT', body: JSON.stringify({ nombre: f.nombre, usuario: f.usuario, correo: f.correo, telefono: f.telefono, documento: f.documento, password: f.password || undefined, esMech: f.esMech, notificarAutomatico: f.esMech && f.notificarAutomatico }) });
       } else {
-        await api('/api/talleres/' + f.tallerId + '/admins', { method: 'POST', body: JSON.stringify({ nombre: f.nombre, usuario: f.usuario, correo: f.correo, telefono: f.telefono, documento: f.documento, password: f.password }) });
+        await api('/api/talleres/' + f.tallerId + '/admins', { method: 'POST', body: JSON.stringify({ nombre: f.nombre, usuario: f.usuario, correo: f.correo, telefono: f.telefono, documento: f.documento, password: f.password, esMech: f.esMech, notificarAutomatico: f.esMech && f.notificarAutomatico }) });
       }
       setModalOpen(false); cargar(); Alert.alert('✅ Listo', editId ? 'Administrador actualizado con éxito.' : 'Administrador creado con éxito.');
     } catch (e) { Alert.alert('Error', e.message); }
@@ -2578,6 +2600,26 @@ function Usuarios({ esSuper, taller }) {
             <Text style={s.label}>Usuario (nick de acceso)</Text><TextInput style={s.input} value={f.usuario} onChangeText={(v) => setF({ ...f, usuario: v })} autoCapitalize="none" />
             <Text style={s.label}>Correo</Text><TextInput style={s.input} value={f.correo} onChangeText={(v) => setF({ ...f, correo: v })} autoCapitalize="none" keyboardType="email-address" />
             <Text style={s.label}>Teléfono / Celular</Text><TextInput style={s.input} value={f.telefono} onChangeText={(v) => setF({ ...f, telefono: v })} />
+            <View style={{ backgroundColor: '#f7f8fa', borderRadius: 10, padding: 12, marginTop: 10 }}>
+              <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }} onPress={() => setF({ ...f, esMech: !f.esMech })}>
+                <View style={{ width: 20, height: 20, borderRadius: 5, borderWidth: 2, borderColor: f.esMech ? '#16191d' : '#c7ccd1', backgroundColor: f.esMech ? '#16191d' : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
+                  {f.esMech ? <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800' }}>✓</Text> : null}
+                </View>
+                <Text style={{ fontWeight: '700', fontSize: 13.5 }}>Administrador y Técnico</Text>
+              </TouchableOpacity>
+              <Text style={{ fontSize: 11, color: '#6b7480', marginTop: 6 }}>Esta persona también repara vehículos. Aparecerá también en el módulo Técnicos, usando este mismo usuario y contraseña.</Text>
+              {f.esMech ? (
+                <View style={{ marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#e5e7eb' }}>
+                  <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }} onPress={() => setF({ ...f, notificarAutomatico: !f.notificarAutomatico })}>
+                    <View style={{ width: 20, height: 20, borderRadius: 5, borderWidth: 2, borderColor: f.notificarAutomatico ? '#16191d' : '#c7ccd1', backgroundColor: f.notificarAutomatico ? '#16191d' : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
+                      {f.notificarAutomatico ? <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800' }}>✓</Text> : null}
+                    </View>
+                    <Text style={{ fontWeight: '700', fontSize: 13.5 }}>Notificar al cliente</Text>
+                  </TouchableOpacity>
+                  <Text style={{ fontSize: 11, color: '#6b7480', marginTop: 6 }}>Si lo marcas, cada avance que el técnico suba desde la app le llega directo al cliente. Si lo dejas sin marcar, los avances quedan para que tú los revises y decidas cuáles enviar, en el módulo "Avances".</Text>
+                </View>
+              ) : null}
+            </View>
             <Text style={s.label}>{editId ? 'Nueva contraseña (opcional)' : 'Contraseña'}</Text><TextInput style={s.input} value={f.password} onChangeText={(v) => setF({ ...f, password: v })} secureTextEntry placeholder={editId ? 'Dejar vacío para no cambiar' : 'mínimo 6 caracteres'} />
             <Text style={s.label}>Confirmar contraseña</Text><TextInput style={s.input} value={f.password2} onChangeText={(v) => setF({ ...f, password2: v })} secureTextEntry />
           </ScrollView>
