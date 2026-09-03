@@ -401,7 +401,7 @@ export default function AdminHomeScreen({ navigation, route }) {
       {tab === 'ordenes' && taller && (() => {
         const grupos = [
           { k: 'espera', t: 'En espera', filtro: (v) => !v.status || v.status === 'espera' || v.status === 'reprog' },
-          { k: 'rep', t: 'Trabajando', filtro: (v) => v.status === 'rep' || v.status === 'wait' },
+          { k: 'rep', t: 'En reparación', filtro: (v) => v.status === 'rep' || v.status === 'wait' },
           { k: 'term', t: 'Terminado', filtro: (v) => v.status === 'term' },
         ];
         return (
@@ -448,7 +448,7 @@ export default function AdminHomeScreen({ navigation, route }) {
                           </View>
                         )}
                         <View style={s.actions}>
-                          <TouchableOpacity style={s.act} onPress={() => cambiarEstadoOrden(item.id, 'rep')}><Text style={s.actT}>Trabajando</Text></TouchableOpacity>
+                          <TouchableOpacity style={s.act} onPress={() => cambiarEstadoOrden(item.id, 'rep')}><Text style={s.actT}>Iniciar trabajo</Text></TouchableOpacity>
                           <TouchableOpacity style={s.act} onPress={() => cambiarEstadoOrden(item.id, 'wait')}><Text style={s.actT}>Esp. repuesto</Text></TouchableOpacity>
                           {item.status === 'term' ? (
                             <TouchableOpacity style={[s.act, s.actOk]} onPress={() => setModal({ tipo: 'pago', item })}><Text style={[s.actT, { color: '#fff' }]}>Cobrar / Culminar</Text></TouchableOpacity>
