@@ -273,10 +273,14 @@ export default function AdminHomeScreen({ navigation, route }) {
   const marcarPagada = async (fid) => guardar({ ...data, facturas: (data.facturas || []).map((f) => (f.id === fid ? { ...f, estado: 'pagada' } : f)) });
   const [asignarTecnicoOpen, setAsignarTecnicoOpen] = useState(null); // id del vehiculo, o null
   const [tecnicoElegido, setTecnicoElegido] = useState('');
-  const cambiarEstadoOrden = (id, code) => {
+  const cambiarEstadoOrden = async (id, code) => {
     if (code === 'rep') {
       const veh = (data.vehicles || []).find((v) => v.id === id);
-      if (veh && !veh.mech) { setTecnicoElegido(''); setAsignarTecnicoOpen(id); return; }
+      if (veh && !veh.mech) {
+        setTecnicoElegido(''); setAsignarTecnicoOpen(id);
+        recargar(); // trae técnicos frescos (por si alguien se acaba de marcar como dual-rol)
+        return;
+      }
     }
     const vs = (data.vehicles || []).map((v) => {
       if (v.id !== id) return v;
@@ -2944,10 +2948,17 @@ function FormModal({ modal, close, data, guardar, cur, pickFoto, taller }) {
                 <TextInput style={[s.input, { flex: 1 }]} value={f.telNum} onChangeText={(v) => set('telNum', v)} keyboardType="phone-pad" placeholder={(PAISES.find((x) => x.cod === (f.paisCod || '+58')) || {}).ej || 'número'} />
               </View>
               <Text style={s.label}>Correo electrónico</Text><TextInput style={s.input} value={f.correo} onChangeText={(v) => set('correo', v)} autoCapitalize="none" keyboardType="email-address" />
-              <View style={s.sep}><Text style={s.sepT}>Acceso del técnico a la app</Text></View>
-              <Text style={s.label}>Usuario de acceso</Text><TextInput style={s.input} value={f.usuario} onChangeText={(v) => set('usuario', v)} autoCapitalize="none" />
-              <Text style={s.label}>Contraseña</Text><CampoClave value={f.password} onChangeText={(v) => set('password', v)} placeholder={item ? 'Dejar vacío para no cambiar' : 'mínimo 6 caracteres'} />
-              <Text style={s.label}>Confirmar contraseña</Text><CampoClave value={f.password2} onChangeText={(v) => set('password2', v)} />
+              {item && item.esAdmin ? (
+                <View style={{ backgroundColor: '#f7f8fa', borderRadius: 10, padding: 12, marginTop: 10 }}>
+                  <Text style={{ fontWeight: '700', fontSize: 13 }}>🔑 Acceso a la app</Text>
+                  <Text style={{ fontSize: 12, color: '#6b7480', marginTop: 4 }}>Esta persona entra con su usuario y contraseña de administrador — no tiene un acceso de técnico aparte. Para cambiar su contraseña, hazlo desde Usuarios y accesos.</Text>
+                </View>
+              ) : (<>
+                <View style={s.sep}><Text style={s.sepT}>Acceso del técnico a la app</Text></View>
+                <Text style={s.label}>Usuario de acceso</Text><TextInput style={s.input} value={f.usuario} onChangeText={(v) => set('usuario', v)} autoCapitalize="none" />
+                <Text style={s.label}>Contraseña</Text><CampoClave value={f.password} onChangeText={(v) => set('password', v)} placeholder={item ? 'Dejar vacío para no cambiar' : 'mínimo 6 caracteres'} />
+                <Text style={s.label}>Confirmar contraseña</Text><CampoClave value={f.password2} onChangeText={(v) => set('password2', v)} />
+              </>)}
               <Text style={s.label}>Estado</Text>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 {[[true, 'Activo'], [false, 'Inactivo']].map(([k, l]) => (<TouchableOpacity key={String(k)} style={[s.pillBtn, f.activo === k && s.pillBtnOn]} onPress={() => set('activo', k)}><Text style={[s.pillBtnT, f.activo === k && { color: '#16191d' }]}>{l}</Text></TouchableOpacity>))}
