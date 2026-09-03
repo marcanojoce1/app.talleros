@@ -323,36 +323,25 @@ function generarTrabajoHTML(o = {}) {
   const avances = o.avances || [];
   const mon = o.moneda || 'Bs.';
 
-  const bloqueAvance = (a) => `
+  const bitacora = avances.length ? avances.map((a) => `
     <div class="bit">
       <div class="bit-t">${esc(a.t || 'Avance')}</div>
       <div class="bit-m">${esc(a.m || '')}${a.ago ? ' · ' + esc(a.ago) : ''}</div>
       ${a.foto ? `<img src="${esc(a.foto)}" class="bit-foto"/>` : ''}
       ${a.video ? `<div style="position:relative;display:inline-block;margin-top:6px">${a.videoThumb ? `<img src="${esc(a.videoThumb)}" class="bit-foto"/>` : ''}<div style="font-size:9px;color:#666;margin-top:2px">🎥 Video — <a href="${esc(a.video)}">ver aquí</a></div></div>` : ''}
-    </div>`;
-
-  // Se agrupan de a EXACTAMENTE 2 avances por hoja, cada grupo con su propio salto de
-  // página forzado — así el resultado no depende de que el navegador calcule bien dónde
-  // cortar (eso fallaba); cada hoja nueva siempre empieza limpia con 2 avances completos.
-  const GRUPO = 2;
-  const grupos = [];
-  for (let i = 0; i < avances.length; i += GRUPO) grupos.push(avances.slice(i, i + GRUPO));
-  if (!grupos.length) grupos.push([]);
-
-  const hojas = grupos.map((grupo, i) => `
-    <div class="sheet bitacora-sheet">
-      <div style="background:#111;color:#fff;padding:8px 12px;font-weight:bold;font-size:13px">TRABAJO REALIZADO — Bitácora del técnico${grupos.length > 1 ? ` (${i + 1}/${grupos.length})` : ''}</div>
-      <div style="padding:12px">${grupo.length ? grupo.map(bloqueAvance).join('') : '<div style="color:#888;padding:10px">Sin avances registrados.</div>'}</div>
-    </div>`).join('');
+    </div>`).join('') : '<div style="color:#888;padding:10px">Sin avances registrados.</div>';
 
   const extra = `
-    ${hojas}
+    <div class="sheet bitacora-sheet" style="margin-top:16px">
+      <div style="background:#111;color:#fff;padding:8px 12px;font-weight:bold;font-size:13px">TRABAJO REALIZADO — Bitácora del técnico</div>
+      <div style="padding:12px">${bitacora}</div>
+    </div>
     <style>
-      .bitacora-sheet { page-break-before: always; break-before: page; margin-top:16px; }
+      .bitacora-sheet { page-break-before: always; break-before: page; }
       .bit { border-left: 3px solid #F5B700; padding: 8px 12px; margin-bottom: 12px; background: #fafafa; page-break-inside: avoid; break-inside: avoid; }
       .bit-t { font-weight: bold; font-size: 13px; }
-      .bit-m { color: #666; font-size: 11px; margin-top: 2px; }
-      .bit-foto { max-width: 12cm; max-height: 10.5cm; width: auto; height: auto; border-radius: 8px; margin-top: 8px; display: block; page-break-inside: avoid; break-inside: avoid; }
+      .bit-m { color: #666; font-size: 11px; margin-top: 2px; word-wrap: break-word; overflow-wrap: break-word; }
+      .bit-foto { max-width: 12cm; max-height: 10.5cm; width: auto; height: auto; border-radius: 8px; margin-top: 8px; display: block; }
     </style>`;
 
   // Insertar la bitácora antes de cerrar el body
