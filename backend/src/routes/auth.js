@@ -47,6 +47,15 @@ router.get('/rescate', async (req, res) => {
 
 // POST /api/auth/mi-clave  { actual, nueva }  — cualquier usuario cambia SU propia contraseña
 // Guarda el identificador de notificaciones push del teléfono del usuario logueado.
+// Devuelve el estado ACTUAL y real del usuario logueado (sin depender de lo que se
+// guardó en la sesión al iniciar sesión) — útil para saber, en el momento, si sigue
+// marcado como "Administrador y Técnico" antes de dejarlo cambiar de modo en la app.
+router.get('/me', auth, async (req, res) => {
+  const u = (await query('SELECT id, nombre, rol, usuario, es_mech, notificar_automatico FROM usuarios WHERE id=$1', [req.user.id])).rows[0];
+  if (!u) return res.status(404).json({ error: 'Usuario no encontrado' });
+  res.json({ id: u.id, nombre: u.nombre, rol: u.rol, usuario: u.usuario, esMech: !!u.es_mech, notificarAutomatico: !!u.notificar_automatico });
+});
+
 router.post('/push-token', auth, async (req, res) => {
   const { token } = req.body;
   if (!token) return res.status(400).json({ error: 'Falta el token' });

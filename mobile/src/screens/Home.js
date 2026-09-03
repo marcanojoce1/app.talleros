@@ -870,6 +870,7 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
   const [videoThumb, setVideoThumb] = useState(null); // uri local de la miniatura
   const [videoDuracionSeg, setVideoDuracionSeg] = useState(0);
   const [subiendoVideo, setSubiendoVideo] = useState(false);
+  const [guardandoAvance, setGuardandoAvance] = useState(false);
   const [avanceModalOpen, setAvanceModalOpen] = useState(false);
   const [adicional, setAdicional] = useState(false);
   const [txtAd, setTxtAd] = useState('');
@@ -1000,7 +1001,9 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
   };
 
   const guardarAvance = async () => {
+    if (guardandoAvance) return; // ya se está guardando — evita que un doble toque cree un avance repetido
     if (!txt.trim() && prog === (v.progress || 0) && !foto && !video) { Alert.alert('Nada que registrar', 'Escribe una descripción, cambia el porcentaje, o adjunta una foto o video.'); return; }
+    setGuardandoAvance(true);
     let videoUrl = null, videoThumbUrl = null;
     if (video) {
       setSubiendoVideo(true);
@@ -1008,16 +1011,17 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
         videoUrl = await subirMedia(video, 'video', 'video/mp4');
         if (videoThumb) videoThumbUrl = await subirMedia(videoThumb, 'miniatura', 'image/jpeg');
       } catch (e) {
-        setSubiendoVideo(false);
+        setSubiendoVideo(false); setGuardandoAvance(false);
         Alert.alert('No se pudo subir el video', e.message || 'Intenta de nuevo. Puedes guardar el avance sin video.');
         return;
       }
       setSubiendoVideo(false);
     }
     aplicar({ progress: prog },
-      { t: txt.trim() || 'Avance actualizado', m: (me.nombre || 'Técnico') + ' · ' + prog + '% completado', type: 'nota', ago: 'ahora', foto, video: videoUrl, videoThumb: videoThumbUrl, videoDuracion: videoUrl ? videoDuracionSeg : 0 },
+      { id: Date.now() + '-' + Math.random().toString(36).slice(2), t: txt.trim() || 'Avance actualizado', m: (me.nombre || 'Técnico') + ' · ' + prog + '% completado', type: 'nota', ago: 'ahora', foto, video: videoUrl, videoThumb: videoThumbUrl, videoDuracion: videoUrl ? videoDuracionSeg : 0 },
       { text: 'Nuevo avance en tu vehículo (' + prog + '%)' });
     setAvanceModalOpen(false);
+    setGuardandoAvance(false);
     setTxt(''); setFoto(null); setVideo(null); setVideoThumb(null); setVideoDuracionSeg(0);
     Alert.alert('Listo', 'Avance registrado. El cliente ya puede verlo.');
   };
@@ -1124,7 +1128,7 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
                     </View>
                   ) : null}
 
-                  <TouchableOpacity style={[s.addAv, { marginTop: 16 }]} onPress={guardarAvance} disabled={subiendoVideo}><Text style={s.addAvT}>{subiendoVideo ? 'Subiendo video…' : 'Guardar'}</Text></TouchableOpacity>
+                  <TouchableOpacity style={[s.addAv, { marginTop: 16 }]} onPress={guardarAvance} disabled={guardandoAvance}><Text style={s.addAvT}>{subiendoVideo ? 'Subiendo video…' : guardandoAvance ? 'Guardando…' : 'Guardar'}</Text></TouchableOpacity>
                   <TouchableOpacity style={{ marginTop: 10, alignItems: 'center', padding: 6 }} onPress={() => setAvanceModalOpen(false)}><Text style={{ color: '#6b7480', fontWeight: '600' }}>Cancelar</Text></TouchableOpacity>
                 </ScrollView>
               </View>

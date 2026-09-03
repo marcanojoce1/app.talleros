@@ -111,7 +111,10 @@ function fusionarVehiculo(actualV, entranteV) {
   if (advA.length || advE.length) {
     const base = advE.length >= advA.length ? [...advE] : [...advA];
     const otro = advE.length >= advA.length ? advA : advE;
-    otro.forEach((a) => { if (!base.some((b) => JSON.stringify(a) === JSON.stringify(b))) base.push(a); });
+    otro.forEach((a) => {
+      const yaEsta = base.some((b) => (a && a.id != null && b && b.id != null) ? a.id === b.id : JSON.stringify(a) === JSON.stringify(b));
+      if (!yaEsta) base.push(a);
+    });
     merged.advances = base;
   }
   return merged;
