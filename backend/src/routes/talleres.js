@@ -6,6 +6,33 @@ const { MODULOS, ACCIONES, resolverPerms } = require('../permisos');
 const { registrar } = require('../audit');
 
 const router = express.Router();
+
+// Cuando un administrador se marca como "Administrador y Técnico", también debe
+// aparecer en el módulo Técnicos del taller (para poder asignársele órdenes) — usa la
+// misma cuenta/clave del administrador, no crea un usuario aparte.
+async function sincronizarComoTecnico(tallerId, nombre, esMech) {
+  const st = (await query('SELECT data FROM app_state WHERE taller_id=$1', [tallerId])).rows[0];
+  let data = {}; if (st && st.data) { try { data = typeof st.data === 'string' ? JSON.parse(st.data) : st.data; } catch (e) { data = {}; } }
+  data.mecanicos = data.mecanicos || [];
+  const idx = data.mecanicos.findIndex(m => m.n === nombre);
+  if (esMech) {
+    if (idx === -1) {
+      const nid = Math.max(0, ...data.mecanicos.map(m => m.id || 0)) + 1;
+      data.mecanicos.push({ id: nid, n: nombre, activo: true, esAdmin: true, esp: '', tel: '', doc: '' });
+    } else {
+      data.mecanicos[idx].activo = true;
+      data.mecanicos[idx].esAdmin = true;
+    }
+  } else if (idx !== -1 && data.mecanicos[idx].esAdmin) {
+    // Se desmarcó "Administrador y Técnico" — se retira de Técnicos (solo si fue
+    // agregado automáticamente por esta sincronización, no si ya existía como técnico normal).
+    data.mecanicos.splice(idx, 1);
+  }
+  await query(
+    `INSERT INTO app_state (taller_id, data, updated_at) VALUES ($1,$2,CURRENT_TIMESTAMP)
+     ON CONFLICT (taller_id) DO UPDATE SET data=$2, updated_at=CURRENT_TIMESTAMP`,
+    [tallerId, JSON.stringify(data)]);
+}
 router.use(auth); // todas requieren sesión
 
 // Lista de talleres según el rol: superadmin ve todos; admin ve los suyos.
@@ -161,6 +188,10 @@ router.post('/:id/admins', async (req, res) => {
   const yaAsignado = (await query('SELECT 1 FROM taller_admins WHERE taller_id=$1 AND usuario_id=$2', [tallerId, usuarioId])).rows[0];
   if (yaAsignado) return res.status(409).json({ error: 'Ese administrador ya está asignado a este taller' });
   await query('INSERT INTO taller_admins (taller_id, usuario_id) VALUES ($1,$2)', [tallerId, usuarioId]);
+  try {
+    const u2 = (await query('SELECT nombre, es_mech FROM usuarios WHERE id=$1', [usuarioId])).rows[0];
+    if (u2) await sincronizarComoTecnico(tallerId, u2.nombre, !!u2.es_mech);
+  } catch (e) { console.error('[dual-role] no se pudo sincronizar con Técnicos:', e.message); }
   res.status(201).json({ ok: true, usuario_id: usuarioId });
 });
 
@@ -278,6 +309,10 @@ router.put('/:id/admins/:uid', async (req, res) => {
   await query('UPDATE usuarios SET nombre=COALESCE($2,nombre), usuario=COALESCE($3,usuario), correo=COALESCE($4,correo), telefono=COALESCE($5,telefono), documento=COALESCE($6,documento), es_mech=$7, notificar_automatico=$8 WHERE id=$1',
     [req.params.uid, nombre || null, usuario || null, correo || null, telefono || null, documento || null, esMech ? 1 : 0, notificarAutomatico ? 1 : 0]);
   if (password) await query('UPDATE usuarios SET password=$2, must_change=1 WHERE id=$1', [req.params.uid, await hashPassword(password)]);
+  try {
+    const u2 = (await query('SELECT nombre, es_mech FROM usuarios WHERE id=$1', [req.params.uid])).rows[0];
+    if (u2) await sincronizarComoTecnico(req.params.id, u2.nombre, !!u2.es_mech);
+  } catch (e) { console.error('[dual-role] no se pudo sincronizar con Técnicos:', e.message); }
   res.json({ ok: true });
 });
 
