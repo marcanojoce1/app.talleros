@@ -6,23 +6,30 @@ let _browser = null;
 
 async function getBrowser() {
   if (_browser && _browser.isConnected()) return _browser;
-  const puppeteer = require('puppeteer-core');
-  const chromium = require('@sparticuz/chromium');
-  const execPath = await chromium.executablePath();
-  console.log('[pdf] Iniciando Chrome en:', execPath);
+  const puppeteer = require('puppeteer');
+  console.log('[pdf] Iniciando Chrome…');
   _browser = await puppeteer.launch({
-    args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--single-process'],
-    executablePath: execPath,
-    headless: chromium.headless,
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--single-process'],
   });
   _browser.on('disconnected', () => { _browser = null; });
+  console.log('[pdf] Chrome listo');
   return _browser;
+}
+
+// Si algo se cuelga (Chrome no arranca, una página no responde), esto evita que la
+// petición se quede esperando para siempre — falla a los 15 segundos en vez de colgarse.
+function conLimiteDeTiempo(promesa, ms, mensaje) {
+  return Promise.race([
+    promesa,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(mensaje || 'Tiempo de espera agotado')), ms)),
+  ]);
 }
 
 // Convierte un HTML (como el que genera generarActaHTML/generarTrabajoHTML) a un
 // PDF real en A4, respetando los saltos de página del CSS. Devuelve un Buffer.
 async function htmlAPdf(html) {
-  const browser = await getBrowser();
+  const browser = await conLimiteDeTiempo(getBrowser(), 15000, 'Chrome no arrancó a tiempo');
   const page = await browser.newPage();
   try {
     await page.setContent(html, { waitUntil: 'networkidle0', timeout: 20000 });
