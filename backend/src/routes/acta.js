@@ -116,7 +116,7 @@ router.get('/acta/:tallerId/:vehId', async (req, res) => {
         res.set('Content-Type', 'application/pdf').set('Content-Disposition', 'inline; filename="acta.pdf"').send(buffer);
         return;
       } catch (e) {
-        console.error('[pdf] No se pudo generar el PDF con Puppeteer, se envía el HTML:', e.message);
+        console.error('[pdf] No se pudo generar el PDF con Puppeteer, se envía el HTML:', e.message, e.stack);
       }
     }
     res.set('Content-Type', 'text/html; charset=utf-8').send(html);
@@ -159,7 +159,7 @@ router.get('/trabajo/:tallerId/:vehId', async (req, res) => {
         res.set('Content-Type', 'application/pdf').set('Content-Disposition', 'inline; filename="trabajo.pdf"').send(buffer);
         return;
       } catch (e) {
-        console.error('[pdf] No se pudo generar el PDF con Puppeteer, se envía el HTML:', e.message);
+        console.error('[pdf] No se pudo generar el PDF con Puppeteer, se envía el HTML:', e.message, e.stack);
       }
     }
     res.set('Content-Type', 'text/html; charset=utf-8').send(html);

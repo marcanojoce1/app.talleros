@@ -8,11 +8,14 @@ async function getBrowser() {
   if (_browser && _browser.isConnected()) return _browser;
   const puppeteer = require('puppeteer-core');
   const chromium = require('@sparticuz/chromium');
+  const execPath = await chromium.executablePath();
+  console.log('[pdf] Iniciando Chrome en:', execPath);
   _browser = await puppeteer.launch({
-    args: chromium.args,
-    executablePath: await chromium.executablePath(),
+    args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--single-process'],
+    executablePath: execPath,
     headless: chromium.headless,
   });
+  _browser.on('disconnected', () => { _browser = null; });
   return _browser;
 }
 
