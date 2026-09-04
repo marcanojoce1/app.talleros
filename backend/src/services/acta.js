@@ -319,29 +319,60 @@ function firmaSVG(trazos) {
 
 // Informe de TRABAJO REALIZADO: ficha de recepción + todas las fotos y avances del técnico
 function generarTrabajoHTML(o = {}) {
-  const acta = generarActaHTML(o); // reusa el acta completa
+  const acta = generarActaHTML(o); // reusa el acta completa (queda fija en la hoja 1)
   const avances = o.avances || [];
   const mon = o.moneda || 'Bs.';
 
-  const bitacora = avances.length ? avances.map((a) => `
-    <div class="bit">
+  const textoSolo = avances.filter((a) => !a.foto);
+  const conFoto = avances.filter((a) => a.foto);
+
+  const movimientos = textoSolo.length ? `
+    <div class="sheet bitacora-sheet">
+      <div class="bit-head">TRABAJO REALIZADO — Movimientos</div>
+      <div style="padding:12px">${textoSolo.map((a) => `
+        <div class="bit">
+          <div class="bit-t">${esc(a.t || 'Avance')}</div>
+          <div class="bit-m">${esc(a.m || '')}${a.ago ? ' · ' + esc(a.ago) : ''}</div>
+        </div>`).join('')}</div>
+    </div>` : '';
+
+  // Fotos agrupadas de a EXACTAMENTE 2 por hoja — con salto de página forzado por grupo,
+  // así nunca depende de calcular alturas: 1 foto → 1 hoja con 1; 3 fotos → hoja con 2 y
+  // otra con 1; 10 fotos → 5 hojas de 2, etc.
+  const grupos = [];
+  for (let i = 0; i < conFoto.length; i += 2) grupos.push(conFoto.slice(i, i + 2));
+
+  const celda = (a) => `
+    <div class="foto-celda">
       <div class="bit-t">${esc(a.t || 'Avance')}</div>
       <div class="bit-m">${esc(a.m || '')}${a.ago ? ' · ' + esc(a.ago) : ''}</div>
-      ${a.foto ? `<img src="${esc(a.foto)}" class="bit-foto"/>` : ''}
-      ${a.video ? `<div style="position:relative;display:inline-block;margin-top:6px">${a.videoThumb ? `<img src="${esc(a.videoThumb)}" class="bit-foto"/>` : ''}<div style="font-size:9px;color:#666;margin-top:2px">🎥 Video — <a href="${esc(a.video)}">ver aquí</a></div></div>` : ''}
-    </div>`).join('') : '<div style="color:#888;padding:10px">Sin avances registrados.</div>';
+      <img src="${esc(a.foto)}" class="bit-foto"/>
+      ${a.video ? `<div style="font-size:9px;color:#666;margin-top:4px">🎥 Video — <a href="${esc(a.video)}">ver aquí</a></div>` : ''}
+    </div>`;
+
+  const hojasFotos = grupos.map((g) => `
+    <div class="sheet bitacora-sheet">
+      <div class="bit-head">TRABAJO REALIZADO — Fotos</div>
+      <div class="foto-grid">${g.map(celda).join('')}</div>
+    </div>`).join('');
+
+  const sinNada = (!textoSolo.length && !conFoto.length) ? `
+    <div class="sheet bitacora-sheet">
+      <div class="bit-head">TRABAJO REALIZADO — Bitácora del técnico</div>
+      <div style="padding:12px;color:#888">Sin avances registrados.</div>
+    </div>` : '';
 
   const extra = `
-    <div class="sheet bitacora-sheet" style="margin-top:16px">
-      <div style="background:#111;color:#fff;padding:8px 12px;font-weight:bold;font-size:13px">TRABAJO REALIZADO — Bitácora del técnico</div>
-      <div style="padding:12px">${bitacora}</div>
-    </div>
+    ${movimientos}${hojasFotos}${sinNada}
     <style>
-      .bitacora-sheet { page-break-before: always; break-before: page; }
+      .bitacora-sheet { page-break-before: always; break-before: page; margin-top:16px; }
+      .bit-head { background:#111; color:#fff; padding:8px 12px; font-weight:bold; font-size:13px; }
       .bit { border-left: 3px solid #F5B700; padding: 8px 12px; margin-bottom: 12px; background: #fafafa; page-break-inside: avoid; break-inside: avoid; }
       .bit-t { font-weight: bold; font-size: 13px; }
       .bit-m { color: #666; font-size: 11px; margin-top: 2px; word-wrap: break-word; overflow-wrap: break-word; }
-      .bit-foto { max-width: 8cm; max-height: 7cm; width: auto; height: auto; border-radius: 8px; margin-top: 8px; display: block; }
+      .foto-grid { display:flex; gap:14px; padding:14px; }
+      .foto-celda { flex:1; min-width:0; border:1px solid #e2e6ea; border-radius:8px; padding:10px; page-break-inside: avoid; break-inside: avoid; }
+      .bit-foto { width:100%; max-height:11cm; object-fit:contain; border-radius:6px; margin-top:8px; display:block; }
     </style>`;
 
   // Insertar la bitácora antes de cerrar el body
