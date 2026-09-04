@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node --experimental-sqlite src/server.js",
     "migrate": "node --experimental-sqlite src/migrate.js",
-    "seed": "node --experimental-sqlite src/seed.js"
+    "seed": "node --experimental-sqlite src/seed.js",
+    "postinstall": "npx puppeteer browsers install chrome"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.750.0",
