@@ -189,54 +189,59 @@ function dibujarActa(doc, o) {
 
 // Dibuja las hojas de "Trabajo realizado": movimientos y fotos (2 por hoja).
 function dibujarBitacora(doc, avances, orden, veh) {
-  const textoSolo = avances.filter((a) => !a.foto && !a.video);
-  const conFoto = avances.filter((a) => a.foto || a.video);
+  const ENCABEZADO_H = 16, TOP = M + ENCABEZADO_H + 8;
+  const wCelda = (PAGE_W - 2 * M - 14) / 2;
+  const hFoto = 300; // alto de cada bloque con foto (título + descripción + imagen)
+  const hTexto = 28; // alto de cada bloque de puro texto
 
-  if (textoSolo.length) {
+  let y = TOP;
+  let pos = 0; // 0 = columna izquierda libre, 1 = columna derecha ocupada (para parear fotos lado a lado)
+
+  function nuevaPagina() {
     doc.addPage({ size: 'A4', margin: 0 });
-    let y = M;
-    doc.rect(M, y, PAGE_W - 2 * M, 16).fill('#111');
-    doc.fillColor('#fff').font('Helvetica-Bold').fontSize(9).text('TRABAJO REALIZADO - Movimientos', M + 6, y + 4);
+    doc.rect(M, M, PAGE_W - 2 * M, ENCABEZADO_H).fill('#111');
+    doc.fillColor('#fff').font('Helvetica-Bold').fontSize(9).text('TRABAJO REALIZADO — Bitácora del técnico', M + 6, M + 4);
     doc.fillColor('#111');
-    y += 22;
-    textoSolo.forEach((a) => {
-      doc.rect(M, y, 3, 24).fill('#F5B700');
+    y = TOP;
+    pos = 0;
+  }
+  nuevaPagina();
+
+  avances.forEach((a) => {
+    const tieneFoto = !!(a.foto || a.video);
+    if (!tieneFoto) {
+      // Bloque de puro texto — ocupa el ancho completo, se intercala en el orden real.
+      if (pos !== 0) { y += hFoto; pos = 0; } // si venía de una columna de fotos a medias, baja a una línea nueva completa
+      if (y + hTexto > PAGE_H - M) nuevaPagina();
+      doc.rect(M, y, 3, hTexto - 4).fill('#F5B700');
       doc.fillColor('#111').font('Helvetica-Bold').fontSize(8.5).text(a.t || 'Avance', M + 10, y + 2, { width: PAGE_W - 2 * M - 14 });
       doc.font('Helvetica').fontSize(7.5).fillColor('#666').text((a.m || '') + (a.ago ? ' · ' + a.ago : ''), M + 10, y + 13, { width: PAGE_W - 2 * M - 14 });
-      y += 28;
-    });
-  }
+      y += hTexto;
+      return;
+    }
+    // Bloque con foto/video — se coloca de a 2 por fila (izquierda/derecha), nunca se
+    // corta a la mitad: si no cabe completo en lo que queda de la hoja, se pasa entero
+    // a la siguiente.
+    if (y + hFoto > PAGE_H - M) { nuevaPagina(); }
+    const cx = M + pos * (wCelda + 14);
+    doc.rect(cx, y, wCelda, hFoto).stroke('#ccc');
+    doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#111').text(a.t || 'Avance', cx + 8, y + 8, { width: wCelda - 16 });
+    doc.font('Helvetica').fontSize(7).fillColor('#666').text((a.m || '') + (a.ago ? ' · ' + a.ago : ''), cx + 8, y + 20, { width: wCelda - 16 });
+    const buf = bufferDeBase64(a.foto) || bufferDeBase64(a.videoThumb);
+    const fotoY = y + 34;
+    const fotoH = a.video ? hFoto - 56 : hFoto - 42;
+    if (buf) {
+      try { doc.image(buf, cx + 8, fotoY, { fit: [wCelda - 16, fotoH], align: 'center', valign: 'center' }); } catch (e) {}
+    } else if (a.foto && a.foto.startsWith('http')) {
+      doc.font('Helvetica').fontSize(7).fillColor('#999').text('(foto alojada externamente, no se pudo incrustar)', cx + 8, fotoY + fotoH / 2, { width: wCelda - 16, align: 'center' });
+    } else if (a.video) {
+      doc.rect(cx + 8, fotoY, wCelda - 16, fotoH).fillAndStroke('#f2f4f7', '#ccc');
+      doc.fillColor('#666').font('Helvetica').fontSize(9).text('Video', cx + 8, fotoY + fotoH / 2 - 5, { width: wCelda - 16, align: 'center' });
+    }
+    if (a.video) doc.font('Helvetica').fontSize(6.5).fillColor('#666').text('Video adjunto — ver desde la app', cx + 8, y + hFoto - 12, { width: wCelda - 16 });
 
-  // Fotos: exactamente 2 por hoja, cada grupo en su propia página.
-  for (let i = 0; i < conFoto.length; i += 2) {
-    doc.addPage({ size: 'A4', margin: 0 });
-    let y = M;
-    doc.rect(M, y, PAGE_W - 2 * M, 16).fill('#111');
-    doc.fillColor('#fff').font('Helvetica-Bold').fontSize(9).text('TRABAJO REALIZADO - Fotos', M + 6, y + 4);
-    doc.fillColor('#111');
-    y += 24;
-    const grupo = conFoto.slice(i, i + 2);
-    const wCelda = (PAGE_W - 2 * M - 14) / 2;
-    const hCelda = 480;
-    grupo.forEach((a, idx) => {
-      const cx = M + idx * (wCelda + 14);
-      doc.rect(cx, y, wCelda, hCelda).stroke('#ccc');
-      doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#111').text(a.t || 'Avance', cx + 8, y + 8, { width: wCelda - 16 });
-      doc.font('Helvetica').fontSize(7).fillColor('#666').text((a.m || '') + (a.ago ? ' · ' + a.ago : ''), cx + 8, y + 20, { width: wCelda - 16 });
-      const buf = bufferDeBase64(a.foto) || bufferDeBase64(a.videoThumb);
-      const fotoY = y + 34;
-      const fotoH = a.video ? hCelda - 56 : hCelda - 42;
-      if (buf) {
-        try { doc.image(buf, cx + 8, fotoY, { fit: [wCelda - 16, fotoH], align: 'center', valign: 'center' }); } catch (e) {}
-      } else if (a.foto && a.foto.startsWith('http')) {
-        doc.font('Helvetica').fontSize(7).fillColor('#999').text('(foto alojada externamente, no se pudo incrustar)', cx + 8, fotoY + fotoH / 2, { width: wCelda - 16, align: 'center' });
-      } else if (a.video) {
-        doc.rect(cx + 8, fotoY, wCelda - 16, fotoH).fillAndStroke('#f2f4f7', '#ccc');
-        doc.fillColor('#666').font('Helvetica').fontSize(9).text('Video', cx + 8, fotoY + fotoH / 2 - 5, { width: wCelda - 16, align: 'center' });
-      }
-      if (a.video) doc.font('Helvetica').fontSize(6.5).fillColor('#666').text('Video adjunto — ver desde la app', cx + 8, y + hCelda - 12, { width: wCelda - 16 });
-    });
-  }
+    if (pos === 0) { pos = 1; } else { pos = 0; y += hFoto; }
+  });
 }
 
 function generarActaPDF(o) {
