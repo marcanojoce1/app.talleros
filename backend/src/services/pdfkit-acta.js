@@ -200,54 +200,61 @@ function dibujarActa(doc, o) {
 
 // Dibuja las hojas de "Trabajo realizado": movimientos y fotos (2 por hoja).
 function dibujarBitacora(doc, avances, orden, veh) {
-  const ENCABEZADO_H = 16, TOP = M + ENCABEZADO_H + 10;
-  const wFull = PAGE_W - 2 * M;
-  const hFoto = 260; // alto de cada bloque con foto (título + descripción + imagen)
-  const hTexto = 28; // alto de cada bloque de puro texto
+  const ENCABEZADO_H = 16;
 
-  let y = TOP;
-
-  function nuevaPagina() {
-    doc.addPage({ size: 'A4', margin: 0 });
+  function encabezadoHoja(titulo) {
     doc.rect(M, M, PAGE_W - 2 * M, ENCABEZADO_H).fill('#111');
-    doc.fillColor('#fff').font('Helvetica-Bold').fontSize(9).text('TRABAJO REALIZADO - Bitacora del tecnico', M + 6, M + 4);
+    doc.fillColor('#fff').font('Helvetica-Bold').fontSize(9).text(titulo, M + 6, M + 4);
     doc.fillColor('#111');
-    y = TOP;
   }
-  nuevaPagina();
 
-  avances.forEach((a) => {
-    const tieneFoto = !!(a.foto || a.video);
-    const alto = tieneFoto ? hFoto : hTexto;
-    // Si no cabe completo en lo que queda de la hoja, se pasa entero a la siguiente —
-    // así nunca se corta ni se superpone nada.
-    if (y + alto > PAGE_H - M) nuevaPagina();
+  const textoSolo = avances.filter((a) => !a.foto && !a.video);
+  const conFoto = avances.filter((a) => a.foto || a.video);
 
-    if (!tieneFoto) {
+  // --- Página(s) de Movimientos (resumen de texto) ---
+  if (textoSolo.length) {
+    doc.addPage({ size: 'A4', margin: 0 });
+    encabezadoHoja('TRABAJO REALIZADO - Resumen / Movimientos');
+    let y = M + ENCABEZADO_H + 10;
+    const hTexto = 28;
+    textoSolo.forEach((a) => {
+      if (y + hTexto > PAGE_H - M) { doc.addPage({ size: 'A4', margin: 0 }); encabezadoHoja('TRABAJO REALIZADO - Resumen / Movimientos'); y = M + ENCABEZADO_H + 10; }
       doc.rect(M, y, 3, hTexto - 4).fill('#F5B700');
-      doc.fillColor('#111').font('Helvetica-Bold').fontSize(8.5).text(limpiarTexto(a.t || 'Avance'), M + 10, y + 2, { width: wFull - 14 });
-      doc.font('Helvetica').fontSize(7.5).fillColor('#666').text(limpiarTexto((a.m || '') + (a.ago ? ' - ' + a.ago : '')), M + 10, y + 13, { width: wFull - 14 });
+      doc.fillColor('#111').font('Helvetica-Bold').fontSize(8.5).text(limpiarTexto(a.t || 'Avance'), M + 10, y + 2, { width: PAGE_W - 2 * M - 14 });
+      doc.font('Helvetica').fontSize(7.5).fillColor('#666').text(limpiarTexto((a.m || '') + (a.ago ? ' - ' + a.ago : '')), M + 10, y + 13, { width: PAGE_W - 2 * M - 14 });
       y += hTexto;
-      return;
-    }
+    });
+  }
 
-    doc.rect(M, y, wFull, hFoto).stroke('#ccc');
-    doc.font('Helvetica-Bold').fontSize(9).fillColor('#111').text(limpiarTexto(a.t || 'Avance'), M + 10, y + 8, { width: wFull - 20 });
-    doc.font('Helvetica').fontSize(7.5).fillColor('#666').text(limpiarTexto((a.m || '') + (a.ago ? ' - ' + a.ago : '')), M + 10, y + 21, { width: wFull - 20 });
-    const buf = bufferDeBase64(a.foto) || bufferDeBase64(a.videoThumb);
-    const fotoY = y + 36;
-    const fotoH = a.video ? hFoto - 58 : hFoto - 44;
-    if (buf) {
-      try { doc.image(buf, M + 10, fotoY, { fit: [wFull - 20, fotoH], align: 'center', valign: 'center' }); } catch (e) {}
-    } else if (a.foto && a.foto.startsWith('http')) {
-      doc.font('Helvetica').fontSize(7).fillColor('#999').text('(foto alojada externamente, no se pudo incrustar)', M + 10, fotoY + fotoH / 2, { width: wFull - 20, align: 'center' });
-    } else if (a.video) {
-      doc.rect(M + 10, fotoY, wFull - 20, fotoH).fillAndStroke('#f2f4f7', '#ccc');
-      doc.fillColor('#666').font('Helvetica').fontSize(9).text('Video', M + 10, fotoY + fotoH / 2 - 5, { width: wFull - 20, align: 'center' });
-    }
-    if (a.video) doc.font('Helvetica').fontSize(6.5).fillColor('#666').text('Video adjunto - ver desde la app', M + 10, y + hFoto - 12, { width: wFull - 20 });
-    y += hFoto;
-  });
+  // --- Páginas de Fotos: EXACTAMENTE 2 por hoja, cada grupo agrupado de antemano —
+  // así nunca depende de calcular si algo "cabe a medias", cada hoja nueva siempre
+  // empieza limpia con su propio grupo completo.
+  const wCelda = (PAGE_W - 2 * M - 14) / 2;
+  const hCelda = 480;
+  for (let i = 0; i < conFoto.length; i += 2) {
+    doc.addPage({ size: 'A4', margin: 0 });
+    encabezadoHoja('TRABAJO REALIZADO - Fotos');
+    const y = M + ENCABEZADO_H + 12;
+    const grupo = conFoto.slice(i, i + 2);
+    grupo.forEach((a, idx) => {
+      const cx = M + idx * (wCelda + 14);
+      doc.rect(cx, y, wCelda, hCelda).stroke('#ccc');
+      doc.font('Helvetica-Bold').fontSize(9).fillColor('#111').text(limpiarTexto(a.t || 'Avance'), cx + 8, y + 8, { width: wCelda - 16 });
+      doc.font('Helvetica').fontSize(7.5).fillColor('#666').text(limpiarTexto((a.m || '') + (a.ago ? ' - ' + a.ago : '')), cx + 8, y + 21, { width: wCelda - 16 });
+      const buf = bufferDeBase64(a.foto) || bufferDeBase64(a.videoThumb);
+      const fotoY = y + 36;
+      const fotoH = a.video ? hCelda - 58 : hCelda - 44;
+      if (buf) {
+        try { doc.image(buf, cx + 8, fotoY, { fit: [wCelda - 16, fotoH], align: 'center', valign: 'center' }); } catch (e) {}
+      } else if (a.foto && a.foto.startsWith('http')) {
+        doc.font('Helvetica').fontSize(7).fillColor('#999').text('(foto alojada externamente, no se pudo incrustar)', cx + 8, fotoY + fotoH / 2, { width: wCelda - 16, align: 'center' });
+      } else if (a.video) {
+        doc.rect(cx + 8, fotoY, wCelda - 16, fotoH).fillAndStroke('#f2f4f7', '#ccc');
+        doc.fillColor('#666').font('Helvetica').fontSize(9).text('Video', cx + 8, fotoY + fotoH / 2 - 5, { width: wCelda - 16, align: 'center' });
+      }
+      if (a.video) doc.font('Helvetica').fontSize(6.5).fillColor('#666').text('Video adjunto - ver desde la app', cx + 8, y + hCelda - 12, { width: wCelda - 16 });
+    });
+  }
 }
 
 function generarActaPDF(o) {
