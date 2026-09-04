@@ -2,7 +2,7 @@
 const express = require('express');
 const { query } = require('../db');
 const { generarActaHTML, generarTrabajoHTML, generarCotizacionHTML, generarResumenEsperaHTML } = require('../services/acta');
-const { htmlAPdf } = require('../services/pdf');
+const { generarActaPDF, generarTrabajoPDF } = require('../services/pdfkit-acta');
 
 const router = express.Router();
 
@@ -89,7 +89,7 @@ router.get('/acta/:tallerId/:vehId', async (req, res) => {
     const proto = req.headers['x-forwarded-proto'] || req.protocol;
     const baseUrl = `${proto}://${req.get('host')}`;
 
-    let html = generarActaHTML({
+    const datosActa = {
       taller,
       cliente: cli,
       vehiculo: veh,
@@ -103,22 +103,21 @@ router.get('/acta/:tallerId/:vehId', async (req, res) => {
       moneda,
       avances: veh.advances || [],
       baseUrl,
-    });
-    // ?raw=1 → sin la barra de botones (para generar PDF desde la app)
-    if (req.query.raw) html = html.replace(/<!--TOOLBAR_START-->[\s\S]*?<!--TOOLBAR_END-->/, '');
-    // ?formato=pdf → devuelve el PDF real generado en el servidor (respeta los saltos
-    // de página de verdad, sin el corte mecánico de antes). Si algo falla, cae de
-    // vuelta al HTML para no dejar al usuario sin nada.
+    };
+    // ?formato=pdf → PDF real dibujado directamente (PDFKit) — no necesita Chrome para
+    // nada, así que no puede fallar por eso; el Acta siempre queda en la hoja 1.
     if (req.query.formato === 'pdf') {
       try {
-        const htmlSinBarra = html.replace(/<!--TOOLBAR_START-->[\s\S]*?<!--TOOLBAR_END-->/, '');
-        const buffer = await htmlAPdf(htmlSinBarra);
+        const buffer = await generarActaPDF(datosActa);
         res.set('Content-Type', 'application/pdf').set('Content-Disposition', 'inline; filename="acta.pdf"').send(buffer);
         return;
       } catch (e) {
-        console.error('[pdf] No se pudo generar el PDF con Puppeteer, se envía el HTML:', e.message, e.stack);
+        console.error('[pdf] No se pudo generar el PDF con PDFKit, se envía el HTML:', e.message, e.stack);
       }
     }
+    let html = generarActaHTML(datosActa);
+    // ?raw=1 → sin la barra de botones (para generar PDF desde la app)
+    if (req.query.raw) html = html.replace(/<!--TOOLBAR_START-->[\s\S]*?<!--TOOLBAR_END-->/, '');
     res.set('Content-Type', 'text/html; charset=utf-8').send(html);
   } catch (e) {
     res.status(500).send('<h3>Error al generar el acta: ' + e.message + '</h3>');
@@ -144,24 +143,24 @@ router.get('/trabajo/:tallerId/:vehId', async (req, res) => {
     const pago = hist ? { total: hist.total || 0, pagado: hist.pagado || 0, saldo: hist.saldo != null ? hist.saldo : Math.max(0, (hist.total || 0) - (hist.pagado || 0)) } : null;
     const proto = req.headers['x-forwarded-proto'] || req.protocol;
     const baseUrl = `${proto}://${req.get('host')}`;
-    let html = generarTrabajoHTML({
+    const datosTrabajo = {
       taller, cliente: cli, vehiculo: veh, recepcion: veh.recepcion || {},
       damages: veh.recepDamages || [], lados: veh.recepLados || [], orden: veh.numOrden ? "OS" + String(veh.numOrden).padStart(4, "0") : veh.id,
       precio: hist ? hist.total : (veh.cost || ''),
       servicios: hist && hist.servicios ? hist.servicios : [{ desc: (veh.recepcion && veh.recepcion.trabajo) || veh.motivo || '', precio: hist ? hist.total : (veh.cost || '') }],
       pago, moneda, avances: veh.advances || [], baseUrl,
-    });
-    if (req.query.raw) html = html.replace(/<!--TOOLBAR_START-->[\s\S]*?<!--TOOLBAR_END-->/, '');
+    };
     if (req.query.formato === 'pdf') {
       try {
-        const htmlSinBarra = html.replace(/<!--TOOLBAR_START-->[\s\S]*?<!--TOOLBAR_END-->/, '');
-        const buffer = await htmlAPdf(htmlSinBarra);
+        const buffer = await generarTrabajoPDF(datosTrabajo);
         res.set('Content-Type', 'application/pdf').set('Content-Disposition', 'inline; filename="trabajo.pdf"').send(buffer);
         return;
       } catch (e) {
-        console.error('[pdf] No se pudo generar el PDF con Puppeteer, se envía el HTML:', e.message, e.stack);
+        console.error('[pdf] No se pudo generar el PDF con PDFKit, se envía el HTML:', e.message, e.stack);
       }
     }
+    let html = generarTrabajoHTML(datosTrabajo);
+    if (req.query.raw) html = html.replace(/<!--TOOLBAR_START-->[\s\S]*?<!--TOOLBAR_END-->/, '');
     res.set('Content-Type', 'text/html; charset=utf-8').send(html);
   } catch (e) {
     res.status(500).send('<h3>Error al generar el informe: ' + e.message + '</h3>');
