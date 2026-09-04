@@ -2,6 +2,7 @@
 const express = require('express');
 const { query } = require('../db');
 const { generarActaHTML, generarTrabajoHTML, generarCotizacionHTML, generarResumenEsperaHTML } = require('../services/acta');
+const { htmlAPdf } = require('../services/pdf');
 
 const router = express.Router();
 
@@ -105,6 +106,19 @@ router.get('/acta/:tallerId/:vehId', async (req, res) => {
     });
     // ?raw=1 → sin la barra de botones (para generar PDF desde la app)
     if (req.query.raw) html = html.replace(/<!--TOOLBAR_START-->[\s\S]*?<!--TOOLBAR_END-->/, '');
+    // ?formato=pdf → devuelve el PDF real generado en el servidor (respeta los saltos
+    // de página de verdad, sin el corte mecánico de antes). Si algo falla, cae de
+    // vuelta al HTML para no dejar al usuario sin nada.
+    if (req.query.formato === 'pdf') {
+      try {
+        const htmlSinBarra = html.replace(/<!--TOOLBAR_START-->[\s\S]*?<!--TOOLBAR_END-->/, '');
+        const buffer = await htmlAPdf(htmlSinBarra);
+        res.set('Content-Type', 'application/pdf').set('Content-Disposition', 'inline; filename="acta.pdf"').send(buffer);
+        return;
+      } catch (e) {
+        console.error('[pdf] No se pudo generar el PDF con Puppeteer, se envía el HTML:', e.message);
+      }
+    }
     res.set('Content-Type', 'text/html; charset=utf-8').send(html);
   } catch (e) {
     res.status(500).send('<h3>Error al generar el acta: ' + e.message + '</h3>');
@@ -138,6 +152,16 @@ router.get('/trabajo/:tallerId/:vehId', async (req, res) => {
       pago, moneda, avances: veh.advances || [], baseUrl,
     });
     if (req.query.raw) html = html.replace(/<!--TOOLBAR_START-->[\s\S]*?<!--TOOLBAR_END-->/, '');
+    if (req.query.formato === 'pdf') {
+      try {
+        const htmlSinBarra = html.replace(/<!--TOOLBAR_START-->[\s\S]*?<!--TOOLBAR_END-->/, '');
+        const buffer = await htmlAPdf(htmlSinBarra);
+        res.set('Content-Type', 'application/pdf').set('Content-Disposition', 'inline; filename="trabajo.pdf"').send(buffer);
+        return;
+      } catch (e) {
+        console.error('[pdf] No se pudo generar el PDF con Puppeteer, se envía el HTML:', e.message);
+      }
+    }
     res.set('Content-Type', 'text/html; charset=utf-8').send(html);
   } catch (e) {
     res.status(500).send('<h3>Error al generar el informe: ' + e.message + '</h3>');

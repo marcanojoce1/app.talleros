@@ -226,11 +226,11 @@ export async function compartirActaPDF(tallerId, veh, tipo = 'acta') {
   const ruta = tipo === 'trabajo' ? 'trabajo' : 'acta';
   const titulo = tipo === 'trabajo' ? 'Informe de trabajo' : 'Acta';
 
-  const Print = cargarModulo('print');
   const Sharing = cargarModulo('sharing');
+  const FS = cargarModulo('fs');
 
-  // Sin módulos nativos → abrir en el navegador (desde ahí se puede imprimir/compartir)
-  if (!Print || !Print.printToFileAsync) {
+  // Sin módulo de archivos → abrir en el navegador (desde ahí se puede imprimir/compartir)
+  if (!FS || !FS.downloadAsync || !FS.cacheDirectory) {
     Alert.alert(titulo, 'Se abrirá en el navegador. Desde ahí puedes imprimirlo, guardarlo como PDF o compartirlo.', [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Abrir', onPress: () => abrirEnNavegador(tallerId, veh, tipo) },
@@ -239,15 +239,17 @@ export async function compartirActaPDF(tallerId, veh, tipo = 'acta') {
   }
 
   try {
-    // 1) Traer el HTML
-    let html;
+    // El servidor genera el PDF real (con Chrome, respeta los saltos de página de
+    // verdad) — la app solo lo descarga y lo comparte, ya no lo arma localmente.
+    const token = await getToken();
+    const destino = FS.cacheDirectory + nombreArchivo(veh, tipo);
+    let descarga;
     try {
-      const token = await getToken();
-      const res = await fetch(`${base}/api/${ruta}/${tallerId}/${veh.id}?raw=1`, {
-        headers: token ? { Authorization: 'Bearer ' + token } : {},
-      });
-      if (!res.ok) throw new Error('servidor ' + res.status);
-      html = await res.text();
+      descarga = await FS.downloadAsync(
+        `${base}/api/${ruta}/${tallerId}/${veh.id}?raw=1&formato=pdf`,
+        destino,
+        { headers: token ? { Authorization: 'Bearer ' + token } : {} }
+      );
     } catch (netErr) {
       Alert.alert('Sin conexión', 'No se pudo obtener el documento del servidor.\n\n' + (netErr.message || ''), [
         { text: 'Cancelar', style: 'cancel' },
@@ -255,34 +257,16 @@ export async function compartirActaPDF(tallerId, veh, tipo = 'acta') {
       ]);
       return;
     }
-    if (!html || html.length < 100) { Alert.alert(titulo, 'El documento aún no tiene contenido.'); return; }
-
-    // 2) Convertir a PDF
-    let uri;
-    try {
-      const out = await Print.printToFileAsync({ html, base64: false, width: 595, height: 842 }); // A4 en puntos
-      uri = out && out.uri;
-    } catch (pdfErr) {
-      Alert.alert('No se pudo crear el PDF', (pdfErr.message || '') + '\n\nPuedes abrirlo en el navegador.', [
+    if (!descarga || descarga.status !== 200) {
+      Alert.alert('No se pudo crear el PDF', 'Puedes abrirlo en el navegador.', [
         { text: 'Cancelar', style: 'cancel' },
         { text: 'Abrir en navegador', onPress: () => abrirEnNavegador(tallerId, veh, tipo) },
       ]);
       return;
     }
-    if (!uri) { Alert.alert('No se pudo crear el PDF', 'El archivo salió vacío.'); return; }
+    const uri = descarga.uri;
 
-    // Renombrar el PDF a un nombre significativo (N° orden, placa, fecha) si se puede
-    try {
-      const FS = cargarModulo('fs');
-      if (FS && FS.moveAsync && FS.cacheDirectory) {
-        const destino = FS.cacheDirectory + nombreArchivo(veh, tipo);
-        try { if (FS.deleteAsync) await FS.deleteAsync(destino, { idempotent: true }); } catch (e) {}
-        await FS.moveAsync({ from: uri, to: destino });
-        uri = destino;
-      }
-    } catch (e) { /* si falla, se comparte con el nombre por defecto */ }
-
-    // 3) Compartir
+    // Compartir
     let puedeCompartir = false;
     try { puedeCompartir = Sharing && Sharing.isAvailableAsync ? await Sharing.isAvailableAsync() : false; } catch (e) { puedeCompartir = false; }
 
@@ -292,9 +276,6 @@ export async function compartirActaPDF(tallerId, veh, tipo = 'acta') {
         dialogTitle: titulo + ' — ' + (veh.model || 'vehículo'),
         UTI: 'com.adobe.pdf',
       });
-    } else if (Print.printAsync) {
-      // Sin menú de compartir: al menos abrir el diálogo de impresión / guardar PDF
-      await Print.printAsync({ uri });
     } else {
       Alert.alert(titulo, 'PDF generado en:\n' + uri);
     }

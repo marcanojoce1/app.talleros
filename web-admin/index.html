@@ -413,7 +413,7 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover{background:var(--surface-2)}
   <div class="web-wrap"><div class="web">
     <div class="wsideBackdrop" id="wSideBackdrop" onclick="toggleWSide(false)"></div>
     <div class="wside">
-      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v185</span></div>
+      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v187</span></div>
       <div class="wlbl op-item">Operación</div>
       <a class="on op-item" data-w="dash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
       <a class="op-item" data-w="recep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-6 0v4"/><rect x="2" y="9" width="20" height="11" rx="2"/></svg>Recepción digital</a>
@@ -2275,64 +2275,19 @@ function _cargarLibsPDF(){
 }
 async function compartirComoPDF(pdfUrl,filename,titulo,textoCaption){
   toast('Generando PDF…');
+  const sep=pdfUrl.includes('?')?'&':'?';
   try{
-    await _cargarLibsPDF();
-    const sep=pdfUrl.includes('?')?'&':'?';
-    const res=await fetch(pdfUrl+sep+'raw=1',{headers:{'Authorization':'Bearer '+TOKEN}});
-    if(!res.ok)throw new Error('No se pudo obtener el documento (http '+res.status+')');
-    const html=await res.text();
-    const iframe=document.createElement('iframe');
-    iframe.style.cssText='position:fixed;left:-99999px;top:0;width:820px;height:1160px;border:0';
-    document.body.appendChild(iframe);
-    iframe.contentDocument.open();iframe.contentDocument.write(html);iframe.contentDocument.close();
-    await new Promise(r=>setTimeout(r,350));
-    // Esperar a que TODAS las fotos terminen de cargar de verdad antes de medir dónde
-    // está cada una — si se mide antes de tiempo, las alturas salen mal calculadas y
-    // el sistema no logra evitar cortar una foto a la mitad.
-    const imgs=Array.from(iframe.contentDocument.querySelectorAll('img'));
-    await Promise.all(imgs.map(img=>img.complete?Promise.resolve():new Promise(res=>{img.onload=res;img.onerror=res;setTimeout(res,4000);})));
-    await new Promise(r=>setTimeout(r,120));
-    const body=iframe.contentDocument.body;
-    // Zonas que NO se pueden cortar a la mitad (cada avance con su foto, cada hoja/"sheet"
-    // completa) — se recogen ANTES de sacar la captura, en píxeles CSS del iframe.
-    const bloquesProtegidos=Array.from(body.querySelectorAll('.bit, .foto-celda')).map(el=>({
-      top: el.getBoundingClientRect().top-body.getBoundingClientRect().top, bottom: el.getBoundingClientRect().bottom-body.getBoundingClientRect().top,
-    }));
-    const alturaContenidoCss=body.scrollHeight;
-    const canvas=await window.html2canvas(body,{scale:2,useCORS:true,backgroundColor:'#ffffff',windowWidth:820});
-    document.body.removeChild(iframe);
-    const { jsPDF }=window.jspdf;
-    const pageW=595,pageH=842; // A4 en pt
-    const imgW=pageW,imgH=canvas.height*(pageW/canvas.width);
-    const ptPorPixelCss=imgH/alturaContenidoCss; // para convertir posiciones del iframe a puntos del PDF
-    const pdf=new jsPDF({unit:'pt',format:'a4'});
-    const imgData=canvas.toDataURL('image/jpeg',0.92);
-    let pos=0,pagina=0;
-    while(pos<imgH){
-      let alturaPagina=pageH;
-      // Si el corte natural de esta hoja cae DENTRO de un bloque protegido, achicamos esta
-      // hoja para que termine justo antes de ese bloque — así el bloque entero se pasa completo
-      // a la siguiente hoja, en vez de partirse por la mitad.
-      const finPropuesto=pos+alturaPagina;
-      for(const b of bloquesProtegidos){
-        const bTop=b.top*ptPorPixelCss,bBottom=b.bottom*ptPorPixelCss;
-        if(bTop<finPropuesto&&bBottom>finPropuesto&&bTop>pos){
-          alturaPagina=Math.max(40,bTop-pos); // deja al menos un poco de contenido, evita hojas vacías infinitas
-          break;
-        }
-      }
-      if(pagina>0)pdf.addPage();
-      pdf.addImage(imgData,'JPEG',0,pos===0?0:-pos,imgW,imgH);
-      pos+=alturaPagina;pagina++;
-      if(pagina>30)break; // límite de seguridad
-    }
-    const blob=pdf.output('blob');
+    // El servidor ahora genera el PDF de verdad (con Chrome real, respeta los saltos
+    // de página como corresponde) — ya no hace falta capturar la pantalla ni cortarla
+    // a mano.
+    const res=await fetch(pdfUrl+sep+'raw=1&formato=pdf',{headers:{'Authorization':'Bearer '+TOKEN}});
+    if(!res.ok)throw new Error('No se pudo generar el documento (http '+res.status+')');
+    const blob=await res.blob();
     const file=new File([blob],filename,{type:'application/pdf'});
     if(navigator.canShare&&navigator.canShare({files:[file]})){
       await navigator.share({files:[file],title:titulo,text:textoCaption||''});
       return;
     }
-    // El navegador no soporta adjuntar archivos: descargamos el PDF y compartimos el texto/link aparte
     const urlBlob=URL.createObjectURL(blob);
     const a=document.createElement('a');a.href=urlBlob;a.download=filename;document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(urlBlob),30000);
