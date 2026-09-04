@@ -211,49 +211,93 @@ function dibujarBitacora(doc, avances, orden, veh) {
   const textoSolo = avances.filter((a) => !a.foto && !a.video);
   const conFoto = avances.filter((a) => a.foto || a.video);
 
-  // --- Página(s) de Movimientos (resumen de texto) ---
+  // --- Página(s) de Movimientos (resumen de texto) — altura medida de verdad, no fija,
+  // para que un comentario largo nunca quede tapado por el siguiente renglón.
   if (textoSolo.length) {
     doc.addPage({ size: 'A4', margin: 0 });
     encabezadoHoja('TRABAJO REALIZADO - Resumen / Movimientos');
     let y = M + ENCABEZADO_H + 10;
-    const hTexto = 28;
+    const wTexto = PAGE_W - 2 * M - 14;
     textoSolo.forEach((a) => {
+      doc.font('Helvetica-Bold').fontSize(8.5);
+      const hT = doc.heightOfString(limpiarTexto(a.t || 'Avance'), { width: wTexto });
+      doc.font('Helvetica').fontSize(7.5);
+      const hD = doc.heightOfString(limpiarTexto((a.m || '') + (a.ago ? ' - ' + a.ago : '')), { width: wTexto });
+      const hTexto = 2 + hT + 2 + hD + 8;
       if (y + hTexto > PAGE_H - M) { doc.addPage({ size: 'A4', margin: 0 }); encabezadoHoja('TRABAJO REALIZADO - Resumen / Movimientos'); y = M + ENCABEZADO_H + 10; }
       doc.rect(M, y, 3, hTexto - 4).fill('#F5B700');
-      doc.fillColor('#111').font('Helvetica-Bold').fontSize(8.5).text(limpiarTexto(a.t || 'Avance'), M + 10, y + 2, { width: PAGE_W - 2 * M - 14 });
-      doc.font('Helvetica').fontSize(7.5).fillColor('#666').text(limpiarTexto((a.m || '') + (a.ago ? ' - ' + a.ago : '')), M + 10, y + 13, { width: PAGE_W - 2 * M - 14 });
+      doc.fillColor('#111').font('Helvetica-Bold').fontSize(8.5).text(limpiarTexto(a.t || 'Avance'), M + 10, y + 2, { width: wTexto });
+      doc.font('Helvetica').fontSize(7.5).fillColor('#666').text(limpiarTexto((a.m || '') + (a.ago ? ' - ' + a.ago : '')), M + 10, y + 2 + hT + 2, { width: wTexto });
       y += hTexto;
     });
   }
 
-  // --- Páginas de Fotos: EXACTAMENTE 2 por hoja, cada grupo agrupado de antemano —
-  // así nunca depende de calcular si algo "cabe a medias", cada hoja nueva siempre
-  // empieza limpia con su propio grupo completo.
-  const wCelda = (PAGE_W - 2 * M - 14) / 2;
-  const hCelda = 480;
-  for (let i = 0; i < conFoto.length; i += 2) {
+  // --- Páginas de Fotos: se intenta 2 por hoja, pero cada tarjeta mide su propio
+  // texto ANTES de ubicar la foto — la foto siempre arranca después del texto real,
+  // nunca en una coordenada fija. Si un comentario es tan largo que no deja espacio
+  // decente para la foto al lado de otra, ese avance pasa a ocupar la hoja completo
+  // (a lo ancho, con menos renglones) en vez de superponerse con nada.
+  const wCeldaPar = (PAGE_W - 2 * M - 14) / 2;
+  const wCeldaSolo = PAGE_W - 2 * M;
+  const altoUtil = PAGE_H - M - ENCABEZADO_H - 12 - M; // alto disponible bajo el encabezado
+  const FOTO_MIN = 130;  // alto mínimo para que la foto se vea decente
+  const FOTO_DEF = 380;  // alto "cómodo" cuando sobra espacio
+
+  function medirBase(a, w) {
+    const wTexto = w - 16;
+    doc.font('Helvetica-Bold').fontSize(9);
+    const hT = doc.heightOfString(limpiarTexto(a.t || 'Avance'), { width: wTexto });
+    doc.font('Helvetica').fontSize(7.5);
+    const hD = doc.heightOfString(limpiarTexto((a.m || '') + (a.ago ? ' - ' + a.ago : '')), { width: wTexto });
+    return { hT, hD, base: 8 + hT + 4 + hD + 6 };
+  }
+
+  function dibujarCelda(a, cx, y, w, hCelda) {
+    const wTexto = w - 16;
+    const { hT, base } = medirBase(a, w);
+    doc.rect(cx, y, w, hCelda).stroke('#ccc');
+    doc.font('Helvetica-Bold').fontSize(9).fillColor('#111').text(limpiarTexto(a.t || 'Avance'), cx + 8, y + 8, { width: wTexto });
+    doc.font('Helvetica').fontSize(7.5).fillColor('#666').text(limpiarTexto((a.m || '') + (a.ago ? ' - ' + a.ago : '')), cx + 8, y + 8 + hT + 4, { width: wTexto });
+    const fotoY = y + base;
+    const fotoH = Math.max(FOTO_MIN, hCelda - base - 8);
+    const buf = bufferDeBase64(a.foto) || bufferDeBase64(a.videoThumb);
+    if (buf) {
+      try { doc.image(buf, cx + 8, fotoY, { fit: [wTexto, fotoH], align: 'center', valign: 'center' }); } catch (e) {}
+    } else if (a.foto && a.foto.startsWith('http')) {
+      doc.font('Helvetica').fontSize(7).fillColor('#999').text('(foto alojada externamente, no se pudo incrustar)', cx + 8, fotoY + fotoH / 2, { width: wTexto, align: 'center' });
+    } else if (a.video) {
+      doc.rect(cx + 8, fotoY, wTexto, fotoH).fillAndStroke('#f2f4f7', '#ccc');
+      doc.fillColor('#666').font('Helvetica').fontSize(9).text('Video', cx + 8, fotoY + fotoH / 2 - 5, { width: wTexto, align: 'center' });
+    }
+    if (a.video) doc.font('Helvetica').fontSize(6.5).fillColor('#666').text('Video adjunto - ver desde la app', cx + 8, y + hCelda - 12, { width: wTexto });
+  }
+
+  let i = 0;
+  while (i < conFoto.length) {
+    const a = conFoto[i];
+    const baseA = medirBase(a, wCeldaPar).base;
+    const aCabeEnPar = (baseA + FOTO_MIN + 8) <= altoUtil;
+    const b = (aCabeEnPar && i + 1 < conFoto.length) ? conFoto[i + 1] : null;
+    const bCabeEnPar = b ? (medirBase(b, wCeldaPar).base + FOTO_MIN + 8) <= altoUtil : false;
+
     doc.addPage({ size: 'A4', margin: 0 });
     encabezadoHoja('TRABAJO REALIZADO - Fotos');
     const y = M + ENCABEZADO_H + 12;
-    const grupo = conFoto.slice(i, i + 2);
-    grupo.forEach((a, idx) => {
-      const cx = M + idx * (wCelda + 14);
-      doc.rect(cx, y, wCelda, hCelda).stroke('#ccc');
-      doc.font('Helvetica-Bold').fontSize(9).fillColor('#111').text(limpiarTexto(a.t || 'Avance'), cx + 8, y + 8, { width: wCelda - 16 });
-      doc.font('Helvetica').fontSize(7.5).fillColor('#666').text(limpiarTexto((a.m || '') + (a.ago ? ' - ' + a.ago : '')), cx + 8, y + 21, { width: wCelda - 16 });
-      const buf = bufferDeBase64(a.foto) || bufferDeBase64(a.videoThumb);
-      const fotoY = y + 36;
-      const fotoH = a.video ? hCelda - 58 : hCelda - 44;
-      if (buf) {
-        try { doc.image(buf, cx + 8, fotoY, { fit: [wCelda - 16, fotoH], align: 'center', valign: 'center' }); } catch (e) {}
-      } else if (a.foto && a.foto.startsWith('http')) {
-        doc.font('Helvetica').fontSize(7).fillColor('#999').text('(foto alojada externamente, no se pudo incrustar)', cx + 8, fotoY + fotoH / 2, { width: wCelda - 16, align: 'center' });
-      } else if (a.video) {
-        doc.rect(cx + 8, fotoY, wCelda - 16, fotoH).fillAndStroke('#f2f4f7', '#ccc');
-        doc.fillColor('#666').font('Helvetica').fontSize(9).text('Video', cx + 8, fotoY + fotoH / 2 - 5, { width: wCelda - 16, align: 'center' });
-      }
-      if (a.video) doc.font('Helvetica').fontSize(6.5).fillColor('#666').text('Video adjunto - ver desde la app', cx + 8, y + hCelda - 12, { width: wCelda - 16 });
-    });
+
+    if (b && aCabeEnPar && bCabeEnPar) {
+      // Ambos comentarios son razonables — hoja con 2, lado a lado.
+      const hCelda = Math.min(altoUtil, Math.max(baseA, medirBase(b, wCeldaPar).base) + FOTO_DEF + 8);
+      dibujarCelda(a, M, y, wCeldaPar, hCelda);
+      dibujarCelda(b, M + wCeldaPar + 14, y, wCeldaPar, hCelda);
+      i += 2;
+    } else {
+      // Este comentario es muy largo para ir en media hoja — se le da la hoja
+      // completa a lo ancho (menos renglones de texto, nunca se aplasta con nada).
+      const baseSolo = medirBase(a, wCeldaSolo).base;
+      const hCelda = Math.min(altoUtil, baseSolo + FOTO_DEF + 8);
+      dibujarCelda(a, M, y, wCeldaSolo, hCelda);
+      i += 1;
+    }
   }
 }
 
