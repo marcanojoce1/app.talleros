@@ -13,6 +13,17 @@ const IMG_DIR = path.join(__dirname, '..', '..', '..', 'web-admin', 'img');
 const CAR_IMG = { Superior: 'car-sup.png', Frontal: 'car-front.png', 'Lateral Izquierdo': 'car-izq.png', 'Lateral Derecho': 'car-izq.png', Posterior: 'car-post.png' };
 const SEV_COLOR = { leve: '#2563eb', moderado: '#d97706', grave: '#dc2626' };
 
+// Limpia cualquier texto que venga de la base de datos (no lo escribimos nosotros,
+// puede traer símbolos que las fuentes básicas del PDF no soportan y rompan el dibujo
+// — como el símbolo de fracción ½, o algún emoji). Los reemplaza por algo seguro.
+function limpiarTexto(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/½/g, '1/2').replace(/¼/g, '1/4').replace(/¾/g, '3/4')
+    .replace(/[☑☒✓✔]/g, '[X]')
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, ''); // quita emojis (rangos comunes)
+}
+
 function bufferDeBase64(dataUri) {
   if (!dataUri || typeof dataUri !== 'string') return null;
   const m = dataUri.match(/^data:image\/\w+;base64,(.+)$/);
@@ -31,7 +42,7 @@ function caja(doc, x, y, w, h, titulo) {
 
 function textoCampo(doc, x, y, label, valor, wLabel, w) {
   doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#111').text(label + ':', x, y, { continued: false });
-  doc.font('Helvetica').fontSize(9).text(valor || '', x + wLabel, y, { width: w - wLabel });
+  doc.font('Helvetica').fontSize(9).text(limpiarTexto(valor), x + wLabel, y, { width: w - wLabel });
 }
 
 // Dibuja la hoja 1: el Acta de recepción completa.
@@ -81,7 +92,7 @@ function dibujarActa(doc, o) {
     textoCampo(doc, M + 6, yy, 'Celular', cli.tel || '', 42, wMid - 12); yy += 12;
     textoCampo(doc, M + 6, yy, 'Email', cli.correo || '', 42, wMid - 12);
     yy = y + 20;
-    textoCampo(doc, M + wMid + 6, yy, 'Marca/Modelo', String(v.model || ''), 62, wMid - 12); yy += 12;
+    textoCampo(doc, M + wMid + 6, yy, 'Marca/Modelo', limpiarTexto(v.model || ''), 62, wMid - 12); yy += 12;
     textoCampo(doc, M + wMid + 6, yy, 'Placa', String(v.plate || ''), 62, wMid - 12); yy += 12;
     textoCampo(doc, M + wMid + 6, yy, 'Tipo/Color', String(r.tipoVeh || v.tipoVeh || '') + ' - ' + String(r.color || v.color || ''), 62, wMid - 12); yy += 12;
     textoCampo(doc, M + wMid + 6, yy, 'Km', String(v.km || r.km || ''), 62, wMid - 12);
@@ -95,13 +106,13 @@ function dibujarActa(doc, o) {
     const acc = [].concat(r.accesorios || []).concat(r.documentos || []).filter((x) => typeof x === 'string');
     let ax = M + 6, ay = y + 20, col = 0;
     acc.slice(0, 8).forEach((a) => {
-      doc.font('Helvetica').fontSize(7.5).fillColor('#111').text('[X] ' + a, ax + (col % 2) * (wIzq / 2), ay, { width: wIzq / 2 - 8 });
+      doc.font('Helvetica').fontSize(7.5).fillColor('#111').text('[X] ' + limpiarTexto(a), ax + (col % 2) * (wIzq / 2), ay, { width: wIzq / 2 - 8 });
       col++; if (col % 2 === 0) ay += 10;
     });
     caja(doc, M + wIzq, y, wDer, hAcc, 'Combustible');
-    doc.font('Helvetica-Bold').fontSize(14).fillColor('#111').text(String(r.combustible || '1/2'), M + wIzq, y + 18, { width: wDer, align: 'center' });
-    doc.font('Helvetica').fontSize(7).fillColor('#666').text('Prioridad: ' + String(r.prioridad || 'Media'), M + wIzq + 6, y + 40);
-    if (r.bateria) doc.font('Helvetica').fontSize(6.5).fillColor('#666').text('Bateria: ' + String(r.bateriaMarca || '') + ' ' + (r.bateriaAmperaje ? r.bateriaAmperaje + 'A' : ''), M + wIzq + 6, y + 50, { width: wDer - 10 });
+    doc.font('Helvetica-Bold').fontSize(14).fillColor('#111').text(limpiarTexto(r.combustible || '1/2'), M + wIzq, y + 18, { width: wDer, align: 'center' });
+    doc.font('Helvetica').fontSize(7).fillColor('#666').text('Prioridad: ' + limpiarTexto(r.prioridad || 'Media'), M + wIzq + 6, y + 40);
+    if (r.bateria) doc.font('Helvetica').fontSize(6.5).fillColor('#666').text('Bateria: ' + limpiarTexto(r.bateriaMarca || '') + ' ' + (r.bateriaAmperaje ? r.bateriaAmperaje + 'A' : ''), M + wIzq + 6, y + 50, { width: wDer - 10 });
   });
   y += hAcc;
 
@@ -167,12 +178,12 @@ function dibujarActa(doc, o) {
   y += hServ;
 
   // --- Observaciones ---
-  if (r.obs && r.obs !== '-' && r.obs !== '—') {
+  if (r.obs && r.obs !== '-' && r.obs !== '-') {
     seccion('observaciones', () => {
       const hObs = 40;
       doc.rect(M, y, PAGE_W - 2 * M, hObs).stroke('#111');
       doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#111').text('Observaciones:', M + 6, y + 5, { continued: true });
-      doc.font('Helvetica').fontSize(7.5).text(' ' + String(r.obs), { width: PAGE_W - 2 * M - 12 });
+      doc.font('Helvetica').fontSize(7.5).text(' ' + limpiarTexto(r.obs), { width: PAGE_W - 2 * M - 12 });
       y += hObs;
     });
   }
@@ -183,64 +194,59 @@ function dibujarActa(doc, o) {
     const hCond = 50;
     doc.rect(M, y, PAGE_W - 2 * M, hCond).stroke('#111');
     doc.font('Helvetica-Bold').fontSize(7).fillColor('#111').text('Condiciones del Servicio:', M + 6, y + 5);
-    doc.font('Helvetica').fontSize(6.5).fillColor('#444').text(String(cond), M + 6, y + 15, { width: PAGE_W - 2 * M - 12, height: hCond - 20, ellipsis: true });
+    doc.font('Helvetica').fontSize(6.5).fillColor('#444').text(limpiarTexto(cond), M + 6, y + 15, { width: PAGE_W - 2 * M - 12, height: hCond - 20, ellipsis: true });
   });
 }
 
 // Dibuja las hojas de "Trabajo realizado": movimientos y fotos (2 por hoja).
 function dibujarBitacora(doc, avances, orden, veh) {
-  const ENCABEZADO_H = 16, TOP = M + ENCABEZADO_H + 8;
-  const wCelda = (PAGE_W - 2 * M - 14) / 2;
-  const hFoto = 300; // alto de cada bloque con foto (título + descripción + imagen)
+  const ENCABEZADO_H = 16, TOP = M + ENCABEZADO_H + 10;
+  const wFull = PAGE_W - 2 * M;
+  const hFoto = 260; // alto de cada bloque con foto (título + descripción + imagen)
   const hTexto = 28; // alto de cada bloque de puro texto
 
   let y = TOP;
-  let pos = 0; // 0 = columna izquierda libre, 1 = columna derecha ocupada (para parear fotos lado a lado)
 
   function nuevaPagina() {
     doc.addPage({ size: 'A4', margin: 0 });
     doc.rect(M, M, PAGE_W - 2 * M, ENCABEZADO_H).fill('#111');
-    doc.fillColor('#fff').font('Helvetica-Bold').fontSize(9).text('TRABAJO REALIZADO — Bitácora del técnico', M + 6, M + 4);
+    doc.fillColor('#fff').font('Helvetica-Bold').fontSize(9).text('TRABAJO REALIZADO - Bitacora del tecnico', M + 6, M + 4);
     doc.fillColor('#111');
     y = TOP;
-    pos = 0;
   }
   nuevaPagina();
 
   avances.forEach((a) => {
     const tieneFoto = !!(a.foto || a.video);
+    const alto = tieneFoto ? hFoto : hTexto;
+    // Si no cabe completo en lo que queda de la hoja, se pasa entero a la siguiente —
+    // así nunca se corta ni se superpone nada.
+    if (y + alto > PAGE_H - M) nuevaPagina();
+
     if (!tieneFoto) {
-      // Bloque de puro texto — ocupa el ancho completo, se intercala en el orden real.
-      if (pos !== 0) { y += hFoto; pos = 0; } // si venía de una columna de fotos a medias, baja a una línea nueva completa
-      if (y + hTexto > PAGE_H - M) nuevaPagina();
       doc.rect(M, y, 3, hTexto - 4).fill('#F5B700');
-      doc.fillColor('#111').font('Helvetica-Bold').fontSize(8.5).text(a.t || 'Avance', M + 10, y + 2, { width: PAGE_W - 2 * M - 14 });
-      doc.font('Helvetica').fontSize(7.5).fillColor('#666').text((a.m || '') + (a.ago ? ' · ' + a.ago : ''), M + 10, y + 13, { width: PAGE_W - 2 * M - 14 });
+      doc.fillColor('#111').font('Helvetica-Bold').fontSize(8.5).text(limpiarTexto(a.t || 'Avance'), M + 10, y + 2, { width: wFull - 14 });
+      doc.font('Helvetica').fontSize(7.5).fillColor('#666').text(limpiarTexto((a.m || '') + (a.ago ? ' - ' + a.ago : '')), M + 10, y + 13, { width: wFull - 14 });
       y += hTexto;
       return;
     }
-    // Bloque con foto/video — se coloca de a 2 por fila (izquierda/derecha), nunca se
-    // corta a la mitad: si no cabe completo en lo que queda de la hoja, se pasa entero
-    // a la siguiente.
-    if (y + hFoto > PAGE_H - M) { nuevaPagina(); }
-    const cx = M + pos * (wCelda + 14);
-    doc.rect(cx, y, wCelda, hFoto).stroke('#ccc');
-    doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#111').text(a.t || 'Avance', cx + 8, y + 8, { width: wCelda - 16 });
-    doc.font('Helvetica').fontSize(7).fillColor('#666').text((a.m || '') + (a.ago ? ' · ' + a.ago : ''), cx + 8, y + 20, { width: wCelda - 16 });
-    const buf = bufferDeBase64(a.foto) || bufferDeBase64(a.videoThumb);
-    const fotoY = y + 34;
-    const fotoH = a.video ? hFoto - 56 : hFoto - 42;
-    if (buf) {
-      try { doc.image(buf, cx + 8, fotoY, { fit: [wCelda - 16, fotoH], align: 'center', valign: 'center' }); } catch (e) {}
-    } else if (a.foto && a.foto.startsWith('http')) {
-      doc.font('Helvetica').fontSize(7).fillColor('#999').text('(foto alojada externamente, no se pudo incrustar)', cx + 8, fotoY + fotoH / 2, { width: wCelda - 16, align: 'center' });
-    } else if (a.video) {
-      doc.rect(cx + 8, fotoY, wCelda - 16, fotoH).fillAndStroke('#f2f4f7', '#ccc');
-      doc.fillColor('#666').font('Helvetica').fontSize(9).text('Video', cx + 8, fotoY + fotoH / 2 - 5, { width: wCelda - 16, align: 'center' });
-    }
-    if (a.video) doc.font('Helvetica').fontSize(6.5).fillColor('#666').text('Video adjunto — ver desde la app', cx + 8, y + hFoto - 12, { width: wCelda - 16 });
 
-    if (pos === 0) { pos = 1; } else { pos = 0; y += hFoto; }
+    doc.rect(M, y, wFull, hFoto).stroke('#ccc');
+    doc.font('Helvetica-Bold').fontSize(9).fillColor('#111').text(limpiarTexto(a.t || 'Avance'), M + 10, y + 8, { width: wFull - 20 });
+    doc.font('Helvetica').fontSize(7.5).fillColor('#666').text(limpiarTexto((a.m || '') + (a.ago ? ' - ' + a.ago : '')), M + 10, y + 21, { width: wFull - 20 });
+    const buf = bufferDeBase64(a.foto) || bufferDeBase64(a.videoThumb);
+    const fotoY = y + 36;
+    const fotoH = a.video ? hFoto - 58 : hFoto - 44;
+    if (buf) {
+      try { doc.image(buf, M + 10, fotoY, { fit: [wFull - 20, fotoH], align: 'center', valign: 'center' }); } catch (e) {}
+    } else if (a.foto && a.foto.startsWith('http')) {
+      doc.font('Helvetica').fontSize(7).fillColor('#999').text('(foto alojada externamente, no se pudo incrustar)', M + 10, fotoY + fotoH / 2, { width: wFull - 20, align: 'center' });
+    } else if (a.video) {
+      doc.rect(M + 10, fotoY, wFull - 20, fotoH).fillAndStroke('#f2f4f7', '#ccc');
+      doc.fillColor('#666').font('Helvetica').fontSize(9).text('Video', M + 10, fotoY + fotoH / 2 - 5, { width: wFull - 20, align: 'center' });
+    }
+    if (a.video) doc.font('Helvetica').fontSize(6.5).fillColor('#666').text('Video adjunto - ver desde la app', M + 10, y + hFoto - 12, { width: wFull - 20 });
+    y += hFoto;
   });
 }
 
