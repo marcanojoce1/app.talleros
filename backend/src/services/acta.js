@@ -89,7 +89,7 @@ function generarActaHTML(o = {}) {
     }).join('');
     return `<div class="carbox">
       <div class="carlbl">${esc(v.label)}</div>
-      <div class="carimg">${baseUrl ? `<img src="${baseUrl}/img/${v.img}" style="${mirror}max-width:100%;max-height:125px"/>` : `<div style="color:#999;padding:30px">${esc(v.label)}</div>`}
+      <div class="carimg">${baseUrl ? `<img src="${baseUrl}/img/${v.img}" style="${mirror}max-width:100%;max-height:88px"/>` : `<div style="color:#999;padding:30px">${esc(v.label)}</div>`}
         <div class="pins">${pins}</div></div>
     </div>`;
   }).join('');
@@ -119,8 +119,8 @@ function generarActaHTML(o = {}) {
   .col h3 { margin: 0 0 6px; font-size: 12px; background: #111; color: #fff; padding: 3px 7px; display: inline-block; }
   .fld { font-size: 11px; padding: 2px 0; border-bottom: 1px dotted #999; margin-bottom: 3px; }
   .fld span { color: #555; }
-  .cars { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; justify-content: center; }
-  .carbox { border: 1px solid #ccc; border-radius: 6px; padding: 6px; text-align: center; background: #fbfbfb; min-width: 150px; }
+  .cars { display: flex; flex-wrap: wrap; gap: 5px; padding: 6px; justify-content: center; }
+  .carbox { border: 1px solid #ccc; border-radius: 6px; padding: 4px; text-align: center; background: #fbfbfb; min-width: 140px; }
   .carlbl { font-size: 9px; font-weight: bold; color: #666; letter-spacing: 1px; margin-bottom: 4px; }
   .carimg { position: relative; display: inline-block; }
   .pins { position: absolute; inset: 0; }
@@ -279,7 +279,7 @@ function generarActaHTML(o = {}) {
       ${(r.cotizacionItems && r.cotizacionItems.length) ? `<div style="margin-top:6px;font-size:9.5px"><b>Servicios y repuestos de la cotización:</b><br/>${r.cotizacionItems.map((it) => `${it.tipo === 'repuesto' ? '🔩' : '🔧'} ${esc(it.n || '')}${it.p ? ' — ' + esc(mon || 'Bs.') + ' ' + Number(it.p).toLocaleString('es-VE') : ''}`).join('<br/>')}</div>` : ''}
       ${pago ? `<div style="margin-top:4px"><b>TOTAL GENERAL (servicio + cotización): ${esc(mon || 'Bs.')} ${(Number(pago.total || 0) + Number(r.montoCotizacion || 0)).toLocaleString('es-VE')}</b></div>` : ''}
     </div>` : ''}
-    ${r.obs && r.obs !== '—' ? `<div style="padding:8px 10px;border-bottom:1.5px solid #111;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;max-height:2.6cm;overflow:hidden;font-size:10.5px;line-height:1.35"><b>Observaciones:</b> ${esc(r.obs)}</div>` : ''}
+    ${r.obs && r.obs !== '—' ? `<div style="padding:8px 10px;border-bottom:1.5px solid #111;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;font-size:10.5px;line-height:1.35"><b>Observaciones:</b> ${esc(r.obs)}</div>` : ''}
 
     <div class="cond">
       <b>Condiciones del Servicio:</b><br/>
