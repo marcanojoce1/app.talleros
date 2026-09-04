@@ -89,7 +89,7 @@ function generarActaHTML(o = {}) {
     }).join('');
     return `<div class="carbox">
       <div class="carlbl">${esc(v.label)}</div>
-      <div class="carimg">${baseUrl ? `<img src="${baseUrl}/img/${v.img}" style="${mirror}max-width:100%;max-height:150px"/>` : `<div style="color:#999;padding:30px">${esc(v.label)}</div>`}
+      <div class="carimg">${baseUrl ? `<img src="${baseUrl}/img/${v.img}" style="${mirror}max-width:100%;max-height:125px"/>` : `<div style="color:#999;padding:30px">${esc(v.label)}</div>`}
         <div class="pins">${pins}</div></div>
     </div>`;
   }).join('');
@@ -279,7 +279,7 @@ function generarActaHTML(o = {}) {
       ${(r.cotizacionItems && r.cotizacionItems.length) ? `<div style="margin-top:6px;font-size:9.5px"><b>Servicios y repuestos de la cotización:</b><br/>${r.cotizacionItems.map((it) => `${it.tipo === 'repuesto' ? '🔩' : '🔧'} ${esc(it.n || '')}${it.p ? ' — ' + esc(mon || 'Bs.') + ' ' + Number(it.p).toLocaleString('es-VE') : ''}`).join('<br/>')}</div>` : ''}
       ${pago ? `<div style="margin-top:4px"><b>TOTAL GENERAL (servicio + cotización): ${esc(mon || 'Bs.')} ${(Number(pago.total || 0) + Number(r.montoCotizacion || 0)).toLocaleString('es-VE')}</b></div>` : ''}
     </div>` : ''}
-    ${r.obs && r.obs !== '—' ? `<div style="padding:8px 10px;border-bottom:1.5px solid #111;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word"><b>Observaciones:</b> ${esc(r.obs)}</div>` : ''}
+    ${r.obs && r.obs !== '—' ? `<div style="padding:8px 10px;border-bottom:1.5px solid #111;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;max-height:2.6cm;overflow:hidden;font-size:10.5px;line-height:1.35"><b>Observaciones:</b> ${esc(r.obs)}</div>` : ''}
 
     <div class="cond">
       <b>Condiciones del Servicio:</b><br/>
@@ -371,7 +371,7 @@ function generarTrabajoHTML(o = {}) {
       .bit-t { font-weight: bold; font-size: 13px; }
       .bit-m { color: #666; font-size: 11px; margin-top: 2px; word-wrap: break-word; overflow-wrap: break-word; }
       .foto-grid { display:flex; gap:14px; padding:14px; }
-      .foto-celda { flex:1; min-width:0; border:1px solid #e2e6ea; border-radius:8px; padding:10px; page-break-inside: avoid; break-inside: avoid; }
+      .foto-celda { flex:0 0 calc(50% - 7px); max-width:calc(50% - 7px); border:1px solid #e2e6ea; border-radius:8px; padding:10px; page-break-inside: avoid; break-inside: avoid; box-sizing:border-box; }
       .bit-foto { width:100%; max-height:11cm; object-fit:contain; border-radius:6px; margin-top:8px; display:block; }
     </style>`;
 

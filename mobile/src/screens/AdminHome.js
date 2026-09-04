@@ -142,6 +142,7 @@ export default function AdminHomeScreen({ navigation, route }) {
   const [qOrd, setQOrd] = useState('');
   const [resumenOpen, setResumenOpen] = useState(false);
   const [resumenEstado, setResumenEstado] = useState('espera');
+  const [ordenFiltro, setOrdenFiltro] = useState('todos');
   const [editarItem, setEditarItem] = useState(null);
   const [fCod, setFCod] = useState(''); const [fMonto, setFMonto] = useState(''); const [fFoto, setFFoto] = useState(null);
 
@@ -294,13 +295,17 @@ export default function AdminHomeScreen({ navigation, route }) {
   const confirmarAsignarTecnicoYProceso = () => {
     if (!tecnicoElegido) { Alert.alert('Falta', 'Selecciona un técnico.'); return; }
     const vActual = (data.vehicles || []).find((v) => v.id === asignarTecnicoOpen);
-    const vs = (data.vehicles || []).map((v) => (v.id === asignarTecnicoOpen ? { ...v, mech: tecnicoElegido } : v));
+    const vs = (data.vehicles || []).map((v) => {
+      if (v.id !== asignarTecnicoOpen) return v;
+      const nv = { ...v, mech: tecnicoElegido, status: 'rep' };
+      if (!nv.progress || nv.progress === 0) nv.progress = 10;
+      nv.advances = [...(v.advances || []), { t: 'En proceso', m: 'Actualizado por ' + (me.nombre || 'Administrador'), type: 'rep', ago: 'ahora' }];
+      return nv;
+    });
     guardar({ ...data, vehicles: vs });
-    const id = asignarTecnicoOpen;
     setAsignarTecnicoOpen(null);
-    setTimeout(() => cambiarEstadoOrden(id, 'rep'), 60);
-    const numTxt = vActual && vActual.numOrden ? 'OS' + String(vActual.numOrden).padStart(4, '0') : ('#' + id);
-    setTimeout(() => Alert.alert('✅ Orden actualizada', `Orden ${numTxt} fue trasladada a estado Reparación.`), 120);
+    const numTxt = vActual && vActual.numOrden ? 'OS' + String(vActual.numOrden).padStart(4, '0') : ('#' + asignarTecnicoOpen);
+    Alert.alert('✅ Orden actualizada', `Orden ${numTxt} fue trasladada a estado Reparación.`);
   };
 
   const avancesPendientes = vehicles.reduce((a, v) => a + (v.advances || []).filter((ad) => ad.pendienteRevision).length, 0);
@@ -428,7 +433,14 @@ export default function AdminHomeScreen({ navigation, route }) {
             <TextInput style={[s.input, { marginBottom: 14 }]} value={qOrd} onChangeText={setQOrd}
               placeholder="Buscar por N° de orden, vehículo, placa, cliente o técnico…" />
             {!V.length && !loading ? <Text style={s.muted}>Sin vehículos recibidos. Registra una recepción para generar la orden.</Text> : null}
-            {grupos.map((g) => {
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+              {[['todos', 'Todos'], ['espera', 'En espera'], ['rep', 'En reparación'], ['term', 'Terminado']].map(([k, l]) => (
+                <TouchableOpacity key={k} onPress={() => setOrdenFiltro(k)} style={{ flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center', backgroundColor: ordenFiltro === k ? '#16191d' : '#eef0f2' }}>
+                  <Text style={{ fontWeight: '700', fontSize: 11.5, color: ordenFiltro === k ? '#fff' : '#16191d' }}>{l}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {grupos.filter((g) => ordenFiltro === 'todos' || g.k === ordenFiltro).map((g) => {
               const items = V.filter(g.filtro).filter((v) => coincide(v, qOrd));
               return (
                 <View key={g.k} style={{ marginBottom: 18 }}>
@@ -472,7 +484,9 @@ export default function AdminHomeScreen({ navigation, route }) {
                           )}
                         </View>
                         <View style={{ flexDirection: 'row', gap: 14, marginTop: 9, flexWrap: 'wrap' }}>
-                          <TouchableOpacity onPress={() => setModal({ tipo: 'avances', item })}><Text style={[s.link, { color: '#F5B700' }]}>📸 Ver avances{(item.advances || []).filter((a) => a.foto || a.video).length ? ' (' + (item.advances || []).filter((a) => a.foto || a.video).length + ')' : ''} →</Text></TouchableOpacity>
+                          {item.status && item.status !== 'espera' && item.status !== 'reprog' ? (
+                            <TouchableOpacity onPress={() => setModal({ tipo: 'avances', item })}><Text style={[s.link, { color: '#F5B700' }]}>📸 Ver avances{(item.advances || []).filter((a) => a.foto || a.video).length ? ' (' + (item.advances || []).filter((a) => a.foto || a.video).length + ')' : ''} →</Text></TouchableOpacity>
+                          ) : null}
                           <TouchableOpacity onPress={() => abrirEnNavegador(taller.id, item, item.status && item.status !== 'espera' ? 'trabajo' : 'acta')}><Text style={s.link}>Ver acta →</Text></TouchableOpacity>
                           <TouchableOpacity onPress={() => compartirActaPDF(taller.id, item, item.status && item.status !== 'espera' ? 'trabajo' : 'acta')}><Text style={s.link}>Compartir acta (PDF) →</Text></TouchableOpacity>
                           {(!item.status || item.status === 'espera' || item.status === 'reprog') ? (
