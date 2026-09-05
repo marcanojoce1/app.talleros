@@ -100,21 +100,47 @@ function dibujarActa(doc, o) {
   y += hCV;
 
   // --- Accesorios / Documentos / Combustible-Prioridad-Batería ---
-  const hAcc = 60, wDer = 130, wIzq = PAGE_W - 2 * M - wDer;
+  const wDer = 130, wIzq = PAGE_W - 2 * M - wDer;
+  const hAcc = r.bateria ? 106 : 60;
   seccion('accesorios-combustible', () => {
     caja(doc, M, y, wIzq, hAcc, 'Accesorios / Documentos');
     const acc = [].concat(r.accesorios || []).concat(r.documentos || []).filter((x) => typeof x === 'string');
-    let ax = M + 6, ay = y + 20, col = 0;
+    let ay = y + 20, col = 0;
     acc.slice(0, 8).forEach((a) => {
-      doc.font('Helvetica').fontSize(7.5).fillColor('#111').text('[X] ' + limpiarTexto(a), ax + (col % 2) * (wIzq / 2), ay, { width: wIzq / 2 - 8 });
+      const ax = M + 8 + (col % 2) * (wIzq / 2);
+      doc.rect(ax, ay + 1, 7, 7).stroke('#333');
+      doc.moveTo(ax + 1.2, ay + 4.5).lineTo(ax + 3, ay + 6.3).lineTo(ax + 6, ay + 1.5).stroke('#16a34a');
+      doc.font('Helvetica').fontSize(7.5).fillColor('#111').text(limpiarTexto(a), ax + 11, ay, { width: wIzq / 2 - 16 });
       col++; if (col % 2 === 0) ay += 10;
     });
+
     caja(doc, M + wIzq, y, wDer, hAcc, 'Combustible');
-    doc.font('Helvetica-Bold').fontSize(14).fillColor('#111').text(limpiarTexto(r.combustible || '1/2'), M + wIzq, y + 18, { width: wDer, align: 'center' });
-    doc.font('Helvetica').fontSize(7).fillColor('#666').text('Prioridad: ' + limpiarTexto(r.prioridad || 'Media'), M + wIzq + 6, y + 40);
-    if (r.bateria) doc.font('Helvetica').fontSize(6.5).fillColor('#666').text('Bateria: ' + limpiarTexto(r.bateriaMarca || '') + ' ' + (r.bateriaAmperaje ? r.bateriaAmperaje + 'A' : ''), M + wIzq + 6, y + 50, { width: wDer - 10 });
+    const combN = { 'E': 0, 'Vacío': 0, 'Vacio': 0, '\u215B': 12.5, '\u00BC': 25, '\u215C': 37.5, '\u00BD': 50, '\u215D': 62.5, '\u00BE': 75, '\u215E': 87.5, '1/4': 25, '1/2': 50, '3/4': 75, 'F': 100, 'Lleno': 100 };
+    const combPct = combN[r.combustible] != null ? combN[r.combustible] : 50;
+    const bx = M + wIzq + 10, bw = wDer - 20;
+    doc.font('Helvetica-Bold').fontSize(13).fillColor('#111').text(limpiarTexto(r.combustible || '1/2'), bx, y + 16, { width: bw, align: 'center' });
+    doc.rect(bx, y + 32, bw, 5).fill('#eee');
+    doc.rect(bx, y + 32, Math.max(2, bw * combPct / 100), 5).fill('#F5B700');
+    doc.font('Helvetica').fontSize(6).fillColor('#666').text('E', bx, y + 39).text('F', bx + bw - 6, y + 39);
+    doc.font('Helvetica').fontSize(6.5).fillColor('#666').text('Prioridad: ' + limpiarTexto(r.prioridad || 'Media'), bx, y + 48, { width: bw });
+
+    if (r.bateria) {
+      const yB = y + 60;
+      const coloresMap = { negro: '#26282b', gris: '#5b5f66', azul: '#1e4d8f', rojo: '#8f1e1e', verde: '#1e6b3a', blanco: '#d8dadd', amarillo: '#c9a227', plateado: '#9aa0a6', plata: '#9aa0a6' };
+      const colorTxt = (r.bateriaColor || '').toLowerCase().trim();
+      const bodyColor = coloresMap[colorTxt] || '#2b2d31';
+      const textColor = ['#d8dadd', '#9aa0a6', '#c9a227'].includes(bodyColor) ? '#111' : '#fff';
+      doc.moveTo(bx, yB).lineTo(bx + bw, yB).stroke('#111');
+      doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#111').text('Bateria' + (r.bateriaMarca ? ': ' + limpiarTexto(r.bateriaMarca) : ''), bx, yB + 4, { width: bw, align: 'center' });
+      const cajaW = 66, cajaH = 24, cajaX = bx + (bw - cajaW) / 2, cajaY = yB + 14;
+      doc.roundedRect(cajaX, cajaY, cajaW, cajaH, 3).fill(bodyColor);
+      doc.font('Helvetica-Bold').fontSize(9).fillColor('#16a34a').text('+', cajaX + 5, cajaY + 7);
+      doc.fillColor(textColor).fontSize(7.5).text(r.bateriaAmperaje ? limpiarTexto(r.bateriaAmperaje) + 'A' : '', cajaX, cajaY + 8, { width: cajaW, align: 'center' });
+      doc.font('Helvetica-Bold').fontSize(10).fillColor('#dc2626').text('-', cajaX + cajaW - 11, cajaY + 5);
+    }
   });
   y += hAcc;
+
 
   // --- Inspección visual (diagramas del vehículo) ---
   const lados = o.lados || [];
