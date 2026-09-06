@@ -89,7 +89,7 @@ function generarActaHTML(o = {}) {
     }).join('');
     return `<div class="carbox">
       <div class="carlbl">${esc(v.label)}</div>
-      <div class="carimg">${baseUrl ? `<img src="${baseUrl}/img/${v.img}" style="${mirror}max-width:100%;max-height:88px"/>` : `<div style="color:#999;padding:30px">${esc(v.label)}</div>`}
+      <div class="carimg">${baseUrl ? `<img src="${baseUrl}/img/${v.img}" style="${mirror}max-width:100%;max-height:150px"/>` : `<div style="color:#999;padding:30px">${esc(v.label)}</div>`}
         <div class="pins">${pins}</div></div>
     </div>`;
   }).join('');
@@ -119,8 +119,8 @@ function generarActaHTML(o = {}) {
   .col h3 { margin: 0 0 6px; font-size: 12px; background: #111; color: #fff; padding: 3px 7px; display: inline-block; }
   .fld { font-size: 11px; padding: 2px 0; border-bottom: 1px dotted #999; margin-bottom: 3px; }
   .fld span { color: #555; }
-  .cars { display: flex; flex-wrap: wrap; gap: 5px; padding: 6px; justify-content: center; }
-  .carbox { border: 1px solid #ccc; border-radius: 6px; padding: 4px; text-align: center; background: #fbfbfb; min-width: 140px; }
+  .cars { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; justify-content: center; }
+  .carbox { border: 1px solid #ccc; border-radius: 6px; padding: 6px; text-align: center; background: #fbfbfb; min-width: 150px; }
   .carlbl { font-size: 9px; font-weight: bold; color: #666; letter-spacing: 1px; margin-bottom: 4px; }
   .carimg { position: relative; display: inline-block; }
   .pins { position: absolute; inset: 0; }
@@ -131,7 +131,7 @@ function generarActaHTML(o = {}) {
   .serv table { width: 100%; border-collapse: collapse; font-size: 11px; }
   .serv td, .serv th { border: 1px solid #999; padding: 4px 6px; }
   .fuel { text-align: center; font-size: 10px; }
-  .cond { font-size: 8.5px; color: #444; padding: 8px 10px; line-height: 1.4; border-top: 1.5px solid #111; max-height: 3.2cm; overflow: hidden; }
+  .cond { font-size: 8.5px; color: #444; padding: 8px 10px; line-height: 1.4; border-top: 1.5px solid #111; }
   .firma { border-top: 1px solid #333; margin-top: 6px; padding-top: 3px; text-align: center; font-size: 9px; }
   .firmaimg { min-height: 52px; display:flex; align-items:flex-end; justify-content:center; overflow:visible; }
   @media print { .noprint { display: none; } body { padding: 0; } }
@@ -184,8 +184,8 @@ function generarActaHTML(o = {}) {
       </div>
     </div>
 
-    <div class="row" style="display:flex">
-      <div class="col" style="width:400px">
+    <div class="row">
+      <div class="col" style="flex:1.3">
         <h3>Accesorios recibidos</h3>
         ${accMarcados.length ? `<div class="acc">
           ${accMarcados.map((a) => `<div class="item"><span>${checkbox(true)} ${esc(a)}</span></div>`).join('')}
@@ -195,7 +195,7 @@ function generarActaHTML(o = {}) {
           ${docsMarcados.map((a) => `<div class="item"><span>${checkbox(true)} ${esc(a)}</span></div>`).join('')}
         </div>` : `<div style="padding:6px 10px;color:#888;font-size:11px">Ninguno marcado.</div>`}
       </div>
-      <div class="col fuel" style="width:3.5cm;min-width:3.5cm;max-width:3.5cm;min-height:4cm;padding:6px 8px">
+      <div class="col fuel" style="max-width:150px">
         <h3>Combustible</h3>
         <div style="margin-top:8px;font-size:20px;font-weight:bold">${esc(r.combustible || '½')}</div>
         <div style="height:7px;background:#eee;border-radius:4px;margin-top:6px;overflow:hidden"><div style="height:7px;width:${combPct}%;background:#F5B700"></div></div>
@@ -206,23 +206,17 @@ function generarActaHTML(o = {}) {
           const colorTxt = (r.bateriaColor || '').toLowerCase().trim();
           const bodyColor = coloresMap[colorTxt] || '#2b2d31';
           const textColor = ['#d8dadd', '#9aa0a6', '#c9a227'].includes(bodyColor) ? '#111' : '#fff';
-          return `<div style="margin-top:8px;padding-top:6px;border-top:1.5px solid #111;text-align:center;width:100%">
-          <div style="font-size:11px"><b>🔋 Batería</b>${r.bateriaMarca ? ': ' + esc(r.bateriaMarca) : ''}${r.bateriaColor ? ' · ' + esc(r.bateriaColor) : ''}</div>
-          <table style="margin:8px auto 0;border-collapse:collapse"><tr>
-            <td style="width:14px"></td>
-            <td style="width:14px;height:8px;background:#8a8d91;border-radius:2px 2px 0 0"></td>
-            <td style="width:16px"></td>
-            <td style="width:14px;height:8px;background:#8a8d91;border-radius:2px 2px 0 0"></td>
-            <td style="width:14px"></td>
-          </tr></table>
-          <table style="margin:0 auto;border-collapse:collapse;width:76px;height:44px;background:${bodyColor};border:1.5px solid #111;border-radius:6px">
-            <tr>
-              <td style="width:24px;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:bold;color:#16a34a">+</td>
-              <td style="text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:bold;color:${textColor}">${r.bateriaAmperaje ? esc(r.bateriaAmperaje) + 'A' : ''}</td>
-              <td style="width:24px;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#dc2626">−</td>
-            </tr>
-          </table>
-          ${r.bateriaObs ? `<div style="font-size:9.5px;color:#444;margin-top:6px;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;text-align:left">${esc(r.bateriaObs)}</div>` : ''}
+          return `<div style="margin-top:8px;padding-top:6px;border-top:1.5px solid #111;text-align:center">
+          <b>🔋 Batería</b>${r.bateriaMarca ? ': ' + esc(r.bateriaMarca) : ''}
+          <svg width="54" height="40" viewBox="0 0 80 60" style="display:block;margin:4px auto 0">
+            <rect x="10" y="10" width="10" height="8" rx="2" fill="#8a8d91"/><rect x="60" y="10" width="10" height="8" rx="2" fill="#8a8d91"/>
+            <circle cx="15" cy="9" r="4" fill="#a9adb3"/><circle cx="65" cy="9" r="4" fill="#a9adb3"/>
+            <rect x="4" y="16" width="72" height="40" rx="5" fill="${bodyColor}" stroke="#111" stroke-width="1.5"/>
+            <circle cx="16" cy="23" r="2" fill="#00000030"/><circle cx="30" cy="23" r="2" fill="#00000030"/><circle cx="44" cy="23" r="2" fill="#00000030"/><circle cx="58" cy="23" r="2" fill="#00000030"/>
+            <text x="40" y="42" text-anchor="middle" font-size="10" font-weight="bold" font-family="Arial" fill="${textColor}">${esc(r.bateriaAmperaje || '')}${r.bateriaAmperaje ? 'A' : ''}</text>
+            <text x="15" y="14" font-size="10" font-weight="bold" fill="#16a34a">+</text><text x="63" y="14" font-size="12" font-weight="bold" fill="#dc2626">−</text>
+          </svg>
+          ${r.bateriaObs ? `<div style="font-size:8.5px;color:#444;margin-top:3px;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;text-align:left">${esc(r.bateriaObs)}</div>` : ''}
           </div>`;
         })() : ''}
       </div>
@@ -279,7 +273,7 @@ function generarActaHTML(o = {}) {
       ${(r.cotizacionItems && r.cotizacionItems.length) ? `<div style="margin-top:6px;font-size:9.5px"><b>Servicios y repuestos de la cotización:</b><br/>${r.cotizacionItems.map((it) => `${it.tipo === 'repuesto' ? '🔩' : '🔧'} ${esc(it.n || '')}${it.p ? ' — ' + esc(mon || 'Bs.') + ' ' + Number(it.p).toLocaleString('es-VE') : ''}`).join('<br/>')}</div>` : ''}
       ${pago ? `<div style="margin-top:4px"><b>TOTAL GENERAL (servicio + cotización): ${esc(mon || 'Bs.')} ${(Number(pago.total || 0) + Number(r.montoCotizacion || 0)).toLocaleString('es-VE')}</b></div>` : ''}
     </div>` : ''}
-    ${r.obs && r.obs !== '—' ? `<div style="padding:8px 10px;border-bottom:1.5px solid #111;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;font-size:9.5px;line-height:1.3;max-height:4.5cm;overflow:hidden"><b>Observaciones:</b> ${esc(r.obs)}</div>` : ''}
+    ${r.obs && r.obs !== '—' ? `<div style="padding:8px 10px;border-bottom:1.5px solid #111;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word"><b>Observaciones:</b> ${esc(r.obs)}</div>` : ''}
 
     <div class="cond">
       <b>Condiciones del Servicio:</b><br/>
@@ -292,6 +286,8 @@ function generarActaHTML(o = {}) {
   </div>
 </body></html>`;
 }
+
+// Convierte los trazos de firma (paths) a un pequeño SVG
 
 // Convierte los trazos de firma (paths) a un pequeño SVG
 function firmaSVG(trazos) {
