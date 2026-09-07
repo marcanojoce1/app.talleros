@@ -206,16 +206,22 @@ function generarActaHTML(o = {}) {
           const colorTxt = (r.bateriaColor || '').toLowerCase().trim();
           const bodyColor = coloresMap[colorTxt] || '#2b2d31';
           const textColor = ['#d8dadd', '#9aa0a6', '#c9a227'].includes(bodyColor) ? '#111' : '#fff';
+          // Batería dibujada con divs/CSS (no SVG) — html2canvas (usado al compartir por
+          // WhatsApp desde el dashboard web) no captura bien los SVG, así que esto se ve
+          // idéntico pero es 100% compatible con esa captura además del navegador normal.
           return `<div style="margin-top:8px;padding-top:6px;border-top:1.5px solid #111;text-align:center">
           <b>🔋 Batería</b>${r.bateriaMarca ? ': ' + esc(r.bateriaMarca) : ''}
-          <svg width="54" height="40" viewBox="0 0 80 60" style="display:block;margin:4px auto 0">
-            <rect x="10" y="10" width="10" height="8" rx="2" fill="#8a8d91"/><rect x="60" y="10" width="10" height="8" rx="2" fill="#8a8d91"/>
-            <circle cx="15" cy="9" r="4" fill="#a9adb3"/><circle cx="65" cy="9" r="4" fill="#a9adb3"/>
-            <rect x="4" y="16" width="72" height="40" rx="5" fill="${bodyColor}" stroke="#111" stroke-width="1.5"/>
-            <circle cx="16" cy="23" r="2" fill="#00000030"/><circle cx="30" cy="23" r="2" fill="#00000030"/><circle cx="44" cy="23" r="2" fill="#00000030"/><circle cx="58" cy="23" r="2" fill="#00000030"/>
-            <text x="40" y="42" text-anchor="middle" font-size="10" font-weight="bold" font-family="Arial" fill="${textColor}">${esc(r.bateriaAmperaje || '')}${r.bateriaAmperaje ? 'A' : ''}</text>
-            <text x="15" y="14" font-size="10" font-weight="bold" fill="#16a34a">+</text><text x="63" y="14" font-size="12" font-weight="bold" fill="#dc2626">−</text>
-          </svg>
+          <div style="width:76px;margin:6px auto 0;position:relative">
+            <div style="display:flex;justify-content:space-between;padding:0 14px">
+              <div style="width:10px;height:8px;background:#8a8d91;border-radius:2px 2px 0 0"></div>
+              <div style="width:10px;height:8px;background:#8a8d91;border-radius:2px 2px 0 0"></div>
+            </div>
+            <div style="width:76px;height:40px;background:${bodyColor};border:1.5px solid #111;border-radius:5px;position:relative;box-sizing:border-box">
+              <span style="position:absolute;left:6px;top:3px;font-size:11px;font-weight:bold;color:#16a34a;font-family:Arial,Helvetica,sans-serif">+</span>
+              <span style="position:absolute;right:6px;top:2px;font-size:13px;font-weight:bold;color:#dc2626;font-family:Arial,Helvetica,sans-serif">−</span>
+              <span style="position:absolute;left:0;right:0;bottom:6px;text-align:center;font-size:11px;font-weight:bold;color:${textColor};font-family:Arial,Helvetica,sans-serif">${r.bateriaAmperaje ? esc(r.bateriaAmperaje) + 'A' : ''}</span>
+            </div>
+          </div>
           ${r.bateriaObs ? `<div style="font-size:8.5px;color:#444;margin-top:3px;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;text-align:left">${esc(r.bateriaObs)}</div>` : ''}
           </div>`;
         })() : ''}
@@ -287,9 +293,9 @@ function generarActaHTML(o = {}) {
 </body></html>`;
 }
 
-// Convierte los trazos de firma (paths) a un pequeño SVG
-
-// Convierte los trazos de firma (paths) a un pequeño SVG
+// Convierte los trazos de firma (paths) a un <canvas> dibujado con JS — a diferencia
+// del SVG, esto sí lo captura bien html2canvas (usado al compartir por WhatsApp desde
+// el dashboard web), además de verse igual en el navegador normal.
 function firmaSVG(trazos) {
   if (!Array.isArray(trazos) || !trazos.length) return '';
   // Calcula el área real de la firma para que no se corte
@@ -303,14 +309,27 @@ function firmaSVG(trazos) {
       if (y < minY) minY = y; if (y > maxY) maxY = y;
     }
   });
-  let vb = '0 0 300 120';
+  let vx = 0, vy = 0, vw = 300, vh = 120;
   if (isFinite(minX)) {
     const m = 8;
-    const w = Math.max(20, maxX - minX + m * 2), h = Math.max(20, maxY - minY + m * 2);
-    vb = `${minX - m} ${minY - m} ${w} ${h}`;
+    vw = Math.max(20, maxX - minX + m * 2);
+    vh = Math.max(20, maxY - minY + m * 2);
+    vx = minX - m; vy = minY - m;
   }
-  const paths = trazos.map((p) => `<path d="${esc(p)}" stroke="#16191d" stroke-width="2" fill="none" stroke-linecap="round"/>`).join('');
-  return `<svg viewBox="${vb}" width="170" height="50" preserveAspectRatio="xMidYMid meet">${paths}</svg>`;
+  const id = 'firma' + Math.random().toString(36).slice(2, 10);
+  const pathsJson = JSON.stringify(trazos.map((p) => String(p)));
+  const cierre = '</' + 'script>';
+  return `<canvas id="${id}" width="340" height="100" style="width:170px;height:50px;display:block"></canvas>
+<script>(function(){
+  var c=document.getElementById('${id}'); if(!c) return;
+  var ctx=c.getContext('2d');
+  var vx=${vx},vy=${vy},vw=${vw},vh=${vh};
+  var sx=c.width/vw, sy=c.height/vh, s=Math.min(sx,sy);
+  ctx.setTransform(s,0,0,s,-vx*s+(c.width-vw*s)/2,-vy*s+(c.height-vh*s)/2);
+  ctx.strokeStyle='#16191d'; ctx.lineWidth=2/s; ctx.lineCap='round'; ctx.lineJoin='round';
+  var paths=${pathsJson};
+  paths.forEach(function(d){ try{ ctx.stroke(new Path2D(d)); }catch(e){} });
+})();${cierre}`;
 }
 
 // Informe de TRABAJO REALIZADO: ficha de recepción + todas las fotos y avances del técnico
