@@ -89,7 +89,7 @@ function generarActaHTML(o = {}) {
     }).join('');
     return `<div class="carbox">
       <div class="carlbl">${esc(v.label)}</div>
-      <div class="carimg">${baseUrl ? `<img src="${baseUrl}/img/${v.img}" style="${mirror}max-width:100%;max-height:150px"/>` : `<div style="color:#999;padding:30px">${esc(v.label)}</div>`}
+      <div class="carimg">${baseUrl ? `<img src="${baseUrl}/img/${v.img}" style="${mirror}max-width:100%;max-height:105px"/>` : `<div style="color:#999;padding:20px">${esc(v.label)}</div>`}
         <div class="pins">${pins}</div></div>
     </div>`;
   }).join('');
@@ -119,8 +119,8 @@ function generarActaHTML(o = {}) {
   .col h3 { margin: 0 0 6px; font-size: 12px; background: #111; color: #fff; padding: 3px 7px; display: inline-block; }
   .fld { font-size: 11px; padding: 2px 0; border-bottom: 1px dotted #999; margin-bottom: 3px; }
   .fld span { color: #555; }
-  .cars { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; justify-content: center; }
-  .carbox { border: 1px solid #ccc; border-radius: 6px; padding: 6px; text-align: center; background: #fbfbfb; min-width: 150px; }
+  .cars { display: flex; flex-wrap: wrap; gap: 5px; padding: 6px; justify-content: center; }
+  .carbox { border: 1px solid #ccc; border-radius: 6px; padding: 4px; text-align: center; background: #fbfbfb; min-width: 140px; }
   .carlbl { font-size: 9px; font-weight: bold; color: #666; letter-spacing: 1px; margin-bottom: 4px; }
   .carimg { position: relative; display: inline-block; }
   .pins { position: absolute; inset: 0; }
