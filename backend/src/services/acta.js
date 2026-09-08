@@ -77,7 +77,13 @@ function generarActaHTML(o = {}) {
   // Servicios: solo el trabajo seleccionado (más los adicionales si los hay)
   const servicios = (o.servicios && o.servicios.length) ? o.servicios : [{ desc: r.trabajo || r.motivo || '', precio: o.precio || '' }];
 
-  const vistaImgs = vistas.map((k) => {
+  // Vistas angostas (superior/frontal/posterior) van en una fila de hasta 3; las
+  // vistas laterales (más anchas, todo el perfil del carro) van en su propia fila de
+  // hasta 2 — así cada una puede ser más grande y aun así todo cabe en una sola hoja.
+  const FILA_ANGOSTA = ['sup', 'front', 'post'];
+  const FILA_ANCHA = ['izq', 'der'];
+
+  function pintarCaja(k, alto) {
     const v = CAR_VIEWS[k];
     const mirror = k === 'der' ? 'transform:scaleX(-1);' : '';
     const dañosVista = damages.filter((d) => (LADO_KEY[d.lado] || d.lado) === k);
@@ -89,10 +95,17 @@ function generarActaHTML(o = {}) {
     }).join('');
     return `<div class="carbox">
       <div class="carlbl">${esc(v.label)}</div>
-      <div class="carimg">${baseUrl ? `<img src="${baseUrl}/img/${v.img}" style="${mirror}max-width:100%;max-height:105px"/>` : `<div style="color:#999;padding:20px">${esc(v.label)}</div>`}
+      <div class="carimg">${baseUrl ? `<img src="${baseUrl}/img/${v.img}" style="${mirror}max-width:100%;max-height:${alto}px"/>` : `<div style="color:#999;padding:20px">${esc(v.label)}</div>`}
         <div class="pins">${pins}</div></div>
     </div>`;
-  }).join('');
+  }
+
+  const filaAngosta = vistas.filter((k) => FILA_ANGOSTA.includes(k));
+  const filaAncha = vistas.filter((k) => FILA_ANCHA.includes(k));
+  const vistaImgs = [
+    filaAngosta.length ? `<div class="cars">${filaAngosta.map((k) => pintarCaja(k, 150)).join('')}</div>` : '',
+    filaAncha.length ? `<div class="cars">${filaAncha.map((k) => pintarCaja(k, 160)).join('')}</div>` : '',
+  ].join('');
 
   return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -119,7 +132,8 @@ function generarActaHTML(o = {}) {
   .col h3 { margin: 0 0 6px; font-size: 12px; background: #111; color: #fff; padding: 3px 7px; display: inline-block; }
   .fld { font-size: 11px; padding: 2px 0; border-bottom: 1px dotted #999; margin-bottom: 3px; }
   .fld span { color: #555; }
-  .cars { display: flex; flex-wrap: wrap; gap: 5px; padding: 6px; justify-content: center; }
+  .cars { display: flex; flex-wrap: wrap; gap: 5px; padding: 5px 6px; justify-content: center; }
+  .cars:first-of-type { padding-bottom: 2px; }
   .carbox { border: 1px solid #ccc; border-radius: 6px; padding: 4px; text-align: center; background: #fbfbfb; min-width: 140px; }
   .carlbl { font-size: 9px; font-weight: bold; color: #666; letter-spacing: 1px; margin-bottom: 4px; }
   .carimg { position: relative; display: inline-block; }
@@ -229,7 +243,7 @@ function generarActaHTML(o = {}) {
     </div>
 
     ${vistas.length ? `<div style="border-bottom:1.5px solid #111"><div style="background:#111;color:#fff;padding:3px 10px;font-size:11px;font-weight:bold">Inspección visual — vistas registradas</div>
-      <div class="cars">${vistaImgs}</div>
+      <div>${vistaImgs}</div>
       ${damages.length ? `<div style="padding:8px 12px">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
           <b style="font-size:11px">Daños registrados (${damages.length}):</b>
