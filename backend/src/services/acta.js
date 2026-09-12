@@ -393,7 +393,7 @@ function generarTrabajoHTML(o = {}) {
       .bit-m { color: #666; font-size: 11px; margin-top: 2px; word-wrap: break-word; overflow-wrap: break-word; }
       .foto-grid { display:flex; flex-wrap:nowrap; gap:14px; padding:14px; }
       .foto-celda { flex:0 0 calc(50% - 7px); width:calc(50% - 7px); box-sizing:border-box; border:1px solid #e2e6ea; border-radius:8px; padding:10px; }
-      .bit-foto { display:block; margin:8px auto 0; max-width:100%; max-height:330px; border-radius:6px; }
+      .bit-foto { display:block; margin:8px auto 0; width:100%; height:280px; object-fit:contain; background:#f4f4f6; border-radius:6px; }
     </style>`;
 
   // Insertar la bitácora antes de cerrar el body
