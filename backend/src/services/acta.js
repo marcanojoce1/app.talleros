@@ -103,8 +103,8 @@ function generarActaHTML(o = {}) {
   const filaAngosta = vistas.filter((k) => FILA_ANGOSTA.includes(k));
   const filaAncha = vistas.filter((k) => FILA_ANCHA.includes(k));
   const vistaImgs = [
-    filaAngosta.length ? `<div class="cars">${filaAngosta.map((k) => pintarCaja(k, 150)).join('')}</div>` : '',
-    filaAncha.length ? `<div class="cars">${filaAncha.map((k) => pintarCaja(k, 160)).join('')}</div>` : '',
+    filaAngosta.length ? `<div class="cars cars-3">${filaAngosta.map((k) => pintarCaja(k, 130)).join('')}</div>` : '',
+    filaAncha.length ? `<div class="cars cars-2">${filaAncha.map((k) => pintarCaja(k, 130)).join('')}</div>` : '',
   ].join('');
 
   return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"/>
@@ -132,11 +132,14 @@ function generarActaHTML(o = {}) {
   .col h3 { margin: 0 0 6px; font-size: 12px; background: #111; color: #fff; padding: 3px 7px; display: inline-block; }
   .fld { font-size: 11px; padding: 2px 0; border-bottom: 1px dotted #999; margin-bottom: 3px; }
   .fld span { color: #555; }
-  .cars { display: flex; flex-wrap: wrap; gap: 5px; padding: 5px 6px; justify-content: center; }
+  .cars { display: flex; flex-wrap: nowrap; gap: 5px; padding: 5px 6px; justify-content: center; }
   .cars:first-of-type { padding-bottom: 2px; }
-  .carbox { border: 1px solid #ccc; border-radius: 6px; padding: 4px; text-align: center; background: #fbfbfb; min-width: 140px; }
+  .cars-3 .carbox { flex: 0 0 calc(33.333% - 4px); width: calc(33.333% - 4px); }
+  .cars-2 .carbox { flex: 0 0 calc(50% - 3px); width: calc(50% - 3px); }
+  .carbox { border: 1px solid #ccc; border-radius: 6px; padding: 4px; text-align: center; background: #fbfbfb; box-sizing: border-box; overflow: hidden; }
   .carlbl { font-size: 9px; font-weight: bold; color: #666; letter-spacing: 1px; margin-bottom: 4px; }
-  .carimg { position: relative; display: inline-block; }
+  .carimg { position: relative; display: block; }
+  .carimg img { display: block; margin: 0 auto; }
   .pins { position: absolute; inset: 0; }
   .pin { position: absolute; background: #2563EB; color: #fff; border-radius: 50%; width: 16px; height: 16px; font-size: 9px; line-height: 16px; text-align: center; font-weight: bold; }
   .acc { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 14px; font-size: 10px; padding: 8px 10px; }
