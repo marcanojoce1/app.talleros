@@ -93,7 +93,7 @@ function generarActaHTML(o = {}) {
       const col = COLOR_SEV[d.sev] || COLOR_SEV.leve;
       return `<span class="pin" style="left:${left};top:${top};transform:translate(-50%,-50%);background:${col}">${d.n || i + 1}</span>`;
     }).join('');
-    return `<div class="carbox no-split">
+    return `<div class="carbox">
       <div class="carlbl">${esc(v.label)}</div>
       <div class="carimg">${baseUrl ? `<img src="${baseUrl}/img/${v.img}" style="${mirror}max-width:100%;max-height:${alto}px"/>` : `<div style="color:#999;padding:20px">${esc(v.label)}</div>`}
         <div class="pins">${pins}</div></div>
@@ -103,8 +103,8 @@ function generarActaHTML(o = {}) {
   const filaAngosta = vistas.filter((k) => FILA_ANGOSTA.includes(k));
   const filaAncha = vistas.filter((k) => FILA_ANCHA.includes(k));
   const vistaImgs = [
-    filaAngosta.length ? `<div class="cars cars-3">${filaAngosta.map((k) => pintarCaja(k, 130)).join('')}</div>` : '',
-    filaAncha.length ? `<div class="cars cars-2">${filaAncha.map((k) => pintarCaja(k, 130)).join('')}</div>` : '',
+    filaAngosta.length ? `<div class="cars">${filaAngosta.map((k) => pintarCaja(k, 150)).join('')}</div>` : '',
+    filaAncha.length ? `<div class="cars">${filaAncha.map((k) => pintarCaja(k, 160)).join('')}</div>` : '',
   ].join('');
 
   return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"/>
@@ -132,17 +132,11 @@ function generarActaHTML(o = {}) {
   .col h3 { margin: 0 0 6px; font-size: 12px; background: #111; color: #fff; padding: 3px 7px; display: inline-block; }
   .fld { font-size: 11px; padding: 2px 0; border-bottom: 1px dotted #999; margin-bottom: 3px; }
   .fld span { color: #555; }
-  .cars { display: block; padding: 5px 6px; }
-  .cars::after { content: ""; display: block; clear: both; }
+  .cars { display: flex; flex-wrap: wrap; gap: 5px; padding: 5px 6px; justify-content: center; }
   .cars:first-of-type { padding-bottom: 2px; }
-  .cars-3 .carbox { float: left; width: calc(33.333% - 7px); margin-right: 10px; }
-  .cars-3 .carbox:nth-child(3) { margin-right: 0; }
-  .cars-2 .carbox { float: left; width: calc(50% - 5px); margin-right: 10px; }
-  .cars-2 .carbox:nth-child(2) { margin-right: 0; }
-  .carbox { border: 1px solid #ccc; border-radius: 6px; padding: 4px; text-align: center; background: #fbfbfb; box-sizing: border-box; overflow: hidden; page-break-inside: avoid; break-inside: avoid; }
+  .carbox { border: 1px solid #ccc; border-radius: 6px; padding: 4px; text-align: center; background: #fbfbfb; min-width: 140px; }
   .carlbl { font-size: 9px; font-weight: bold; color: #666; letter-spacing: 1px; margin-bottom: 4px; }
-  .carimg { position: relative; display: block; }
-  .carimg img { display: block; margin: 0 auto; }
+  .carimg { position: relative; display: inline-block; }
   .pins { position: absolute; inset: 0; }
   .pin { position: absolute; background: #2563EB; color: #fff; border-radius: 50%; width: 16px; height: 16px; font-size: 9px; line-height: 16px; text-align: center; font-weight: bold; }
   .acc { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 14px; font-size: 10px; padding: 8px 10px; }
@@ -154,8 +148,6 @@ function generarActaHTML(o = {}) {
   .cond { font-size: 8.5px; color: #444; padding: 8px 10px; line-height: 1.4; border-top: 1.5px solid #111; }
   .firma { border-top: 1px solid #333; margin-top: 6px; padding-top: 3px; text-align: center; font-size: 9px; }
   .firmaimg { min-height: 52px; display:flex; align-items:flex-end; justify-content:center; overflow:visible; }
-  .no-split { page-break-inside: avoid; break-inside: avoid; }
-  @page { size: A4; margin: 0; }
   @media print { .noprint { display: none; } body { padding: 0; } }
   .toolbar { max-width: 780px; margin: 0 auto 10px; display: flex; gap: 8px; }
   .toolbar button { flex: 1; padding: 12px; border: 0; border-radius: 10px; font-weight: bold; font-size: 14px; cursor: pointer; }
@@ -188,7 +180,7 @@ function generarActaHTML(o = {}) {
 
     ${r.editada ? `<div style="background:#fff3cd;color:#7a5c00;padding:6px 12px;font-size:10.5px;font-weight:bold;border-bottom:1.5px solid #111">✎ ACTA EDITADA — última modificación: ${esc(r.editadaFecha || '')}</div>` : ''}
 
-    <div class="row no-split">
+    <div class="row">
       <div class="col">
         <h3>Datos del Cliente</h3>
         <div class="fld"><span>Nombre:</span> ${esc(cli.n || cli.nombre || '')}</div>
@@ -206,7 +198,7 @@ function generarActaHTML(o = {}) {
       </div>
     </div>
 
-    <div class="row no-split">
+    <div class="row">
       <div class="col" style="flex:1.3">
         <h3>Accesorios recibidos</h3>
         ${accMarcados.length ? `<div class="acc">
@@ -267,7 +259,7 @@ function generarActaHTML(o = {}) {
         }).join('')}</div></div>` : ''}
       </div>` : ''}
 
-    <div class="row serv no-split">
+    <div class="row serv">
       <div class="col">
         <h3>Servicios Solicitados</h3>
         <table><tr><th>Descripción</th><th style="width:90px">Precio</th></tr>
@@ -285,11 +277,11 @@ function generarActaHTML(o = {}) {
         <div style="font-size:9.5px;line-height:1.4">Estoy de acuerdo con las condiciones de servicio y autorizo la reparación con el material necesario, y concedo permiso para operar la unidad con fines de inspección y prueba.</div>
         <div style="display:flex;gap:14px;margin-top:4px">
           <div style="flex:1">
-            ${r.firmaCliImg ? `<div class="firmaimg no-split"><img src="${esc(r.firmaCliImg)}" style="max-height:52px;max-width:100%;object-fit:contain"/></div>` : (r.firmaCli ? `<div class="firmaimg no-split">${firmaSVG(r.firmaCli)}</div>` : '<div class="firmaimg no-split"></div>')}
+            ${r.firmaCliImg ? `<div class="firmaimg"><img src="${esc(r.firmaCliImg)}" style="max-height:52px;max-width:100%;object-fit:contain"/></div>` : (r.firmaCli ? `<div class="firmaimg">${firmaSVG(r.firmaCli)}</div>` : '<div class="firmaimg"></div>')}
             <div class="firma">Firma del Cliente</div>
           </div>
           <div style="flex:1">
-            ${r.firmaRecImg ? `<div class="firmaimg no-split"><img src="${esc(r.firmaRecImg)}" style="max-height:52px;max-width:100%;object-fit:contain"/></div>` : (r.firmaRec ? `<div class="firmaimg no-split">${firmaSVG(r.firmaRec)}</div>` : '<div class="firmaimg no-split"></div>')}
+            ${r.firmaRecImg ? `<div class="firmaimg"><img src="${esc(r.firmaRecImg)}" style="max-height:52px;max-width:100%;object-fit:contain"/></div>` : (r.firmaRec ? `<div class="firmaimg">${firmaSVG(r.firmaRec)}</div>` : '<div class="firmaimg"></div>')}
             <div class="firma">Firma del Recepcionista</div>
           </div>
         </div>
@@ -315,9 +307,9 @@ function generarActaHTML(o = {}) {
 </body></html>`;
 }
 
-// Convierte los trazos de firma (paths) a un SVG — confiable en todos los motores
-// (navegador, impresión nativa de la app, etc.) porque no depende de que se ejecute
-// ningún script antes de capturar la página.
+// Convierte los trazos de firma (paths) a un <canvas> dibujado con JS — a diferencia
+// del SVG, esto sí lo captura bien html2canvas (usado al compartir por WhatsApp desde
+// el dashboard web), además de verse igual en el navegador normal.
 function firmaSVG(trazos) {
   if (!Array.isArray(trazos) || !trazos.length) return '';
   // Calcula el área real de la firma para que no se corte
@@ -331,74 +323,56 @@ function firmaSVG(trazos) {
       if (y < minY) minY = y; if (y > maxY) maxY = y;
     }
   });
-  let vb = '0 0 300 120';
+  let vx = 0, vy = 0, vw = 300, vh = 120;
   if (isFinite(minX)) {
     const m = 8;
-    const w = Math.max(20, maxX - minX + m * 2), h = Math.max(20, maxY - minY + m * 2);
-    vb = `${minX - m} ${minY - m} ${w} ${h}`;
+    vw = Math.max(20, maxX - minX + m * 2);
+    vh = Math.max(20, maxY - minY + m * 2);
+    vx = minX - m; vy = minY - m;
   }
-  const paths = trazos.map((p) => `<path d="${esc(p)}" stroke="#16191d" stroke-width="2" fill="none" stroke-linecap="round"/>`).join('');
-  return `<svg viewBox="${vb}" width="170" height="50" preserveAspectRatio="xMidYMid meet">${paths}</svg>`;
+  const id = 'firma' + Math.random().toString(36).slice(2, 10);
+  const pathsJson = JSON.stringify(trazos.map((p) => String(p)));
+  const cierre = '</' + 'script>';
+  return `<canvas id="${id}" width="340" height="100" style="width:170px;height:50px;display:block"></canvas>
+<script>(function(){
+  var c=document.getElementById('${id}'); if(!c) return;
+  var ctx=c.getContext('2d');
+  var vx=${vx},vy=${vy},vw=${vw},vh=${vh};
+  var sx=c.width/vw, sy=c.height/vh, s=Math.min(sx,sy);
+  ctx.setTransform(s,0,0,s,-vx*s+(c.width-vw*s)/2,-vy*s+(c.height-vh*s)/2);
+  ctx.strokeStyle='#16191d'; ctx.lineWidth=2/s; ctx.lineCap='round'; ctx.lineJoin='round';
+  var paths=${pathsJson};
+  paths.forEach(function(d){ try{ ctx.stroke(new Path2D(d)); }catch(e){} });
+})();${cierre}`;
 }
 
 // Informe de TRABAJO REALIZADO: ficha de recepción + todas las fotos y avances del técnico
 function generarTrabajoHTML(o = {}) {
   const acta = generarActaHTML(o); // reusa el acta completa
   const avances = o.avances || [];
+  const mon = o.moneda || 'Bs.';
 
-  const textoSolo = avances.filter((a) => !a.foto && !a.video);
-  const conFoto = avances.filter((a) => a.foto || a.video);
-
-  // Movimientos sin foto — lista compacta, una sola columna.
-  const movimientos = textoSolo.length ? `
-    <div class="sheet" style="margin-top:16px;page-break-before:always;break-before:page">
-      <div class="bit-head">TRABAJO REALIZADO — Movimientos</div>
-      <div style="padding:12px">${textoSolo.map((a) => `
-        <div class="bit no-split">
-          <div class="bit-t">${esc(a.t || 'Avance')}</div>
-          <div class="bit-m">${esc(a.m || '')}${a.ago ? ' · ' + esc(a.ago) : ''}</div>
-        </div>`).join('')}</div>
-    </div>` : '';
-
-  // Fotos: EXACTAMENTE 2 por hoja, lado a lado. Cada celda tiene ancho fijo (50%) para
-  // que la proporción real de la foto (a veces muy alta, a veces muy ancha) nunca
-  // rompa el acomodo — la imagen se achica adentro con max-width/max-height, nunca al
-  // revés. El texto va completo arriba de la foto, nunca encima.
-  const grupos = [];
-  for (let i = 0; i < conFoto.length; i += 2) grupos.push(conFoto.slice(i, i + 2));
-
-  const celda = (a) => `
-    <div class="foto-celda no-split">
+  // Sección extra: bitácora del técnico con fotos — una sola columna, un avance
+  // debajo del otro (formato original), con protección para que un comentario largo
+  // nunca quede tapado por el siguiente elemento ni por un salto de página.
+  const bitacora = avances.length ? avances.map((a) => `
+    <div class="bit">
       <div class="bit-t">${esc(a.t || 'Avance')}</div>
       <div class="bit-m">${esc(a.m || '')}${a.ago ? ' · ' + esc(a.ago) : ''}</div>
       ${a.foto ? `<img src="${esc(a.foto)}" class="bit-foto"/>` : ''}
-      ${a.video ? `<div style="margin-top:6px">${a.videoThumb ? `<img src="${esc(a.videoThumb)}" class="bit-foto"/>` : ''}<div style="font-size:9px;color:#666;margin-top:2px">🎥 Video — <a href="${esc(a.video)}">ver aquí</a></div></div>` : ''}
-    </div>`;
-
-  const hojasFotos = grupos.map((g) => `
-    <div class="sheet" style="margin-top:16px;page-break-before:always;break-before:page">
-      <div class="bit-head">TRABAJO REALIZADO — Fotos</div>
-      <div class="foto-grid">${g.map(celda).join('')}</div>
-    </div>`).join('');
-
-  const sinNada = (!textoSolo.length && !conFoto.length) ? `
-    <div class="sheet" style="margin-top:16px;page-break-before:always;break-before:page">
-      <div class="bit-head">TRABAJO REALIZADO — Bitácora del técnico</div>
-      <div style="padding:12px;color:#888">Sin avances registrados.</div>
-    </div>` : '';
+      ${a.video ? `<div style="position:relative;display:inline-block;margin-top:6px">${a.videoThumb ? `<img src="${esc(a.videoThumb)}" class="bit-foto"/>` : ''}<div style="font-size:9px;color:#666;margin-top:2px">🎥 Video — <a href="${esc(a.video)}">ver aquí</a></div></div>` : ''}
+    </div>`).join('') : '<div style="color:#888;padding:10px">Sin avances registrados.</div>';
 
   const extra = `
-    ${movimientos}${hojasFotos}${sinNada}
+    <div class="sheet" style="margin-top:16px">
+      <div style="background:#111;color:#fff;padding:8px 12px;font-weight:bold;font-size:13px">TRABAJO REALIZADO — Bitácora del técnico</div>
+      <div style="padding:12px">${bitacora}</div>
+    </div>
     <style>
-      .bit-head { background:#111; color:#fff; padding:8px 12px; font-weight:bold; font-size:13px; }
-      .bit { border-left: 3px solid #F5B700; padding: 8px 12px; margin-bottom: 12px; background: #fafafa; }
+      .bit { border-left: 3px solid #F5B700; padding: 8px 12px; margin-bottom: 12px; background: #fafafa; page-break-inside: avoid; break-inside: avoid; }
       .bit-t { font-weight: bold; font-size: 13px; }
       .bit-m { color: #666; font-size: 11px; margin-top: 2px; word-wrap: break-word; overflow-wrap: break-word; }
-      .foto-grid { display:block; padding:14px; }
-      .foto-grid::after { content:""; display:block; clear:both; }
-      .foto-celda { float:left; width:calc(50% - 7px); margin-right:14px; box-sizing:border-box; border:1px solid #e2e6ea; border-radius:8px; padding:10px; page-break-inside:avoid; break-inside:avoid; }
-      .foto-celda:nth-child(2) { margin-right:0; }
-      .bit-foto { display:block; margin:8px auto 0; width:100%; height:280px; object-fit:contain; background:#f4f4f6; border-radius:6px; }
+      .bit-foto { max-width: 100%; max-height: 260px; border-radius: 8px; margin-top: 8px; display: block; }
     </style>`;
 
   // Insertar la bitácora antes de cerrar el body
