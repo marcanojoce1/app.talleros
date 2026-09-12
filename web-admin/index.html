@@ -413,7 +413,7 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover{background:var(--surface-2)}
   <div class="web-wrap"><div class="web">
     <div class="wsideBackdrop" id="wSideBackdrop" onclick="toggleWSide(false)"></div>
     <div class="wside">
-      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v219</span></div>
+      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v220</span></div>
       <div class="wlbl op-item">Operación</div>
       <a class="on op-item" data-w="dash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
       <a class="op-item" data-w="recep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-6 0v4"/><rect x="2" y="9" width="20" height="11" rx="2"/></svg>Recepción digital</a>
@@ -2278,20 +2278,32 @@ function _cargarLibsPDF(){
 // dentro de un clic reciente, y armar el PDF toma varios segundos.
 function mostrarBotonCompartirPDF(file,titulo,textoCaption,pdfUrl){
   const prev=document.getElementById('banner-compartir-pdf'); if(prev)prev.remove();
+  const puedeCompartirArchivo=navigator.canShare&&navigator.canShare({files:[file]});
   const div=document.createElement('div');
   div.id='banner-compartir-pdf';
   div.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#16191d;color:#fff;padding:12px 14px;border-radius:12px;z-index:99999;display:flex;gap:10px;align-items:center;box-shadow:0 4px 20px rgba(0,0,0,.35);font-family:sans-serif;font-size:14px';
   div.innerHTML='<span>📄 PDF listo</span>';
   const btn=document.createElement('button');
-  btn.textContent='Compartir';
+  btn.textContent=puedeCompartirArchivo?'Compartir':'Descargar';
   btn.style.cssText='background:#25D366;color:#fff;border:0;padding:9px 18px;border-radius:8px;font-weight:bold;cursor:pointer;font-size:14px';
   btn.onclick=async ()=>{
-    try{
-      await navigator.share({files:[file],title:titulo,text:textoCaption||''});
+    if(puedeCompartirArchivo){
+      try{
+        await navigator.share({files:[file],title:titulo,text:textoCaption||''});
+        div.remove();
+      }catch(e){
+        if(e&&e.name==='AbortError')return; // el usuario cerró el share sheet, no es error
+        toast('No se pudo compartir: '+(e&&e.message?e.message:'error desconocido'));
+      }
+    } else {
+      // Sin soporte para adjuntar archivos: descargamos el PDF (en esta misma pestaña,
+      // sin abrir nada nuevo) y dejamos el texto listo para pegar en WhatsApp.
+      const urlBlob=URL.createObjectURL(file);
+      const a=document.createElement('a');a.href=urlBlob;a.download=file.name;document.body.appendChild(a);a.click();a.remove();
+      setTimeout(()=>URL.revokeObjectURL(urlBlob),30000);
+      if(textoCaption){ try{ await navigator.clipboard.writeText(textoCaption); toast('PDF descargado y texto copiado — pégalo en WhatsApp.'); }catch(e){ toast('PDF descargado.'); } }
+      else toast('PDF descargado.');
       div.remove();
-    }catch(e){
-      if(e&&e.name==='AbortError')return; // el usuario cerró el share sheet, no es error
-      toast('No se pudo compartir: '+(e&&e.message?e.message:'error desconocido'));
     }
   };
   const cerrar=document.createElement('button');
@@ -2305,11 +2317,6 @@ function mostrarBotonCompartirPDF(file,titulo,textoCaption,pdfUrl){
 }
 async function compartirComoPDF(pdfUrl,filename,titulo,textoCaption){
   toast('Generando PDF…');
-  // Abrimos la ventana YA MISMO (vacía), mientras el navegador todavía sabe que fue
-  // un clic tuyo — si la abrimos después de armar el PDF (que tarda varios segundos),
-  // Chrome/Edge la bloquea como si fuera un pop-up no solicitado. La llenamos al final.
-  const ventanaWA=window.open('','_blank');
-  if(ventanaWA){ try{ ventanaWA.document.write('<p style="font-family:sans-serif;padding:20px">Generando PDF, un momento…</p>'); }catch(e){} }
   try{
     await _cargarLibsPDF();
     const sep=pdfUrl.includes('?')?'&':'?';
@@ -2372,36 +2379,13 @@ async function compartirComoPDF(pdfUrl,filename,titulo,textoCaption){
     }
     const blob=pdf.output('blob');
     const file=new File([blob],filename,{type:'application/pdf'});
-    if(navigator.canShare&&navigator.canShare({files:[file]})){
-      // OJO: no podemos llamar navigator.share() aquí directo — ya pasó demasiado
-      // tiempo desde tu clic (armar el PDF toma varios segundos) y el navegador lo
-      // rechaza ("Must be handling a user gesture"). En su lugar, mostramos un botón:
-      // ESE clic sí es fresco y el share funciona.
-      if(ventanaWA)ventanaWA.close();
-      mostrarBotonCompartirPDF(file,titulo,textoCaption,pdfUrl);
-      return;
-    }
-    // El navegador no soporta adjuntar archivos: descargamos el PDF y usamos la
-    // ventana que ya habíamos abierto para ir directo a WhatsApp con el texto.
-    const urlBlob=URL.createObjectURL(blob);
-    const a=document.createElement('a');a.href=urlBlob;a.download=filename;document.body.appendChild(a);a.click();a.remove();
-    setTimeout(()=>URL.revokeObjectURL(urlBlob),30000);
-    toast('PDF descargado. Tu navegador no permite adjuntarlo directo, así que también se abre WhatsApp para el texto.');
-    const waUrl='https://wa.me/?text='+encodeURIComponent(textoCaption||('Descarga el PDF: '+pdfUrl));
-    if(ventanaWA){ ventanaWA.location=waUrl; }
-    else if(navigator.share){ try{ await navigator.share({title:titulo,text:textoCaption||('Descarga el PDF: '+pdfUrl)}); }catch(e){} }
-    else{ window.open(waUrl,'_blank'); }
+    // Nunca abrimos pestañas ni ventanas nuevas — todo pasa aquí mismo. Si el
+    // navegador soporta compartir archivos, mostramos el botón (el share real se
+    // dispara con ESE clic, no automático, porque el navegador exige un clic reciente).
+    // Si no lo soporta, el mismo botón descarga el PDF.
+    mostrarBotonCompartirPDF(file,titulo,textoCaption,pdfUrl);
   }catch(e){
     toast('No se pudo generar el PDF: '+(e&&e.message?e.message:'error desconocido'));
-    if(ventanaWA){
-      try{
-        ventanaWA.document.body.innerHTML='<p style="font-family:sans-serif;padding:20px;color:#b91c1c">No se pudo generar el PDF:<br>'+
-          (e&&e.message?e.message.replace(/</g,'&lt;'):'error desconocido')+
-          '<br><br><a href="'+pdfUrl+'" style="color:#2563EB">Abrir el documento normal en su lugar</a></p>';
-      }catch(e2){ ventanaWA.location=pdfUrl; }
-    } else {
-      window.open(pdfUrl,'_blank');
-    }
   }
 }
 async function waShare(text){

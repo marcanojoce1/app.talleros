@@ -132,11 +132,14 @@ function generarActaHTML(o = {}) {
   .col h3 { margin: 0 0 6px; font-size: 12px; background: #111; color: #fff; padding: 3px 7px; display: inline-block; }
   .fld { font-size: 11px; padding: 2px 0; border-bottom: 1px dotted #999; margin-bottom: 3px; }
   .fld span { color: #555; }
-  .cars { display: flex; flex-wrap: nowrap; gap: 5px; padding: 5px 6px; justify-content: center; }
+  .cars { display: block; padding: 5px 6px; }
+  .cars::after { content: ""; display: block; clear: both; }
   .cars:first-of-type { padding-bottom: 2px; }
-  .cars-3 .carbox { flex: 0 0 calc(33.333% - 4px); width: calc(33.333% - 4px); }
-  .cars-2 .carbox { flex: 0 0 calc(50% - 3px); width: calc(50% - 3px); }
-  .carbox { border: 1px solid #ccc; border-radius: 6px; padding: 4px; text-align: center; background: #fbfbfb; box-sizing: border-box; overflow: hidden; }
+  .cars-3 .carbox { float: left; width: calc(33.333% - 7px); margin-right: 10px; }
+  .cars-3 .carbox:nth-child(3) { margin-right: 0; }
+  .cars-2 .carbox { float: left; width: calc(50% - 5px); margin-right: 10px; }
+  .cars-2 .carbox:nth-child(2) { margin-right: 0; }
+  .carbox { border: 1px solid #ccc; border-radius: 6px; padding: 4px; text-align: center; background: #fbfbfb; box-sizing: border-box; overflow: hidden; page-break-inside: avoid; break-inside: avoid; }
   .carlbl { font-size: 9px; font-weight: bold; color: #666; letter-spacing: 1px; margin-bottom: 4px; }
   .carimg { position: relative; display: block; }
   .carimg img { display: block; margin: 0 auto; }
@@ -391,8 +394,10 @@ function generarTrabajoHTML(o = {}) {
       .bit { border-left: 3px solid #F5B700; padding: 8px 12px; margin-bottom: 12px; background: #fafafa; }
       .bit-t { font-weight: bold; font-size: 13px; }
       .bit-m { color: #666; font-size: 11px; margin-top: 2px; word-wrap: break-word; overflow-wrap: break-word; }
-      .foto-grid { display:flex; flex-wrap:nowrap; gap:14px; padding:14px; }
-      .foto-celda { flex:0 0 calc(50% - 7px); width:calc(50% - 7px); box-sizing:border-box; border:1px solid #e2e6ea; border-radius:8px; padding:10px; }
+      .foto-grid { display:block; padding:14px; }
+      .foto-grid::after { content:""; display:block; clear:both; }
+      .foto-celda { float:left; width:calc(50% - 7px); margin-right:14px; box-sizing:border-box; border:1px solid #e2e6ea; border-radius:8px; padding:10px; page-break-inside:avoid; break-inside:avoid; }
+      .foto-celda:nth-child(2) { margin-right:0; }
       .bit-foto { display:block; margin:8px auto 0; width:100%; height:280px; object-fit:contain; background:#f4f4f6; border-radius:6px; }
     </style>`;
 
