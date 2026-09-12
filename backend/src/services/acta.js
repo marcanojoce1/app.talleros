@@ -77,7 +77,13 @@ function generarActaHTML(o = {}) {
   // Servicios: solo el trabajo seleccionado (más los adicionales si los hay)
   const servicios = (o.servicios && o.servicios.length) ? o.servicios : [{ desc: r.trabajo || r.motivo || '', precio: o.precio || '' }];
 
-  const vistaImgs = vistas.map((k) => {
+  // Vistas angostas (superior/frontal/posterior) van en una fila de hasta 3; las
+  // vistas laterales (más anchas, todo el perfil del carro) van en su propia fila de
+  // hasta 2 — así cada una puede ser más grande y aun así todo cabe en una sola hoja.
+  const FILA_ANGOSTA = ['sup', 'front', 'post'];
+  const FILA_ANCHA = ['izq', 'der'];
+
+  function pintarCaja(k, alto) {
     const v = CAR_VIEWS[k];
     const mirror = k === 'der' ? 'transform:scaleX(-1);' : '';
     const dañosVista = damages.filter((d) => (LADO_KEY[d.lado] || d.lado) === k);
@@ -87,12 +93,19 @@ function generarActaHTML(o = {}) {
       const col = COLOR_SEV[d.sev] || COLOR_SEV.leve;
       return `<span class="pin" style="left:${left};top:${top};transform:translate(-50%,-50%);background:${col}">${d.n || i + 1}</span>`;
     }).join('');
-    return `<div class="carbox">
+    return `<div class="carbox no-split">
       <div class="carlbl">${esc(v.label)}</div>
-      <div class="carimg">${baseUrl ? `<img src="${baseUrl}/img/${v.img}" style="${mirror}max-width:100%;max-height:88px"/>` : `<div style="color:#999;padding:30px">${esc(v.label)}</div>`}
+      <div class="carimg">${baseUrl ? `<img src="${baseUrl}/img/${v.img}" style="${mirror}max-width:100%;max-height:${alto}px"/>` : `<div style="color:#999;padding:20px">${esc(v.label)}</div>`}
         <div class="pins">${pins}</div></div>
     </div>`;
-  }).join('');
+  }
+
+  const filaAngosta = vistas.filter((k) => FILA_ANGOSTA.includes(k));
+  const filaAncha = vistas.filter((k) => FILA_ANCHA.includes(k));
+  const vistaImgs = [
+    filaAngosta.length ? `<div class="cars cars-3">${filaAngosta.map((k) => pintarCaja(k, 130)).join('')}</div>` : '',
+    filaAncha.length ? `<div class="cars cars-2">${filaAncha.map((k) => pintarCaja(k, 130)).join('')}</div>` : '',
+  ].join('');
 
   return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -119,10 +132,17 @@ function generarActaHTML(o = {}) {
   .col h3 { margin: 0 0 6px; font-size: 12px; background: #111; color: #fff; padding: 3px 7px; display: inline-block; }
   .fld { font-size: 11px; padding: 2px 0; border-bottom: 1px dotted #999; margin-bottom: 3px; }
   .fld span { color: #555; }
-  .cars { display: flex; flex-wrap: wrap; gap: 5px; padding: 6px; justify-content: center; }
-  .carbox { border: 1px solid #ccc; border-radius: 6px; padding: 4px; text-align: center; background: #fbfbfb; min-width: 140px; }
+  .cars { display: block; padding: 5px 6px; }
+  .cars::after { content: ""; display: block; clear: both; }
+  .cars:first-of-type { padding-bottom: 2px; }
+  .cars-3 .carbox { float: left; width: calc(33.333% - 7px); margin-right: 10px; }
+  .cars-3 .carbox:nth-child(3) { margin-right: 0; }
+  .cars-2 .carbox { float: left; width: calc(50% - 5px); margin-right: 10px; }
+  .cars-2 .carbox:nth-child(2) { margin-right: 0; }
+  .carbox { border: 1px solid #ccc; border-radius: 6px; padding: 4px; text-align: center; background: #fbfbfb; box-sizing: border-box; overflow: hidden; page-break-inside: avoid; break-inside: avoid; }
   .carlbl { font-size: 9px; font-weight: bold; color: #666; letter-spacing: 1px; margin-bottom: 4px; }
-  .carimg { position: relative; display: inline-block; }
+  .carimg { position: relative; display: block; }
+  .carimg img { display: block; margin: 0 auto; }
   .pins { position: absolute; inset: 0; }
   .pin { position: absolute; background: #2563EB; color: #fff; border-radius: 50%; width: 16px; height: 16px; font-size: 9px; line-height: 16px; text-align: center; font-weight: bold; }
   .acc { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 14px; font-size: 10px; padding: 8px 10px; }
@@ -131,9 +151,11 @@ function generarActaHTML(o = {}) {
   .serv table { width: 100%; border-collapse: collapse; font-size: 11px; }
   .serv td, .serv th { border: 1px solid #999; padding: 4px 6px; }
   .fuel { text-align: center; font-size: 10px; }
-  .cond { font-size: 8.5px; color: #444; padding: 8px 10px; line-height: 1.4; border-top: 1.5px solid #111; max-height: 3.2cm; overflow: hidden; }
+  .cond { font-size: 8.5px; color: #444; padding: 8px 10px; line-height: 1.4; border-top: 1.5px solid #111; }
   .firma { border-top: 1px solid #333; margin-top: 6px; padding-top: 3px; text-align: center; font-size: 9px; }
   .firmaimg { min-height: 52px; display:flex; align-items:flex-end; justify-content:center; overflow:visible; }
+  .no-split { page-break-inside: avoid; break-inside: avoid; }
+  @page { size: A4; margin: 0; }
   @media print { .noprint { display: none; } body { padding: 0; } }
   .toolbar { max-width: 780px; margin: 0 auto 10px; display: flex; gap: 8px; }
   .toolbar button { flex: 1; padding: 12px; border: 0; border-radius: 10px; font-weight: bold; font-size: 14px; cursor: pointer; }
@@ -166,7 +188,7 @@ function generarActaHTML(o = {}) {
 
     ${r.editada ? `<div style="background:#fff3cd;color:#7a5c00;padding:6px 12px;font-size:10.5px;font-weight:bold;border-bottom:1.5px solid #111">✎ ACTA EDITADA — última modificación: ${esc(r.editadaFecha || '')}</div>` : ''}
 
-    <div class="row">
+    <div class="row no-split">
       <div class="col">
         <h3>Datos del Cliente</h3>
         <div class="fld"><span>Nombre:</span> ${esc(cli.n || cli.nombre || '')}</div>
@@ -184,8 +206,8 @@ function generarActaHTML(o = {}) {
       </div>
     </div>
 
-    <div class="row" style="display:flex">
-      <div class="col" style="width:400px">
+    <div class="row no-split">
+      <div class="col" style="flex:1.3">
         <h3>Accesorios recibidos</h3>
         ${accMarcados.length ? `<div class="acc">
           ${accMarcados.map((a) => `<div class="item"><span>${checkbox(true)} ${esc(a)}</span></div>`).join('')}
@@ -195,7 +217,7 @@ function generarActaHTML(o = {}) {
           ${docsMarcados.map((a) => `<div class="item"><span>${checkbox(true)} ${esc(a)}</span></div>`).join('')}
         </div>` : `<div style="padding:6px 10px;color:#888;font-size:11px">Ninguno marcado.</div>`}
       </div>
-      <div class="col fuel" style="width:3.5cm;min-width:3.5cm;max-width:3.5cm;min-height:4cm;padding:6px 8px">
+      <div class="col fuel" style="max-width:150px">
         <h3>Combustible</h3>
         <div style="margin-top:8px;font-size:20px;font-weight:bold">${esc(r.combustible || '½')}</div>
         <div style="height:7px;background:#eee;border-radius:4px;margin-top:6px;overflow:hidden"><div style="height:7px;width:${combPct}%;background:#F5B700"></div></div>
@@ -206,30 +228,30 @@ function generarActaHTML(o = {}) {
           const colorTxt = (r.bateriaColor || '').toLowerCase().trim();
           const bodyColor = coloresMap[colorTxt] || '#2b2d31';
           const textColor = ['#d8dadd', '#9aa0a6', '#c9a227'].includes(bodyColor) ? '#111' : '#fff';
-          return `<div style="margin-top:8px;padding-top:6px;border-top:1.5px solid #111;text-align:center;width:100%">
-          <div style="font-size:11px"><b>🔋 Batería</b>${r.bateriaMarca ? ': ' + esc(r.bateriaMarca) : ''}${r.bateriaColor ? ' · ' + esc(r.bateriaColor) : ''}</div>
-          <table style="margin:8px auto 0;border-collapse:collapse"><tr>
-            <td style="width:14px"></td>
-            <td style="width:14px;height:8px;background:#8a8d91;border-radius:2px 2px 0 0"></td>
-            <td style="width:16px"></td>
-            <td style="width:14px;height:8px;background:#8a8d91;border-radius:2px 2px 0 0"></td>
-            <td style="width:14px"></td>
-          </tr></table>
-          <table style="margin:0 auto;border-collapse:collapse;width:76px;height:44px;background:${bodyColor};border:1.5px solid #111;border-radius:6px">
-            <tr>
-              <td style="width:24px;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:bold;color:#16a34a">+</td>
-              <td style="text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:bold;color:${textColor}">${r.bateriaAmperaje ? esc(r.bateriaAmperaje) + 'A' : ''}</td>
-              <td style="width:24px;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#dc2626">−</td>
-            </tr>
-          </table>
-          ${r.bateriaObs ? `<div style="font-size:9.5px;color:#444;margin-top:6px;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;text-align:left">${esc(r.bateriaObs)}</div>` : ''}
+          // Batería dibujada con divs/CSS (no SVG) — html2canvas (usado al compartir por
+          // WhatsApp desde el dashboard web) no captura bien los SVG, así que esto se ve
+          // idéntico pero es 100% compatible con esa captura además del navegador normal.
+          return `<div style="margin-top:8px;padding-top:6px;border-top:1.5px solid #111;text-align:center">
+          <b>🔋 Batería</b>${r.bateriaMarca ? ': ' + esc(r.bateriaMarca) : ''}
+          <div style="width:76px;margin:6px auto 0;position:relative">
+            <div style="display:flex;justify-content:space-between;padding:0 14px">
+              <div style="width:10px;height:8px;background:#8a8d91;border-radius:2px 2px 0 0"></div>
+              <div style="width:10px;height:8px;background:#8a8d91;border-radius:2px 2px 0 0"></div>
+            </div>
+            <div style="width:76px;height:40px;background:${bodyColor};border:1.5px solid #111;border-radius:5px;position:relative;box-sizing:border-box">
+              <span style="position:absolute;left:6px;top:3px;font-size:11px;font-weight:bold;color:#16a34a;font-family:Arial,Helvetica,sans-serif">+</span>
+              <span style="position:absolute;right:6px;top:2px;font-size:13px;font-weight:bold;color:#dc2626;font-family:Arial,Helvetica,sans-serif">−</span>
+              <span style="position:absolute;left:0;right:0;bottom:6px;text-align:center;font-size:11px;font-weight:bold;color:${textColor};font-family:Arial,Helvetica,sans-serif">${r.bateriaAmperaje ? esc(r.bateriaAmperaje) + 'A' : ''}</span>
+            </div>
+          </div>
+          ${r.bateriaObs ? `<div style="font-size:8.5px;color:#444;margin-top:3px;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;text-align:left">${esc(r.bateriaObs)}</div>` : ''}
           </div>`;
         })() : ''}
       </div>
     </div>
 
     ${vistas.length ? `<div style="border-bottom:1.5px solid #111"><div style="background:#111;color:#fff;padding:3px 10px;font-size:11px;font-weight:bold">Inspección visual — vistas registradas</div>
-      <div class="cars">${vistaImgs}</div>
+      <div>${vistaImgs}</div>
       ${damages.length ? `<div style="padding:8px 12px">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
           <b style="font-size:11px">Daños registrados (${damages.length}):</b>
@@ -245,7 +267,7 @@ function generarActaHTML(o = {}) {
         }).join('')}</div></div>` : ''}
       </div>` : ''}
 
-    <div class="row serv">
+    <div class="row serv no-split">
       <div class="col">
         <h3>Servicios Solicitados</h3>
         <table><tr><th>Descripción</th><th style="width:90px">Precio</th></tr>
@@ -263,11 +285,11 @@ function generarActaHTML(o = {}) {
         <div style="font-size:9.5px;line-height:1.4">Estoy de acuerdo con las condiciones de servicio y autorizo la reparación con el material necesario, y concedo permiso para operar la unidad con fines de inspección y prueba.</div>
         <div style="display:flex;gap:14px;margin-top:4px">
           <div style="flex:1">
-            ${r.firmaCliImg ? `<div class="firmaimg"><img src="${esc(r.firmaCliImg)}" style="max-height:52px;max-width:100%;object-fit:contain"/></div>` : (r.firmaCli ? `<div class="firmaimg">${firmaSVG(r.firmaCli)}</div>` : '<div class="firmaimg"></div>')}
+            ${r.firmaCliImg ? `<div class="firmaimg no-split"><img src="${esc(r.firmaCliImg)}" style="max-height:52px;max-width:100%;object-fit:contain"/></div>` : (r.firmaCli ? `<div class="firmaimg no-split">${firmaSVG(r.firmaCli)}</div>` : '<div class="firmaimg no-split"></div>')}
             <div class="firma">Firma del Cliente</div>
           </div>
           <div style="flex:1">
-            ${r.firmaRecImg ? `<div class="firmaimg"><img src="${esc(r.firmaRecImg)}" style="max-height:52px;max-width:100%;object-fit:contain"/></div>` : (r.firmaRec ? `<div class="firmaimg">${firmaSVG(r.firmaRec)}</div>` : '<div class="firmaimg"></div>')}
+            ${r.firmaRecImg ? `<div class="firmaimg no-split"><img src="${esc(r.firmaRecImg)}" style="max-height:52px;max-width:100%;object-fit:contain"/></div>` : (r.firmaRec ? `<div class="firmaimg no-split">${firmaSVG(r.firmaRec)}</div>` : '<div class="firmaimg no-split"></div>')}
             <div class="firma">Firma del Recepcionista</div>
           </div>
         </div>
@@ -279,7 +301,7 @@ function generarActaHTML(o = {}) {
       ${(r.cotizacionItems && r.cotizacionItems.length) ? `<div style="margin-top:6px;font-size:9.5px"><b>Servicios y repuestos de la cotización:</b><br/>${r.cotizacionItems.map((it) => `${it.tipo === 'repuesto' ? '🔩' : '🔧'} ${esc(it.n || '')}${it.p ? ' — ' + esc(mon || 'Bs.') + ' ' + Number(it.p).toLocaleString('es-VE') : ''}`).join('<br/>')}</div>` : ''}
       ${pago ? `<div style="margin-top:4px"><b>TOTAL GENERAL (servicio + cotización): ${esc(mon || 'Bs.')} ${(Number(pago.total || 0) + Number(r.montoCotizacion || 0)).toLocaleString('es-VE')}</b></div>` : ''}
     </div>` : ''}
-    ${r.obs && r.obs !== '—' ? `<div style="padding:8px 10px;border-bottom:1.5px solid #111;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;font-size:9.5px;line-height:1.3;max-height:4.5cm;overflow:hidden"><b>Observaciones:</b> ${esc(r.obs)}</div>` : ''}
+    ${r.obs && r.obs !== '—' ? `<div style="padding:8px 10px;border-bottom:1.5px solid #111;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word"><b>Observaciones:</b> ${esc(r.obs)}</div>` : ''}
 
     <div class="cond">
       <b>Condiciones del Servicio:</b><br/>
@@ -293,7 +315,9 @@ function generarActaHTML(o = {}) {
 </body></html>`;
 }
 
-// Convierte los trazos de firma (paths) a un pequeño SVG
+// Convierte los trazos de firma (paths) a un SVG — confiable en todos los motores
+// (navegador, impresión nativa de la app, etc.) porque no depende de que se ejecute
+// ningún script antes de capturar la página.
 function firmaSVG(trazos) {
   if (!Array.isArray(trazos) || !trazos.length) return '';
   // Calcula el área real de la firma para que no se corte
@@ -319,45 +343,46 @@ function firmaSVG(trazos) {
 
 // Informe de TRABAJO REALIZADO: ficha de recepción + todas las fotos y avances del técnico
 function generarTrabajoHTML(o = {}) {
-  const acta = generarActaHTML(o); // reusa el acta completa (queda fija en la hoja 1)
+  const acta = generarActaHTML(o); // reusa el acta completa
   const avances = o.avances || [];
-  const mon = o.moneda || 'Bs.';
 
-  const textoSolo = avances.filter((a) => !a.foto);
-  const conFoto = avances.filter((a) => a.foto);
+  const textoSolo = avances.filter((a) => !a.foto && !a.video);
+  const conFoto = avances.filter((a) => a.foto || a.video);
 
+  // Movimientos sin foto — lista compacta, una sola columna.
   const movimientos = textoSolo.length ? `
-    <div class="sheet bitacora-sheet">
+    <div class="sheet" style="margin-top:16px;page-break-before:always;break-before:page">
       <div class="bit-head">TRABAJO REALIZADO — Movimientos</div>
       <div style="padding:12px">${textoSolo.map((a) => `
-        <div class="bit">
+        <div class="bit no-split">
           <div class="bit-t">${esc(a.t || 'Avance')}</div>
           <div class="bit-m">${esc(a.m || '')}${a.ago ? ' · ' + esc(a.ago) : ''}</div>
         </div>`).join('')}</div>
     </div>` : '';
 
-  // Fotos agrupadas de a EXACTAMENTE 2 por hoja — con salto de página forzado por grupo,
-  // así nunca depende de calcular alturas: 1 foto → 1 hoja con 1; 3 fotos → hoja con 2 y
-  // otra con 1; 10 fotos → 5 hojas de 2, etc.
+  // Fotos: EXACTAMENTE 2 por hoja, lado a lado. Cada celda tiene ancho fijo (50%) para
+  // que la proporción real de la foto (a veces muy alta, a veces muy ancha) nunca
+  // rompa el acomodo — la imagen se achica adentro con max-width/max-height, nunca al
+  // revés. El texto va completo arriba de la foto, nunca encima.
   const grupos = [];
   for (let i = 0; i < conFoto.length; i += 2) grupos.push(conFoto.slice(i, i + 2));
 
   const celda = (a) => `
-    <div class="foto-celda">
+    <div class="foto-celda no-split">
       <div class="bit-t">${esc(a.t || 'Avance')}</div>
       <div class="bit-m">${esc(a.m || '')}${a.ago ? ' · ' + esc(a.ago) : ''}</div>
-      <img src="${esc(a.foto)}" class="bit-foto"/>
-      ${a.video ? `<div style="font-size:9px;color:#666;margin-top:4px">🎥 Video — <a href="${esc(a.video)}">ver aquí</a></div>` : ''}
+      ${a.foto ? `<img src="${esc(a.foto)}" class="bit-foto"/>` : ''}
+      ${a.video ? `<div style="margin-top:6px">${a.videoThumb ? `<img src="${esc(a.videoThumb)}" class="bit-foto"/>` : ''}<div style="font-size:9px;color:#666;margin-top:2px">🎥 Video — <a href="${esc(a.video)}">ver aquí</a></div></div>` : ''}
     </div>`;
 
   const hojasFotos = grupos.map((g) => `
-    <div class="sheet bitacora-sheet">
+    <div class="sheet" style="margin-top:16px;page-break-before:always;break-before:page">
       <div class="bit-head">TRABAJO REALIZADO — Fotos</div>
       <div class="foto-grid">${g.map(celda).join('')}</div>
     </div>`).join('');
 
   const sinNada = (!textoSolo.length && !conFoto.length) ? `
-    <div class="sheet bitacora-sheet">
+    <div class="sheet" style="margin-top:16px;page-break-before:always;break-before:page">
       <div class="bit-head">TRABAJO REALIZADO — Bitácora del técnico</div>
       <div style="padding:12px;color:#888">Sin avances registrados.</div>
     </div>` : '';
@@ -365,14 +390,15 @@ function generarTrabajoHTML(o = {}) {
   const extra = `
     ${movimientos}${hojasFotos}${sinNada}
     <style>
-      .bitacora-sheet { page-break-before: always; break-before: page; margin-top:16px; }
       .bit-head { background:#111; color:#fff; padding:8px 12px; font-weight:bold; font-size:13px; }
-      .bit { border-left: 3px solid #F5B700; padding: 8px 12px; margin-bottom: 12px; background: #fafafa; page-break-inside: avoid; break-inside: avoid; }
+      .bit { border-left: 3px solid #F5B700; padding: 8px 12px; margin-bottom: 12px; background: #fafafa; }
       .bit-t { font-weight: bold; font-size: 13px; }
       .bit-m { color: #666; font-size: 11px; margin-top: 2px; word-wrap: break-word; overflow-wrap: break-word; }
-      .foto-grid { display:flex; gap:14px; padding:14px; }
-      .foto-celda { flex:0 0 calc(50% - 7px); max-width:calc(50% - 7px); border:1px solid #e2e6ea; border-radius:8px; padding:10px; page-break-inside: avoid; break-inside: avoid; box-sizing:border-box; }
-      .bit-foto { width:100%; max-height:11cm; object-fit:contain; border-radius:6px; margin-top:8px; display:block; }
+      .foto-grid { display:block; padding:14px; }
+      .foto-grid::after { content:""; display:block; clear:both; }
+      .foto-celda { float:left; width:calc(50% - 7px); margin-right:14px; box-sizing:border-box; border:1px solid #e2e6ea; border-radius:8px; padding:10px; page-break-inside:avoid; break-inside:avoid; }
+      .foto-celda:nth-child(2) { margin-right:0; }
+      .bit-foto { display:block; margin:8px auto 0; width:100%; height:280px; object-fit:contain; background:#f4f4f6; border-radius:6px; }
     </style>`;
 
   // Insertar la bitácora antes de cerrar el body

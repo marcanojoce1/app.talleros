@@ -100,21 +100,47 @@ function dibujarActa(doc, o) {
   y += hCV;
 
   // --- Accesorios / Documentos / Combustible-Prioridad-Batería ---
-  const hAcc = 60, wDer = 130, wIzq = PAGE_W - 2 * M - wDer;
+  const wDer = 130, wIzq = PAGE_W - 2 * M - wDer;
+  const hAcc = r.bateria ? 106 : 60;
   seccion('accesorios-combustible', () => {
     caja(doc, M, y, wIzq, hAcc, 'Accesorios / Documentos');
     const acc = [].concat(r.accesorios || []).concat(r.documentos || []).filter((x) => typeof x === 'string');
-    let ax = M + 6, ay = y + 20, col = 0;
+    let ay = y + 20, col = 0;
     acc.slice(0, 8).forEach((a) => {
-      doc.font('Helvetica').fontSize(7.5).fillColor('#111').text('[X] ' + limpiarTexto(a), ax + (col % 2) * (wIzq / 2), ay, { width: wIzq / 2 - 8 });
+      const ax = M + 8 + (col % 2) * (wIzq / 2);
+      doc.rect(ax, ay + 1, 7, 7).stroke('#333');
+      doc.moveTo(ax + 1.2, ay + 4.5).lineTo(ax + 3, ay + 6.3).lineTo(ax + 6, ay + 1.5).stroke('#16a34a');
+      doc.font('Helvetica').fontSize(7.5).fillColor('#111').text(limpiarTexto(a), ax + 11, ay, { width: wIzq / 2 - 16 });
       col++; if (col % 2 === 0) ay += 10;
     });
+
     caja(doc, M + wIzq, y, wDer, hAcc, 'Combustible');
-    doc.font('Helvetica-Bold').fontSize(14).fillColor('#111').text(limpiarTexto(r.combustible || '1/2'), M + wIzq, y + 18, { width: wDer, align: 'center' });
-    doc.font('Helvetica').fontSize(7).fillColor('#666').text('Prioridad: ' + limpiarTexto(r.prioridad || 'Media'), M + wIzq + 6, y + 40);
-    if (r.bateria) doc.font('Helvetica').fontSize(6.5).fillColor('#666').text('Bateria: ' + limpiarTexto(r.bateriaMarca || '') + ' ' + (r.bateriaAmperaje ? r.bateriaAmperaje + 'A' : ''), M + wIzq + 6, y + 50, { width: wDer - 10 });
+    const combN = { 'E': 0, 'Vacío': 0, 'Vacio': 0, '\u215B': 12.5, '\u00BC': 25, '\u215C': 37.5, '\u00BD': 50, '\u215D': 62.5, '\u00BE': 75, '\u215E': 87.5, '1/4': 25, '1/2': 50, '3/4': 75, 'F': 100, 'Lleno': 100 };
+    const combPct = combN[r.combustible] != null ? combN[r.combustible] : 50;
+    const bx = M + wIzq + 10, bw = wDer - 20;
+    doc.font('Helvetica-Bold').fontSize(13).fillColor('#111').text(limpiarTexto(r.combustible || '1/2'), bx, y + 16, { width: bw, align: 'center' });
+    doc.rect(bx, y + 32, bw, 5).fill('#eee');
+    doc.rect(bx, y + 32, Math.max(2, bw * combPct / 100), 5).fill('#F5B700');
+    doc.font('Helvetica').fontSize(6).fillColor('#666').text('E', bx, y + 39).text('F', bx + bw - 6, y + 39);
+    doc.font('Helvetica').fontSize(6.5).fillColor('#666').text('Prioridad: ' + limpiarTexto(r.prioridad || 'Media'), bx, y + 48, { width: bw });
+
+    if (r.bateria) {
+      const yB = y + 60;
+      const coloresMap = { negro: '#26282b', gris: '#5b5f66', azul: '#1e4d8f', rojo: '#8f1e1e', verde: '#1e6b3a', blanco: '#d8dadd', amarillo: '#c9a227', plateado: '#9aa0a6', plata: '#9aa0a6' };
+      const colorTxt = (r.bateriaColor || '').toLowerCase().trim();
+      const bodyColor = coloresMap[colorTxt] || '#2b2d31';
+      const textColor = ['#d8dadd', '#9aa0a6', '#c9a227'].includes(bodyColor) ? '#111' : '#fff';
+      doc.moveTo(bx, yB).lineTo(bx + bw, yB).stroke('#111');
+      doc.font('Helvetica-Bold').fontSize(6.5).fillColor('#111').text('Bateria' + (r.bateriaMarca ? ': ' + limpiarTexto(r.bateriaMarca) : ''), bx, yB + 4, { width: bw, align: 'center' });
+      const cajaW = 66, cajaH = 24, cajaX = bx + (bw - cajaW) / 2, cajaY = yB + 14;
+      doc.roundedRect(cajaX, cajaY, cajaW, cajaH, 3).fill(bodyColor);
+      doc.font('Helvetica-Bold').fontSize(9).fillColor('#16a34a').text('+', cajaX + 5, cajaY + 7);
+      doc.fillColor(textColor).fontSize(7.5).text(r.bateriaAmperaje ? limpiarTexto(r.bateriaAmperaje) + 'A' : '', cajaX, cajaY + 8, { width: cajaW, align: 'center' });
+      doc.font('Helvetica-Bold').fontSize(10).fillColor('#dc2626').text('-', cajaX + cajaW - 11, cajaY + 5);
+    }
   });
   y += hAcc;
+
 
   // --- Inspección visual (diagramas del vehículo) ---
   const lados = o.lados || [];
@@ -198,63 +224,71 @@ function dibujarActa(doc, o) {
   });
 }
 
-// Dibuja las hojas de "Trabajo realizado": movimientos y fotos (2 por hoja).
+// Dibuja la hoja de "Trabajo realizado": bitácora en UNA sola columna, un avance
+// debajo del otro (igual al formato original que funcionaba bien) — cada tarjeta
+// mide su propio texto antes de ubicar la foto, así que nunca se superponen, y si
+// una tarjeta no cabe en lo que queda de hoja, pasa completa a la siguiente.
 function dibujarBitacora(doc, avances, orden, veh) {
   const ENCABEZADO_H = 16;
+  const wTexto = PAGE_W - 2 * M - 20;
+  const FOTO_H = 320; // alto de foto, igual al formato original
 
-  function encabezadoHoja(titulo) {
+  function encabezadoHoja() {
     doc.rect(M, M, PAGE_W - 2 * M, ENCABEZADO_H).fill('#111');
-    doc.fillColor('#fff').font('Helvetica-Bold').fontSize(9).text(titulo, M + 6, M + 4);
+    doc.fillColor('#fff').font('Helvetica-Bold').fontSize(9).text('TRABAJO REALIZADO \u2014 Bit\u00e1cora del t\u00e9cnico', M + 6, M + 4);
     doc.fillColor('#111');
   }
 
-  const textoSolo = avances.filter((a) => !a.foto && !a.video);
-  const conFoto = avances.filter((a) => a.foto || a.video);
-
-  // --- Página(s) de Movimientos (resumen de texto) ---
-  if (textoSolo.length) {
-    doc.addPage({ size: 'A4', margin: 0 });
-    encabezadoHoja('TRABAJO REALIZADO - Resumen / Movimientos');
-    let y = M + ENCABEZADO_H + 10;
-    const hTexto = 28;
-    textoSolo.forEach((a) => {
-      if (y + hTexto > PAGE_H - M) { doc.addPage({ size: 'A4', margin: 0 }); encabezadoHoja('TRABAJO REALIZADO - Resumen / Movimientos'); y = M + ENCABEZADO_H + 10; }
-      doc.rect(M, y, 3, hTexto - 4).fill('#F5B700');
-      doc.fillColor('#111').font('Helvetica-Bold').fontSize(8.5).text(limpiarTexto(a.t || 'Avance'), M + 10, y + 2, { width: PAGE_W - 2 * M - 14 });
-      doc.font('Helvetica').fontSize(7.5).fillColor('#666').text(limpiarTexto((a.m || '') + (a.ago ? ' - ' + a.ago : '')), M + 10, y + 13, { width: PAGE_W - 2 * M - 14 });
-      y += hTexto;
-    });
+  function medir(a) {
+    doc.font('Helvetica-Bold').fontSize(10);
+    const hT = doc.heightOfString(limpiarTexto(a.t || 'Avance'), { width: wTexto });
+    doc.font('Helvetica').fontSize(8);
+    const hD = doc.heightOfString(limpiarTexto((a.m || '') + (a.ago ? ' - ' + a.ago : '')), { width: wTexto });
+    return { hT, hD };
   }
 
-  // --- Páginas de Fotos: EXACTAMENTE 2 por hoja, cada grupo agrupado de antemano —
-  // así nunca depende de calcular si algo "cabe a medias", cada hoja nueva siempre
-  // empieza limpia con su propio grupo completo.
-  const wCelda = (PAGE_W - 2 * M - 14) / 2;
-  const hCelda = 480;
-  for (let i = 0; i < conFoto.length; i += 2) {
-    doc.addPage({ size: 'A4', margin: 0 });
-    encabezadoHoja('TRABAJO REALIZADO - Fotos');
-    const y = M + ENCABEZADO_H + 12;
-    const grupo = conFoto.slice(i, i + 2);
-    grupo.forEach((a, idx) => {
-      const cx = M + idx * (wCelda + 14);
-      doc.rect(cx, y, wCelda, hCelda).stroke('#ccc');
-      doc.font('Helvetica-Bold').fontSize(9).fillColor('#111').text(limpiarTexto(a.t || 'Avance'), cx + 8, y + 8, { width: wCelda - 16 });
-      doc.font('Helvetica').fontSize(7.5).fillColor('#666').text(limpiarTexto((a.m || '') + (a.ago ? ' - ' + a.ago : '')), cx + 8, y + 21, { width: wCelda - 16 });
+  doc.addPage({ size: 'A4', margin: 0 });
+  encabezadoHoja();
+  let y = M + ENCABEZADO_H + 12;
+
+  if (!avances.length) {
+    doc.font('Helvetica').fontSize(9).fillColor('#888').text('Sin avances registrados.', M + 10, y);
+    return;
+  }
+
+  avances.forEach((a) => {
+    const { hT, hD } = medir(a);
+    const tieneFoto = !!(a.foto || a.video);
+    const baseTxt = 8 + hT + 4 + hD + 8; // alto del bloque de texto (título + descripción + márgenes)
+    const alturaTarjeta = baseTxt + (tieneFoto ? FOTO_H + 10 : 4);
+
+    // Si la tarjeta no cabe en lo que queda de esta hoja, pasa completa a la siguiente.
+    if (y + alturaTarjeta > PAGE_H - M && y > M + ENCABEZADO_H + 12) {
+      doc.addPage({ size: 'A4', margin: 0 });
+      encabezadoHoja();
+      y = M + ENCABEZADO_H + 12;
+    }
+
+    doc.rect(M, y, 3, alturaTarjeta - 6).fill('#F5B700');
+    doc.font('Helvetica-Bold').fontSize(10).fillColor('#111').text(limpiarTexto(a.t || 'Avance'), M + 14, y + 4, { width: wTexto });
+    doc.font('Helvetica').fontSize(8).fillColor('#666').text(limpiarTexto((a.m || '') + (a.ago ? ' - ' + a.ago : '')), M + 14, y + 4 + hT + 4, { width: wTexto });
+
+    if (tieneFoto) {
+      const fotoY = y + baseTxt;
       const buf = bufferDeBase64(a.foto) || bufferDeBase64(a.videoThumb);
-      const fotoY = y + 36;
-      const fotoH = a.video ? hCelda - 58 : hCelda - 44;
       if (buf) {
-        try { doc.image(buf, cx + 8, fotoY, { fit: [wCelda - 16, fotoH], align: 'center', valign: 'center' }); } catch (e) {}
+        try { doc.image(buf, M + 14, fotoY, { fit: [wTexto, FOTO_H], align: 'left', valign: 'top' }); } catch (e) {}
       } else if (a.foto && a.foto.startsWith('http')) {
-        doc.font('Helvetica').fontSize(7).fillColor('#999').text('(foto alojada externamente, no se pudo incrustar)', cx + 8, fotoY + fotoH / 2, { width: wCelda - 16, align: 'center' });
+        doc.font('Helvetica').fontSize(7).fillColor('#999').text('(foto alojada externamente, no se pudo incrustar)', M + 14, fotoY, { width: wTexto });
       } else if (a.video) {
-        doc.rect(cx + 8, fotoY, wCelda - 16, fotoH).fillAndStroke('#f2f4f7', '#ccc');
-        doc.fillColor('#666').font('Helvetica').fontSize(9).text('Video', cx + 8, fotoY + fotoH / 2 - 5, { width: wCelda - 16, align: 'center' });
+        doc.rect(M + 14, fotoY, wTexto, FOTO_H).fillAndStroke('#f2f4f7', '#ccc');
+        doc.fillColor('#666').font('Helvetica').fontSize(9).text('Video', M + 14, fotoY + FOTO_H / 2 - 5, { width: wTexto, align: 'center' });
       }
-      if (a.video) doc.font('Helvetica').fontSize(6.5).fillColor('#666').text('Video adjunto - ver desde la app', cx + 8, y + hCelda - 12, { width: wCelda - 16 });
-    });
-  }
+      if (a.video) doc.font('Helvetica').fontSize(7).fillColor('#666').text('Video adjunto - ver desde la app', M + 14, fotoY + FOTO_H + 4, { width: wTexto });
+    }
+
+    y += alturaTarjeta + 8;
+  });
 }
 
 function generarActaPDF(o) {
