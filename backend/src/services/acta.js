@@ -103,8 +103,8 @@ function generarActaHTML(o = {}) {
   const filaAngosta = vistas.filter((k) => FILA_ANGOSTA.includes(k));
   const filaAncha = vistas.filter((k) => FILA_ANCHA.includes(k));
   const vistaImgs = [
-    filaAngosta.length ? `<div class="cars cars-3">${filaAngosta.map((k) => pintarCaja(k, 130)).join('')}</div>` : '',
-    filaAncha.length ? `<div class="cars cars-2">${filaAncha.map((k) => pintarCaja(k, 130)).join('')}</div>` : '',
+    filaAngosta.length ? `<div class="cars cars-3">${filaAngosta.map((k) => pintarCaja(k, 115)).join('')}</div>` : '',
+    filaAncha.length ? `<div class="cars cars-2">${filaAncha.map((k) => pintarCaja(k, 115)).join('')}</div>` : '',
   ].join('');
 
   return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"/>
@@ -150,7 +150,7 @@ function generarActaHTML(o = {}) {
   .serv table { width: 100%; border-collapse: collapse; font-size: 11px; }
   .serv td, .serv th { border: 1px solid #999; padding: 4px 6px; }
   .fuel { text-align: center; font-size: 10px; }
-  .cond { font-size: 8.5px; color: #444; padding: 8px 10px; line-height: 1.4; border-top: 1.5px solid #111; }
+  .cond { font-size: 8px; color: #444; padding: 6px 10px; line-height: 1.25; border-top: 1.5px solid #111; }
   .firma { border-top: 1px solid #333; margin-top: 6px; padding-top: 3px; text-align: center; font-size: 9px; }
   .firmaimg { min-height: 52px; display:flex; align-items:flex-end; justify-content:center; overflow:visible; }
   .no-split { page-break-inside: avoid; break-inside: avoid; }
