@@ -359,26 +359,21 @@ function generarTrabajoHTML(o = {}) {
         </div>`).join('')}</div>
     </div>` : '';
 
-  // Fotos: EXACTAMENTE 2 por hoja, lado a lado. Cada celda tiene ancho fijo (50%) para
-  // que la proporción real de la foto (a veces muy alta, a veces muy ancha) nunca
-  // rompa el acomodo — la imagen se achica adentro con max-width/max-height, nunca al
-  // revés. El texto va completo arriba de la foto, nunca encima.
-  const grupos = [];
-  for (let i = 0; i < conFoto.length; i += 2) grupos.push(conFoto.slice(i, i + 2));
-
+  // Fotos: UNA por hoja — así, sin importar qué tan larga sea la descripción o qué
+  // proporción tenga la foto, cada avance vive solo en su propia página. Elimina por
+  // completo el problema de emparejar dos fotos de distinto tamaño en una misma hoja.
   const celda = (a) => `
-    <div class="foto-celda no-split">
-      <div class="bit-t">${esc(a.t || 'Avance')}</div>
-      <div class="bit-m">${esc(a.m || '')}${a.ago ? ' · ' + esc(a.ago) : ''}</div>
-      ${a.foto ? `<img src="${esc(a.foto)}" class="bit-foto"/>` : ''}
-      ${a.video ? `<div style="margin-top:6px">${a.videoThumb ? `<img src="${esc(a.videoThumb)}" class="bit-foto"/>` : ''}<div style="font-size:9px;color:#666;margin-top:2px">🎥 Video — <a href="${esc(a.video)}">ver aquí</a></div></div>` : ''}
-    </div>`;
-
-  const hojasFotos = grupos.map((g) => `
     <div class="sheet" style="margin-top:16px;page-break-before:always;break-before:page">
       <div class="bit-head">TRABAJO REALIZADO — Fotos</div>
-      <div class="foto-grid">${g.map(celda).join('')}</div>
-    </div>`).join('');
+      <div class="foto-solo no-split">
+        <div class="bit-t">${esc(a.t || 'Avance')}</div>
+        <div class="bit-m">${esc(a.m || '')}${a.ago ? ' · ' + esc(a.ago) : ''}</div>
+        ${a.foto ? `<img src="${esc(a.foto)}" class="bit-foto"/>` : ''}
+        ${a.video ? `<div style="margin-top:6px">${a.videoThumb ? `<img src="${esc(a.videoThumb)}" class="bit-foto"/>` : ''}<div style="font-size:9px;color:#666;margin-top:2px">🎥 Video — <a href="${esc(a.video)}">ver aquí</a></div></div>` : ''}
+      </div>
+    </div>`;
+
+  const hojasFotos = conFoto.map(celda).join('');
 
   const sinNada = (!textoSolo.length && !conFoto.length) ? `
     <div class="sheet" style="margin-top:16px;page-break-before:always;break-before:page">
@@ -393,10 +388,8 @@ function generarTrabajoHTML(o = {}) {
       .bit { border-left: 3px solid #F5B700; padding: 8px 12px; margin-bottom: 12px; background: #fafafa; }
       .bit-t { font-weight: bold; font-size: 13px; }
       .bit-m { color: #666; font-size: 11px; margin-top: 2px; word-wrap: break-word; overflow-wrap: break-word; }
-      .foto-grid { display:block; padding:14px; font-size:0; }
-      .foto-celda { display:inline-block; vertical-align:top; font-size:12px; width:calc(50% - 7px); margin-right:14px; box-sizing:border-box; border:1px solid #e2e6ea; border-radius:8px; padding:10px; page-break-inside:avoid; break-inside:avoid; }
-      .foto-celda:nth-child(2) { margin-right:0; }
-      .bit-foto { display:block; margin:8px auto 0; width:100%; height:280px; object-fit:contain; background:#f4f4f6; border-radius:6px; }
+      .foto-solo { padding:16px; }
+      .bit-foto { display:block; margin:10px auto 0; width:100%; max-width:600px; height:560px; object-fit:contain; background:#f4f4f6; border-radius:6px; }
     </style>`;
 
   // Insertar la bitácora antes de cerrar el body
