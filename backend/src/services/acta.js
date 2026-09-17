@@ -300,16 +300,18 @@ function generarActaHTML(o = {}) {
       ${(r.cotizacionItems && r.cotizacionItems.length) ? `<div style="margin-top:6px;font-size:9.5px"><b>Servicios y repuestos de la cotización:</b><br/>${r.cotizacionItems.map((it) => `${it.tipo === 'repuesto' ? '🔩' : '🔧'} ${esc(it.n || '')}${it.p ? ' — ' + esc(mon || 'Bs.') + ' ' + Number(it.p).toLocaleString('es-VE') : ''}`).join('<br/>')}</div>` : ''}
       ${pago ? `<div style="margin-top:4px"><b>TOTAL GENERAL (servicio + cotización): ${esc(mon || 'Bs.')} ${(Number(pago.total || 0) + Number(r.montoCotizacion || 0)).toLocaleString('es-VE')}</b></div>` : ''}
     </div>` : ''}
-    ${r.obs && r.obs !== '—' ? `<div style="padding:8px 10px;border-bottom:1.5px solid #111;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word"><b>Observaciones:</b> ${esc(r.obs)}</div>` : ''}
+    <div class="no-split">
+      ${r.obs && r.obs !== '—' ? `<div style="padding:8px 10px;border-bottom:1.5px solid #111;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word"><b>Observaciones:</b> ${esc(r.obs)}</div>` : ''}
 
-    <div class="cond">
-      <b>Condiciones del Servicio:</b><br/>
-      ${taller.condiciones ? esc(taller.condiciones).replace(/\n/g, '<br/>') : `1) Si el vehículo no se recoge una vez terminado el trabajo, se cobrará resguardo por día.
-      2) Es necesario liquidar el 100% del servicio para entregar la unidad.
-      3) En caso de requerir servicio adicional, el cliente será notificado antes de realizarlo.
-      4) El taller no se responsabiliza por objetos de valor no reportados al momento de la recepción.`}
+      <div class="cond">
+        <b>Condiciones del Servicio:</b><br/>
+        ${taller.condiciones ? esc(taller.condiciones).replace(/\n/g, '<br/>') : `1) Si el vehículo no se recoge una vez terminado el trabajo, se cobrará resguardo por día.
+        2) Es necesario liquidar el 100% del servicio para entregar la unidad.
+        3) En caso de requerir servicio adicional, el cliente será notificado antes de realizarlo.
+        4) El taller no se responsabiliza por objetos de valor no reportados al momento de la recepción.`}
+      </div>
+      ${taller.pie ? `<div style="text-align:center;font-size:9px;color:#666;padding:6px;border-top:1px solid #ccc">${esc(taller.pie).replace(/\n/g, '<br/>')}</div>` : ''}
     </div>
-    ${taller.pie ? `<div style="text-align:center;font-size:9px;color:#666;padding:6px;border-top:1px solid #ccc">${esc(taller.pie).replace(/\n/g, '<br/>')}</div>` : ''}
   </div>
 </body></html>`;
 }
