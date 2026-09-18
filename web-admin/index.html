@@ -413,7 +413,7 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover{background:var(--surface-2)}
   <div class="web-wrap"><div class="web">
     <div class="wsideBackdrop" id="wSideBackdrop" onclick="toggleWSide(false)"></div>
     <div class="wside">
-      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v228</span></div>
+      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v229</span></div>
       <div class="wlbl op-item">Operación</div>
       <a class="on op-item" data-w="dash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
       <a class="op-item" data-w="recep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-6 0v4"/><rect x="2" y="9" width="20" height="11" rx="2"/></svg>Recepción digital</a>
@@ -2364,32 +2364,40 @@ async function compartirComoPDF(pdfUrl,filename,titulo,textoCaption){
         primeraPagina=false;
       }else{
         // Esta hoja en particular salió más alta que una página A4 (pasa con
-        // observaciones muy largas). Hay que cortarLA en más de una página —
-        // pero como es una sola hoja capturada aparte, nunca se mezcla con el
-        // contenido de otra hoja distinta, así que es seguro recortarla.
+        // observaciones muy largas). Hay que cortarLA en más de una página — pero
+        // como es una sola hoja capturada aparte, nunca se mezcla con el contenido
+        // de otra hoja distinta. Recortamos nosotros mismos con un canvas (en vez de
+        // depender de la función clip() de la librería de PDF) para estar 100%
+        // seguros de que cada página muestra solo su pedazo, sin traslapes.
         const sheetRect=hojas[i].getBoundingClientRect();
         const bloques=Array.from(hojas[i].querySelectorAll('.no-split')).map(el=>{
           const r=el.getBoundingClientRect();
           return {top:r.top-sheetRect.top,bottom:r.bottom-sheetRect.top};
         }).filter(b=>b.bottom>b.top);
-        const alturaCssTotal=imgH*(820/pageW);
+        const escalaReal=canvasHoja.width/820; // px reales del canvas por cada px CSS
+        const alturaCssTotal=canvasHoja.height/escalaReal;
         const pageH_css=pageH*(820/pageW);
         let posCss=0,pag=0;
         while(posCss<alturaCssTotal-1){
           let corte=posCss+pageH_css;
+          // De TODOS los bloques que quedarían partidos por este corte, usamos el
+          // que empieza más temprano (el primero en aparecer), no cualquiera.
           for(const b of bloques){
-            if(b.top<corte && b.bottom>corte && (b.bottom-b.top)<pageH_css*0.95){
-              corte=Math.max(posCss+40,b.top);
+            if(b.top<corte && b.bottom>corte && (b.bottom-b.top)<pageH_css*0.95 && b.top>posCss+40){
+              corte=Math.min(corte,b.top);
             }
           }
+          const altoRebanadaCss=Math.min(corte,alturaCssTotal)-posCss;
+          const altoRebanadaPx=Math.round(altoRebanadaCss*escalaReal);
+          const yInicioPx=Math.round(posCss*escalaReal);
+          const recorte=document.createElement('canvas');
+          recorte.width=canvasHoja.width;
+          recorte.height=Math.max(1,altoRebanadaPx);
+          recorte.getContext('2d').drawImage(canvasHoja,0,yInicioPx,canvasHoja.width,altoRebanadaPx,0,0,canvasHoja.width,altoRebanadaPx);
+          const imgDataRebanada=recorte.toDataURL('image/jpeg',0.92);
+          const altoRebanadaPt=altoRebanadaCss*(pageW/820);
           if(!primeraPagina)pdf.addPage();
-          const offsetPt=posCss*(pageW/820);
-          const altoVisiblePt=(corte-posCss)*(pageW/820);
-          pdf.saveGraphicsState();
-          pdf.rect(0,0,pageW,altoVisiblePt).clip();
-          if(pdf.discardPath)pdf.discardPath();
-          pdf.addImage(imgDataHoja,'JPEG',0,-offsetPt,pageW,imgH);
-          pdf.restoreGraphicsState();
+          pdf.addImage(imgDataRebanada,'JPEG',0,0,pageW,altoRebanadaPt);
           primeraPagina=false;
           posCss=corte;pag++;
           if(pag>10)break;
