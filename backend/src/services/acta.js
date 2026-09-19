@@ -152,7 +152,8 @@ function generarActaHTML(o = {}) {
   .fuel { text-align: center; font-size: 10px; }
   .cond { font-size: 8px; color: #444; padding: 6px 10px; line-height: 1.25; border-top: 1.5px solid #111; }
   .firma { border-top: 1px solid #333; margin-top: 6px; padding-top: 3px; text-align: center; font-size: 9px; }
-  .firmaimg { min-height: 52px; display:flex; align-items:flex-end; justify-content:center; overflow:visible; }
+  .firmaimg { min-height: 52px; text-align:center; overflow:visible; }
+  .firmaimg img, .firmaimg svg { vertical-align:bottom; }
   .no-split { page-break-inside: avoid; break-inside: avoid; }
   @page { size: A4; margin: 0; }
   @media print { .noprint { display: none; } body { padding: 0; } }
