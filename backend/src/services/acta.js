@@ -167,7 +167,7 @@ function generarActaHTML(o = {}) {
   <div class="sheet">
     <div class="head">
       <div class="brand">
-        ${taller.logo ? `<img src="${esc(taller.logo)}" style="max-height:${Math.round(44*((taller.logo_tam||100)/100))}px;max-width:${Math.round(170*((taller.logo_tam||100)/100))}px;margin-bottom:4px"/>` : ''}
+        ${taller.logo ? `<img src="${esc(taller.logo)}" style="max-height:${Math.min(56, Math.round(44*((taller.logo_tam||100)/100)))}px;max-width:${Math.min(180, Math.round(170*((taller.logo_tam||100)/100)))}px;margin-bottom:4px"/>` : ''}
         <h1>${esc(taller.nombre || 'TallerOS')}</h1>
         <div class="sub">${esc(taller.rubro || 'TALLER AUTOMOTRIZ')}</div>
         ${taller.telefono ? `<div class="sub2">Tel: ${esc(taller.telefono)}</div>` : ''}
@@ -301,7 +301,7 @@ function generarActaHTML(o = {}) {
       ${pago ? `<div style="margin-top:4px"><b>TOTAL GENERAL (servicio + cotización): ${esc(mon || 'Bs.')} ${(Number(pago.total || 0) + Number(r.montoCotizacion || 0)).toLocaleString('es-VE')}</b></div>` : ''}
     </div>` : ''}
     <div class="no-split">
-      ${r.obs && r.obs !== '—' ? `<div style="padding:8px 10px;border-bottom:1.5px solid #111;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word"><b>Observaciones:</b> ${esc(r.obs)}</div>` : ''}
+      ${r.obs && r.obs !== '—' ? `<div style="padding:6px 10px;border-bottom:1.5px solid #111;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;font-size:10.5px;line-height:1.35"><b>Observaciones:</b> ${esc(r.obs)}</div>` : ''}
 
       <div class="cond">
         <b>Condiciones del Servicio:</b><br/>
@@ -339,7 +339,12 @@ function firmaSVG(trazos) {
     vb = `${minX - m} ${minY - m} ${w} ${h}`;
   }
   const paths = trazos.map((p) => `<path d="${esc(p)}" stroke="#16191d" stroke-width="2" fill="none" stroke-linecap="round"/>`).join('');
-  return `<svg viewBox="${vb}" width="170" height="50" preserveAspectRatio="xMidYMid meet">${paths}</svg>`;
+  const svgMarkup = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" width="170" height="50" preserveAspectRatio="xMidYMid meet">${paths}</svg>`;
+  // La envolvemos como <img> (imagen embebida en base64) en vez de dejar el <svg>
+  // "suelto" en el HTML — html2canvas (usado al compartir por WhatsApp desde el
+  // dashboard web) no captura bien el SVG en línea, pero sí una imagen normal.
+  const svgBase64 = Buffer.from(svgMarkup, 'utf-8').toString('base64');
+  return `<img src="data:image/svg+xml;base64,${svgBase64}" width="170" height="50" style="display:block"/>`;
 }
 
 // Informe de TRABAJO REALIZADO: ficha de recepción + todas las fotos y avances del técnico
