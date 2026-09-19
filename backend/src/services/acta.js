@@ -333,10 +333,16 @@ function firmaSVG(trazos) {
     }
   });
   let vb = '0 0 300 120';
-  if (isFinite(minX)) {
+  if (isFinite(minX) && isFinite(minY) && isFinite(maxX) && isFinite(maxY)) {
     const m = 8;
     const w = Math.max(20, maxX - minX + m * 2), h = Math.max(20, maxY - minY + m * 2);
-    vb = `${minX - m} ${minY - m} ${w} ${h}`;
+    // Si el trazo tiene curvas/arcos con más números por comando (no solo x,y), el
+    // cálculo de arriba puede salir disparatado (un área gigante o rarísima) y dejar
+    // la firma invisible. Si pasa eso, mejor usamos el tamaño por defecto que
+    // mostrar algo roto.
+    if (isFinite(w) && isFinite(h) && w > 0 && h > 0 && w < 5000 && h < 5000) {
+      vb = `${minX - m} ${minY - m} ${w} ${h}`;
+    }
   }
   const paths = trazos.map((p) => `<path d="${esc(p)}" stroke="#16191d" stroke-width="2" fill="none" stroke-linecap="round"/>`).join('');
   const svgMarkup = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" width="170" height="50" preserveAspectRatio="xMidYMid meet">${paths}</svg>`;
