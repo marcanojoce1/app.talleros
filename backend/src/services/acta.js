@@ -350,7 +350,7 @@ function firmaSVG(trazos) {
   // "suelto" en el HTML — html2canvas (usado al compartir por WhatsApp desde el
   // dashboard web) no captura bien el SVG en línea, pero sí una imagen normal.
   const svgBase64 = Buffer.from(svgMarkup, 'utf-8').toString('base64');
-  return `<img src="data:image/svg+xml;base64,${svgBase64}" width="170" height="50" style="display:block"/>`;
+  return `<img src="data:image/svg+xml;base64,${svgBase64}" style="display:block;max-width:170px;max-height:50px;width:auto;height:auto;object-fit:contain"/>`;
 }
 
 // Informe de TRABAJO REALIZADO: ficha de recepción + todas las fotos y avances del técnico
