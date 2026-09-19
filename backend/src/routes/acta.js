@@ -29,6 +29,13 @@ async function incrustarImagen(url) {
 async function incrustarFirmas(recepcion) {
   if (!recepcion) return recepcion;
   const r = { ...recepcion };
+  // Diagnóstico temporal: para saber de una vez cómo está guardada cada firma
+  // (como imagen subida o como trazos dibujados a mano) en vez de seguir
+  // adivinando — esto aparece en los logs de Render cada vez que se abre el Acta.
+  console.log('[firma-diagnostico] firmaCliImg:', r.firmaCliImg ? (String(r.firmaCliImg).slice(0, 80) + '... (longitud total: ' + String(r.firmaCliImg).length + ')') : '(vacío)');
+  console.log('[firma-diagnostico] firmaCli (trazos):', Array.isArray(r.firmaCli) ? ('array de ' + r.firmaCli.length + ' trazo(s), primero: ' + String(r.firmaCli[0]).slice(0, 80)) : '(vacío)');
+  console.log('[firma-diagnostico] firmaRecImg:', r.firmaRecImg ? (String(r.firmaRecImg).slice(0, 80) + '... (longitud total: ' + String(r.firmaRecImg).length + ')') : '(vacío)');
+  console.log('[firma-diagnostico] firmaRec (trazos):', Array.isArray(r.firmaRec) ? ('array de ' + r.firmaRec.length + ' trazo(s), primero: ' + String(r.firmaRec[0]).slice(0, 80)) : '(vacío)');
   if (r.firmaCliImg) r.firmaCliImg = await incrustarImagen(r.firmaCliImg);
   if (r.firmaRecImg) r.firmaRecImg = await incrustarImagen(r.firmaRecImg);
   return r;
