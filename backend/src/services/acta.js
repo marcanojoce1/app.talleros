@@ -300,7 +300,7 @@ function generarActaHTML(o = {}) {
       ${(r.cotizacionItems && r.cotizacionItems.length) ? `<div style="margin-top:6px;font-size:9.5px"><b>Servicios y repuestos de la cotización:</b><br/>${r.cotizacionItems.map((it) => `${it.tipo === 'repuesto' ? '🔩' : '🔧'} ${esc(it.n || '')}${it.p ? ' — ' + esc(mon || 'Bs.') + ' ' + Number(it.p).toLocaleString('es-VE') : ''}`).join('<br/>')}</div>` : ''}
       ${pago ? `<div style="margin-top:4px"><b>TOTAL GENERAL (servicio + cotización): ${esc(mon || 'Bs.')} ${(Number(pago.total || 0) + Number(r.montoCotizacion || 0)).toLocaleString('es-VE')}</b></div>` : ''}
     </div>` : ''}
-    <div class="no-split">
+    <div class="no-split acta-flex">
       ${r.obs && r.obs !== '—' ? `<div style="padding:6px 10px;border-bottom:1.5px solid #111;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;font-size:10.5px;line-height:1.35"><b>Observaciones:</b> ${esc(r.obs)}</div>` : ''}
 
       <div class="cond">
