@@ -2,7 +2,6 @@
 const express = require('express');
 const { query } = require('../db');
 const { generarActaHTML, generarTrabajoHTML, generarCotizacionHTML, generarResumenEsperaHTML } = require('../services/acta');
-const { generarActaPDF, generarTrabajoPDF } = require('../services/pdfkit-acta');
 
 const router = express.Router();
 
@@ -104,17 +103,20 @@ router.get('/acta/:tallerId/:vehId', async (req, res) => {
       avances: veh.advances || [],
       baseUrl,
     };
-    // ?formato=pdf → PDF real dibujado directamente (PDFKit) — no necesita Chrome para
-    // nada, así que no puede fallar por eso; el Acta siempre queda en la hoja 1.
+    // ?formato=pdf → PDF real generado con un navegador de verdad (Chromium en el
+    // servidor) a partir del MISMO HTML que ya sabemos que se ve perfecto — sin
+    // aproximaciones ni librerías que imitan un navegador, es uno de verdad.
     if (req.query.formato === 'pdf') {
       try {
-        const buffer = await generarActaPDF(datosActa);
+        const { generarPDFDesdeHTML } = require('../services/puppeteer-pdf');
+        let htmlPdf = generarActaHTML(datosActa);
+        htmlPdf = htmlPdf.replace(/<!--TOOLBAR_START-->[\s\S]*?<!--TOOLBAR_END-->/, '');
+        const buffer = await generarPDFDesdeHTML(htmlPdf);
         console.log('[pdf] Acta generada con exito, tamaño:', buffer.length, 'bytes');
         res.set('Content-Type', 'application/pdf').set('Content-Disposition', 'inline; filename="acta.pdf"').send(buffer);
         return;
       } catch (e) {
-        console.error('[pdf] No se pudo generar el PDF con PDFKit:', e.message, e.stack);
-        console.error('[pdf] Datos que causaron el error:', JSON.stringify(datosActa).slice(0, 3000));
+        console.error('[pdf] No se pudo generar el PDF:', e.message, e.stack);
       }
     }
     let html = generarActaHTML(datosActa);
@@ -154,13 +156,15 @@ router.get('/trabajo/:tallerId/:vehId', async (req, res) => {
     };
     if (req.query.formato === 'pdf') {
       try {
-        const buffer = await generarTrabajoPDF(datosTrabajo);
+        const { generarPDFDesdeHTML } = require('../services/puppeteer-pdf');
+        let htmlPdf = generarTrabajoHTML(datosTrabajo);
+        htmlPdf = htmlPdf.replace(/<!--TOOLBAR_START-->[\s\S]*?<!--TOOLBAR_END-->/, '');
+        const buffer = await generarPDFDesdeHTML(htmlPdf);
         console.log('[pdf] Trabajo generado con exito, tamaño:', buffer.length, 'bytes');
         res.set('Content-Type', 'application/pdf').set('Content-Disposition', 'inline; filename="trabajo.pdf"').send(buffer);
         return;
       } catch (e) {
-        console.error('[pdf] No se pudo generar el PDF con PDFKit:', e.message, e.stack);
-        console.error('[pdf] Datos que causaron el error:', JSON.stringify(datosTrabajo).slice(0, 3000));
+        console.error('[pdf] No se pudo generar el PDF:', e.message, e.stack);
       }
     }
     let html = generarTrabajoHTML(datosTrabajo);
