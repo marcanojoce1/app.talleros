@@ -6,6 +6,34 @@ const { generarActaPDF, generarTrabajoPDF } = require('../services/pdfkit-acta')
 
 const router = express.Router();
 
+// Descarga una imagen (la firma guardada como foto) y la convierte a "data URI"
+// (el archivo incrustado directo en el texto) — así el HTML resultante nunca
+// depende de que el que lo vea después tenga sesión iniciada o permiso para
+// acceder a esa imagen por su cuenta; ya viene incluida.
+async function incrustarImagen(url) {
+  if (!url || !/^https?:\/\//i.test(url)) return url;
+  try {
+    const resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!resp.ok) return url;
+    const tipo = resp.headers.get('content-type') || 'image/png';
+    const buf = Buffer.from(await resp.arrayBuffer());
+    if (buf.length > 3 * 1024 * 1024) return url; // muy pesada, mejor no incrustarla
+    return `data:${tipo};base64,${buf.toString('base64')}`;
+  } catch (e) {
+    console.error('[acta] No se pudo incrustar imagen de firma:', url, e.message);
+    return url;
+  }
+}
+
+// Reemplaza firmaCliImg/firmaRecImg (si son URLs) por su versión incrustada.
+async function incrustarFirmas(recepcion) {
+  if (!recepcion) return recepcion;
+  const r = { ...recepcion };
+  if (r.firmaCliImg) r.firmaCliImg = await incrustarImagen(r.firmaCliImg);
+  if (r.firmaRecImg) r.firmaRecImg = await incrustarImagen(r.firmaRecImg);
+  return r;
+}
+
 // GET /api/resumen-espera/:tallerId → resumen en HTML/PDF de los vehículos en espera
 router.get('/resumen-espera/:tallerId', async (req, res) => {
   const tallerId = Number(req.params.tallerId);
@@ -93,7 +121,7 @@ router.get('/acta/:tallerId/:vehId', async (req, res) => {
       taller,
       cliente: cli,
       vehiculo: veh,
-      recepcion: veh.recepcion || {},
+      recepcion: await incrustarFirmas(veh.recepcion || {}),
       damages: veh.recepDamages || [],
       lados: veh.recepLados || [],
       orden: veh.numOrden ? "OS" + String(veh.numOrden).padStart(4, "0") : veh.id,
@@ -146,7 +174,7 @@ router.get('/trabajo/:tallerId/:vehId', async (req, res) => {
     const proto = req.headers['x-forwarded-proto'] || req.protocol;
     const baseUrl = `${proto}://${req.get('host')}`;
     const datosTrabajo = {
-      taller, cliente: cli, vehiculo: veh, recepcion: veh.recepcion || {},
+      taller, cliente: cli, vehiculo: veh, recepcion: await incrustarFirmas(veh.recepcion || {}),
       damages: veh.recepDamages || [], lados: veh.recepLados || [], orden: veh.numOrden ? "OS" + String(veh.numOrden).padStart(4, "0") : veh.id,
       precio: hist ? hist.total : (veh.cost || ''),
       servicios: hist && hist.servicios ? hist.servicios : [{ desc: (veh.recepcion && veh.recepcion.trabajo) || veh.motivo || '', precio: hist ? hist.total : (veh.cost || '') }],
