@@ -11,7 +11,22 @@ const router = express.Router();
 // depende de que el que lo vea después tenga sesión iniciada o permiso para
 // acceder a esa imagen por su cuenta; ya viene incluida.
 async function incrustarImagen(url) {
-  if (!url || !/^https?:\/\//i.test(url)) return url;
+  if (!url) return url;
+  // Si ya viene como un SVG "codificado en texto" (data:image/svg+xml;charset=utf-8,...),
+  // lo pasamos a base64 — es exactamente el mismo dibujo, pero en un formato que
+  // html2canvas (usado al compartir por WhatsApp desde el dashboard) sí sabe leer
+  // bien; el navegador normal lee ambos formatos igual, por eso ahí siempre se vio bien.
+  const urlEncoded = /^data:image\/svg\+xml(?:;charset=utf-8)?,([\s\S]*)$/i.exec(url);
+  if (urlEncoded) {
+    try {
+      const decodificado = decodeURIComponent(urlEncoded[1]);
+      return `data:image/svg+xml;base64,${Buffer.from(decodificado, 'utf-8').toString('base64')}`;
+    } catch (e) {
+      console.error('[acta] No se pudo convertir firma SVG a base64:', e.message);
+      return url;
+    }
+  }
+  if (!/^https?:\/\//i.test(url)) return url;
   try {
     const resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
     if (!resp.ok) return url;
@@ -29,13 +44,6 @@ async function incrustarImagen(url) {
 async function incrustarFirmas(recepcion) {
   if (!recepcion) return recepcion;
   const r = { ...recepcion };
-  // Diagnóstico temporal: para saber de una vez cómo está guardada cada firma
-  // (como imagen subida o como trazos dibujados a mano) en vez de seguir
-  // adivinando — esto aparece en los logs de Render cada vez que se abre el Acta.
-  console.log('[firma-diagnostico] firmaCliImg:', r.firmaCliImg ? (String(r.firmaCliImg).slice(0, 80) + '... (longitud total: ' + String(r.firmaCliImg).length + ')') : '(vacío)');
-  console.log('[firma-diagnostico] firmaCli (trazos):', Array.isArray(r.firmaCli) ? ('array de ' + r.firmaCli.length + ' trazo(s), primero: ' + String(r.firmaCli[0]).slice(0, 80)) : '(vacío)');
-  console.log('[firma-diagnostico] firmaRecImg:', r.firmaRecImg ? (String(r.firmaRecImg).slice(0, 80) + '... (longitud total: ' + String(r.firmaRecImg).length + ')') : '(vacío)');
-  console.log('[firma-diagnostico] firmaRec (trazos):', Array.isArray(r.firmaRec) ? ('array de ' + r.firmaRec.length + ' trazo(s), primero: ' + String(r.firmaRec[0]).slice(0, 80)) : '(vacío)');
   if (r.firmaCliImg) r.firmaCliImg = await incrustarImagen(r.firmaCliImg);
   if (r.firmaRecImg) r.firmaRecImg = await incrustarImagen(r.firmaRecImg);
   return r;
