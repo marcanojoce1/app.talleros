@@ -399,9 +399,18 @@ export default function AdminHomeScreen({ navigation, route }) {
       {!!error && (
         <View style={{ padding: 16, alignItems: 'center' }}>
           <Text style={s.err}>{error}</Text>
-          <TouchableOpacity style={[s.btn, { marginTop: 12, paddingHorizontal: 28 }]} onPress={() => (taller ? recargar() : setError(''))}>
-            <Text style={s.btnT}>🔄 Reintentar</Text>
-          </TouchableOpacity>
+          {/* Si el token venció (pasa solo si no entras en más de 7 días), "Reintentar" con
+              el mismo token vencido nunca funciona — hay que mandar a iniciar sesión de
+              nuevo. Antes esto dejaba a la persona atascada sin poder hacer nada. */}
+          {/Token inválido|expirad/i.test(error) ? (
+            <TouchableOpacity style={[s.btn, { marginTop: 12, paddingHorizontal: 28 }]} onPress={salir}>
+              <Text style={s.btnT}>🔑 Iniciar sesión de nuevo</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={[s.btn, { marginTop: 12, paddingHorizontal: 28 }]} onPress={() => (taller ? recargar() : setError(''))}>
+              <Text style={s.btnT}>🔄 Reintentar</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
       {!taller && !error && !loading && <Text style={s.muted2}>Selecciona un taller para comenzar.</Text>}

@@ -4,7 +4,11 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
 const SECRET = process.env.JWT_SECRET || 'dev-secret';
-const EXPIRES = process.env.JWT_EXPIRES || '7d';
+// 180 días por defecto — esto es una app de trabajo diario, no algo bancario, así
+// que no tiene sentido que alguien pierda la sesión solo por no abrirla una semana.
+// Si quieres un valor distinto sin tocar código, puedes poner la variable de entorno
+// JWT_EXPIRES en Render (ej. '365d', '30d').
+const EXPIRES = process.env.JWT_EXPIRES || '180d';
 
 function hashPassword(plain) {
   return bcrypt.hash(plain, 10);

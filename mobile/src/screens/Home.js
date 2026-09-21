@@ -219,7 +219,11 @@ export default function HomeScreen({ navigation, route }) {
     return (
       <View style={[s.wrap, { backgroundColor: fondo }]}><Header titulo={me.nombre || 'Bienvenido'} />
         <Text style={s.err}>{error}</Text>
-        <TouchableOpacity style={s.retry} onPress={cargar}><Text style={{ fontWeight: '800' }}>Reintentar</Text></TouchableOpacity>
+        {/Token inválido|expirad/i.test(error) ? (
+          <TouchableOpacity style={s.retry} onPress={salir}><Text style={{ fontWeight: '800' }}>🔑 Iniciar sesión de nuevo</Text></TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={s.retry} onPress={cargar}><Text style={{ fontWeight: '800' }}>Reintentar</Text></TouchableOpacity>
+        )}
       </View>
     );
   }
