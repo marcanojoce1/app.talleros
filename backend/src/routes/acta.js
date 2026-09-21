@@ -49,6 +49,17 @@ async function incrustarFirmas(recepcion) {
   return r;
 }
 
+// Versión SIN firmas para nada (deja las cajas vacías) — la usa el botón de
+// WhatsApp para la "foto de fondo", así la firma real nunca llega a existir en
+// esa captura y se pega aparte después, ya en su tamaño y posición correctos.
+function sinFirmas(recepcion) {
+  if (!recepcion) return recepcion;
+  const r = { ...recepcion };
+  delete r.firmaCliImg; delete r.firmaCli;
+  delete r.firmaRecImg; delete r.firmaRec;
+  return r;
+}
+
 // GET /api/resumen-espera/:tallerId → resumen en HTML/PDF de los vehículos en espera
 router.get('/resumen-espera/:tallerId', async (req, res) => {
   const tallerId = Number(req.params.tallerId);
@@ -136,7 +147,7 @@ router.get('/acta/:tallerId/:vehId', async (req, res) => {
       taller,
       cliente: cli,
       vehiculo: veh,
-      recepcion: await incrustarFirmas(veh.recepcion || {}),
+      recepcion: req.query.sinfirmas === '1' ? sinFirmas(veh.recepcion || {}) : await incrustarFirmas(veh.recepcion || {}),
       damages: veh.recepDamages || [],
       lados: veh.recepLados || [],
       orden: veh.numOrden ? "OS" + String(veh.numOrden).padStart(4, "0") : veh.id,
@@ -189,7 +200,7 @@ router.get('/trabajo/:tallerId/:vehId', async (req, res) => {
     const proto = req.headers['x-forwarded-proto'] || req.protocol;
     const baseUrl = `${proto}://${req.get('host')}`;
     const datosTrabajo = {
-      taller, cliente: cli, vehiculo: veh, recepcion: await incrustarFirmas(veh.recepcion || {}),
+      taller, cliente: cli, vehiculo: veh, recepcion: req.query.sinfirmas === '1' ? sinFirmas(veh.recepcion || {}) : await incrustarFirmas(veh.recepcion || {}),
       damages: veh.recepDamages || [], lados: veh.recepLados || [], orden: veh.numOrden ? "OS" + String(veh.numOrden).padStart(4, "0") : veh.id,
       precio: hist ? hist.total : (veh.cost || ''),
       servicios: hist && hist.servicios ? hist.servicios : [{ desc: (veh.recepcion && veh.recepcion.trabajo) || veh.motivo || '', precio: hist ? hist.total : (veh.cost || '') }],
