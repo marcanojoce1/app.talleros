@@ -285,11 +285,11 @@ function generarActaHTML(o = {}) {
         <div style="font-size:9.5px;line-height:1.4">Estoy de acuerdo con las condiciones de servicio y autorizo la reparación con el material necesario, y concedo permiso para operar la unidad con fines de inspección y prueba.</div>
         <div style="display:flex;gap:14px;margin-top:4px">
           <div style="flex:1">
-            ${r.firmaCliImg ? `<div class="firmaimg no-split"><img src="${esc(r.firmaCliImg)}" crossorigin="anonymous" style="display:block;max-width:170px;max-height:50px;width:auto;height:auto;object-fit:contain"/></div>` : (r.firmaCli ? `<div class="firmaimg no-split">${firmaSVG(r.firmaCli)}</div>` : '<div class="firmaimg no-split"></div>')}
+            ${r.firmaCliImg ? `<div class="firmaimg no-split"><img src="${esc(r.firmaCliImg)}" width="170" height="50" style="display:block;object-fit:contain"/></div>` : (r.firmaCli ? `<div class="firmaimg no-split">${firmaSVG(r.firmaCli)}</div>` : '<div class="firmaimg no-split"></div>')}
             <div class="firma">Firma del Cliente</div>
           </div>
           <div style="flex:1">
-            ${r.firmaRecImg ? `<div class="firmaimg no-split"><img src="${esc(r.firmaRecImg)}" crossorigin="anonymous" style="display:block;max-width:170px;max-height:50px;width:auto;height:auto;object-fit:contain"/></div>` : (r.firmaRec ? `<div class="firmaimg no-split">${firmaSVG(r.firmaRec)}</div>` : '<div class="firmaimg no-split"></div>')}
+            ${r.firmaRecImg ? `<div class="firmaimg no-split"><img src="${esc(r.firmaRecImg)}" width="170" height="50" style="display:block;object-fit:contain"/></div>` : (r.firmaRec ? `<div class="firmaimg no-split">${firmaSVG(r.firmaRec)}</div>` : '<div class="firmaimg no-split"></div>')}
             <div class="firma">Firma del Recepcionista</div>
           </div>
         </div>
