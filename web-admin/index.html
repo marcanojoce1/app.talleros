@@ -413,7 +413,7 @@ tbody tr.clk{cursor:pointer}tbody tr.clk:hover{background:var(--surface-2)}
   <div class="web-wrap"><div class="web">
     <div class="wsideBackdrop" id="wSideBackdrop" onclick="toggleWSide(false)"></div>
     <div class="wside">
-      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v247</span></div>
+      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v249</span></div>
       <div class="wlbl op-item">Operación</div>
       <a class="on op-item" data-w="dash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
       <a class="op-item" data-w="recep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-6 0v4"/><rect x="2" y="9" width="20" height="11" rx="2"/></svg>Recepción digital</a>
@@ -2319,71 +2319,10 @@ function mostrarBotonCompartirPDF(file,titulo,textoCaption,pdfUrl){
 // usando el propio navegador para decodificarla — el mismo motor que ya sabemos
 // que la dibuja bien en "Acta imprimible". Así evitamos por completo que
 // html2canvas tenga que interpretarla él mismo.
-function firmaAPng(src,wCss,hCss){
-  return new Promise((resolve)=>{
-    try{
-      const img=new Image();
-      img.onload=()=>{
-        try{
-          const c=document.createElement('canvas');
-          c.width=Math.max(1,Math.round(wCss*3));c.height=Math.max(1,Math.round(hCss*3));
-          const ctx=c.getContext('2d');
-          ctx.drawImage(img,0,0,c.width,c.height);
-          resolve(c.toDataURL('image/png'));
-        }catch(e){ resolve(null); }
-      };
-      img.onerror=()=>resolve(null);
-      img.src=src;
-      setTimeout(()=>resolve(null),3000);
-    }catch(e){ resolve(null); }
-  });
-}
-// Oculta las firmas dentro de un elemento ANTES de capturarlo con html2canvas
-// (para que no intente dibujarlas él mismo) y devuelve su posición + imagen ya
-// convertida a PNG, para pegarlas aparte directo en el PDF después.
-async function extraerFirmas(el){
-  const elRect=el.getBoundingClientRect();
-  const contenedores=Array.from(el.querySelectorAll('.firmaimg'));
-  const firmas=[];
-  for(const cont of contenedores){
-    const nodo=cont.querySelector('img,svg');
-    if(!nodo)continue;
-    const contRect=cont.getBoundingClientRect();
-    const r=nodo.getBoundingClientRect();
-    if(r.width<=0||r.height<=0)continue;
-    let src=null;
-    if(nodo.tagName==='IMG')src=nodo.src;
-    else{ try{ src='data:image/svg+xml;base64,'+btoa(unescape(encodeURIComponent(nodo.outerHTML))); }catch(e){} }
-    if(!src)continue;
-    // Límite fijo: la firma NUNCA debe verse más alta de 50px, sin importar la
-    // orden ni qué tan grande la haya medido el navegador — si el "tamaño
-    // natural" salió más grande (como pasó con un trazo más complejo), lo
-    // achicamos aquí manteniendo la proporción, igual que hace el CSS normal.
-    const ALTO_MAX=50;
-    let w=r.width,h=r.height;
-    if(h>ALTO_MAX){ w=w*(ALTO_MAX/h); h=ALTO_MAX; }
-    const png=await firmaAPng(src,w,h);
-    if(png)firmas.push({
-      png,
-      // Alineada al fondo de su caja (.firmaimg) y centrada horizontalmente en
-      // ella — así siempre queda pegada justo arriba de la línea/etiqueta
-      // "Firma del Cliente/Recepcionista", sin importar el tamaño real del trazo.
-      top:(contRect.bottom-elRect.top)-h,
-      left:(contRect.left-elRect.left)+(contRect.width-w)/2,
-      width:w,height:h,
-    });
-  }
-  return firmas;
-}
 async function compartirComoPDF(pdfUrl,filename,titulo,textoCaption){
-  // Después de muchos intentos, quedó claro que html2canvas tiene un límite real
-  // que no se puede resolver de forma confiable con la firma. En vez de seguir
-  // peleando contra eso, usamos el motor de impresión REAL del navegador — el
-  // mismo que "Acta imprimible" usa y que siempre se ve perfecto. La única
-  // diferencia: hay que darle "Guardar como PDF" tú mismo una vez (un clic extra),
-  // a cambio de que salga bien siempre, sin excepciones.
-  toast('Abriendo el documento para guardar como PDF…');
+  toast('Generando PDF…');
   try{
+    await _cargarLibsPDF();
     const sep=pdfUrl.includes('?')?'&':'?';
     const ctrl=new AbortController();
     const to=setTimeout(()=>ctrl.abort(),45000);
@@ -2399,16 +2338,89 @@ async function compartirComoPDF(pdfUrl,filename,titulo,textoCaption){
     iframe.style.cssText='position:fixed;left:-99999px;top:0;width:820px;height:1160px;border:0';
     document.body.appendChild(iframe);
     iframe.contentDocument.open();iframe.contentDocument.write(html);iframe.contentDocument.close();
-    await new Promise(r=>setTimeout(r,300));
+    // Desactivamos las reglas CSS de "no partir entre páginas" SOLO para esta
+    // captura — esas reglas son para cuando se imprime de verdad, y aquí la
+    // paginación la maneja nuestro propio script más abajo.
+    try{
+      const estiloNeutro=iframe.contentDocument.createElement('style');
+      estiloNeutro.textContent='*{page-break-inside:auto !important;break-inside:auto !important;page-break-before:auto !important;break-before:auto !important;page-break-after:auto !important;break-after:auto !important}';
+      iframe.contentDocument.head.appendChild(estiloNeutro);
+    }catch(e){}
+    await new Promise(r=>setTimeout(r,200));
     const imgs=Array.from(iframe.contentDocument.images||[]);
     await Promise.all(imgs.map(img=>img.complete?Promise.resolve():new Promise(res=>{img.onload=res;img.onerror=res;setTimeout(res,4000);})));
-    toast('Elige "Guardar como PDF" en el diálogo de impresión, luego compártelo por WhatsApp.');
-    iframe.contentWindow.focus();
-    iframe.contentWindow.print();
-    // Lo dejamos un rato antes de quitarlo, para darle tiempo al diálogo de imprimir.
-    setTimeout(()=>{ try{ document.body.removeChild(iframe); }catch(e){} },60000);
+    // Esperar a que el navegador realmente PINTE ese contenido (no solo que la imagen
+    // haya cargado) antes de tomar la captura — evita que salga algo a medias.
+    await new Promise(res=>iframe.contentWindow.requestAnimationFrame(()=>iframe.contentWindow.requestAnimationFrame(res)));
+    await new Promise(r=>setTimeout(r,150));
+    // Cada "hoja" del documento (el Acta, la lista de movimientos, cada foto) ya es
+    // su propio <div class="sheet"> independiente en el HTML — capturamos cada una
+    // por separado y la colocamos directa en su propia página del PDF.
+    const hojas=Array.from(iframe.contentDocument.querySelectorAll('.sheet'));
+    if(!hojas.length) throw new Error('El documento no tiene contenido reconocible.');
+    const { jsPDF }=window.jspdf;
+    const pageW=595,pageH=842; // A4 en pt
+    const pdf=new jsPDF({unit:'pt',format:'a4'});
+    let primeraPagina=true;
+    for(let i=0;i<hojas.length;i++){
+      const canvasHoja=await window.html2canvas(hojas[i],{scale:2,useCORS:true,backgroundColor:'#ffffff',windowWidth:820});
+      const imgDataHoja=canvasHoja.toDataURL('image/jpeg',0.92);
+      const imgH=canvasHoja.height*(pageW/canvasHoja.width);
+      if(imgH<=pageH+1){
+        // Cabe entera en una página — caso normal, sin recortes.
+        if(!primeraPagina)pdf.addPage();
+        pdf.addImage(imgDataHoja,'JPEG',0,0,pageW,imgH);
+        primeraPagina=false;
+      }else{
+        // Esta hoja salió más alta que una página A4 (pasa con observaciones muy
+        // largas). Separamos la hoja en DOS FOTOS DISTINTAS desde el origen: la
+        // parte fija (todo menos Observaciones) y la parte de Observaciones/
+        // Condiciones aparte — nunca están en la misma imagen, así que es
+        // físicamente imposible que se mezclen o dupliquen.
+        const flexible=hojas[i].querySelector('.acta-flex');
+        async function dibujarComoPropiaPagina(el){
+          const c=await window.html2canvas(el,{scale:2,useCORS:true,backgroundColor:'#ffffff',windowWidth:820});
+          const data=c.toDataURL('image/jpeg',0.92);
+          const h=c.height*(pageW/c.width);
+          if(h<=pageH+1){
+            if(!primeraPagina)pdf.addPage();
+            pdf.addImage(data,'JPEG',0,0,pageW,h);
+            primeraPagina=false;
+          }else{
+            const escala=c.width/820;
+            let pos=0;
+            while(pos<c.height-1){
+              const alto=Math.min(c.height-pos,Math.round(pageH*escala*(820/pageW)));
+              const rec=document.createElement('canvas');
+              rec.width=c.width;rec.height=alto;
+              rec.getContext('2d').drawImage(c,0,pos,c.width,alto,0,0,c.width,alto);
+              if(!primeraPagina)pdf.addPage();
+              pdf.addImage(rec.toDataURL('image/jpeg',0.92),'JPEG',0,0,pageW,alto*(pageW/c.width));
+              primeraPagina=false;pos+=alto;
+            }
+          }
+        }
+        if(flexible){
+          const mostrabaAntes=flexible.style.display;
+          flexible.style.display='none';
+          await dibujarComoPropiaPagina(hojas[i]);
+          flexible.style.display=mostrabaAntes;
+          await dibujarComoPropiaPagina(flexible);
+        }else{
+          await dibujarComoPropiaPagina(hojas[i]);
+        }
+      }
+    }
+    document.body.removeChild(iframe);
+    const blob=pdf.output('blob');
+    const file=new File([blob],filename,{type:'application/pdf'});
+    // Nunca abrimos pestañas ni ventanas nuevas — todo pasa aquí mismo. Si el
+    // navegador soporta compartir archivos, mostramos el botón (el share real se
+    // dispara con ESE clic, no automático, porque el navegador exige un clic reciente).
+    // Si no lo soporta, el mismo botón descarga el PDF.
+    mostrarBotonCompartirPDF(file,titulo,textoCaption,pdfUrl);
   }catch(e){
-    toast('No se pudo abrir el documento: '+(e&&e.message?e.message:'error desconocido'));
+    toast('No se pudo generar el PDF: '+(e&&e.message?e.message:'error desconocido'));
   }
 }
 async function waShare(text){
