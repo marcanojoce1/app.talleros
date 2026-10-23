@@ -531,7 +531,7 @@ html[data-theme="dark"] .wbtn:focus-visible,html[data-theme="dark"] .logoutbtn:f
   <div class="web-wrap"><div class="web">
     <div class="wsideBackdrop" id="wSideBackdrop" onclick="toggleWSide(false)"></div>
     <div class="wside">
-      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v259</span><button id="btnTema" onclick="toggleTema()" title="Modo claro / oscuro" style="margin-left:auto;font-size:15px;line-height:1;background:rgba(255,255,255,.12);border-radius:8px;width:28px;height:28px;color:#fff">🌙</button></div>
+      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v260</span><button id="btnTema" onclick="toggleTema()" title="Modo claro / oscuro" style="margin-left:auto;font-size:15px;line-height:1;background:rgba(255,255,255,.12);border-radius:8px;width:28px;height:28px;color:#fff">🌙</button></div>
       <div class="wlbl op-item">Operación</div>
       <a class="on op-item" data-w="dash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
       <a class="op-item" data-w="recep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-6 0v4"/><rect x="2" y="9" width="20" height="11" rx="2"/></svg>Recepción digital</a>
@@ -3129,6 +3129,31 @@ async function spProbarCorreo(){
     document.getElementById('modal').classList.add('on');
   }catch(e){toast(e.message);}
 }
+
+// Ficha completa de una demo: todo lo que registró el cliente, para contactarlo después (incluso vencida).
+async function spDemoDetalle(id){
+  let demos=[];try{demos=await apiReq('/api/talleres/demos');}catch(e){toast(e.message);return;}
+  const d=demos.find(x=>x.id===id);
+  if(!d){toast('Esta demo no tiene datos de contacto (fue un intento fallido).');return;}
+  const ahora=new Date(),exp=new Date(d.demo_expira),venc=exp<ahora,dias=Math.ceil((exp-ahora)/86400000);
+  const f=x=>x?new Date(x).toLocaleString('es',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+  const fila=(k,v)=>`<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px"><div style="width:130px;flex:none;color:var(--muted)">${k}</div><div style="flex:1;word-break:break-word;font-weight:600">${v||'—'}</div></div>`;
+  const tel=(d.admin_telefono||'').replace(/[^0-9]/g,'');
+  window._demoCopiar=`Demo TallerOS\nNombre: ${d.admin_nombre}\nCorreo: ${d.admin_correo}\nTeléfono: ${d.admin_telefono||'—'}\nTaller/Empresa: ${d.nombre}\nPaís: ${d.demo_pais||'—'}\nVehículos/mes: ${d.demo_volumen||'—'}\nInterés: ${d.demo_interes||'—'}\nSolicitó: ${f(d.creado_en)}\nVence: ${f(d.demo_expira)}`;
+  document.getElementById('modalH').innerHTML=`<h2>🎁 ${d.nombre}</h2>`;
+  document.getElementById('modalB').innerHTML=`
+    <div style="margin-bottom:8px"><span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:${venc?'#40222B':'#17382a'};color:${venc?'#FF9A9A':'#7BE0A4'}">${venc?'Demo vencido':dias+' día(s) restante(s)'}</span></div>
+    ${fila('Nombre',d.admin_nombre)}${fila('Correo',d.admin_correo)}${fila('Teléfono / WhatsApp',d.admin_telefono)}
+    ${fila('Taller / empresa',d.nombre)}${fila('País',d.demo_pais)}${fila('Vehículos al mes',d.demo_volumen)}
+    ${fila('Qué necesita',d.demo_interes)}${fila('Usuario de acceso',d.admin_usuario)}
+    ${fila('Solicitó el',f(d.creado_en))}${fila('Vence el',f(d.demo_expira))}
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+      <button class="wbtn wbtn-d" onclick="window.open('mailto:${d.admin_correo}?subject='+encodeURIComponent('Tu demo de TallerOS'))">✉️ Escribirle</button>
+      ${tel?`<button class="wbtn wbtn-p" onclick="window.open('https://wa.me/${tel}?text='+encodeURIComponent('Hola ${(d.admin_nombre||'').split(' ')[0]}, te escribimos de TallerOS sobre tu demo. ¿Pudiste probar la plataforma?'))">💬 WhatsApp</button>`:''}
+      <button class="wbtn wbtn-g" onclick="navigator.clipboard.writeText(window._demoCopiar).then(()=>toast('Datos copiados'))">📋 Copiar datos</button>
+    </div>`;
+  document.getElementById('modal').classList.add('on');
+}
 async function spVerDemos(){
   let demos=[];try{demos=await apiReq('/api/talleres/demos');}catch(e){toast(e.message);return;}
   const ahora=new Date();
@@ -3139,7 +3164,7 @@ async function spVerDemos(){
     const expira=new Date(d.demo_expira);const vencido=expira<ahora;
     const diasRestantes=Math.ceil((expira-ahora)/(1000*60*60*24));
     return `<div style="border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;${vencido?'opacity:.6':''}">
-      <div style="display:flex;justify-content:space-between;align-items:center"><b>${d.nombre}</b><span style="font-size:11px;padding:3px 8px;border-radius:20px;background:${vencido?'#fee2e2':'#dcfce7'};color:${vencido?'#b91c1c':'#166534'}">${vencido?'Vencido':diasRestantes+' día(s) restante(s)'}</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center"><b style="cursor:pointer;text-decoration:underline dotted" onclick="spDemoDetalle(${d.id})" title="Ver todos los datos">${d.nombre}</b><span style="font-size:11px;padding:3px 8px;border-radius:20px;background:${vencido?'#fee2e2':'#dcfce7'};color:${vencido?'#b91c1c':'#166534'}">${vencido?'Vencido':diasRestantes+' día(s) restante(s)'}</span></div>
       <div style="font-size:12.5px;color:var(--muted);margin-top:4px">${d.admin_nombre} · ${d.admin_correo}${d.admin_telefono?' · '+d.admin_telefono:''}</div>
       <div style="font-size:12px;color:var(--muted);margin-top:2px">${d.demo_pais||'—'} · ${d.demo_volumen||'—'} vehículos/mes</div>
       ${d.demo_interes?`<div style="font-size:12px;color:#374151;margin-top:6px;background:#f7f8fa;border-radius:6px;padding:8px">${d.demo_interes}</div>`:''}
@@ -3196,7 +3221,7 @@ function spTallerCard(t){const nm=(t.nombre||'').replace(/'/g,'');const inactivo
     const fmt=d=>d?d.toLocaleDateString('es',{day:'numeric',month:'short'}):'—';
     badgeDemo=`<div style="margin-top:4px"><span style="font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;background:${vencido?'#fee2e2':'#dbeafe'};color:${vencido?'#b91c1c':'#1e40af'}">🎁 DEMO ${vencido?'VENCIDO':'ACTIVO'}</span> <span style="font-size:11px;color:var(--muted)">${fmt(inicio)} → ${fmt(fin)}</span></div>`;
   }
-  return `<div class="dcard" style="margin-bottom:12px;${inactivo?'opacity:.72':''}"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><div class="av" style="background:${esDemo?'#2563eb':'var(--sidebar)'};color:#fff">${inits(t.nombre)}</div><div style="flex:1;min-width:140px"><div style="font-weight:700">${t.nombre} ${inactivo?'<span style="color:var(--red);font-size:11px">(inactivo)</span>':''}</div><div style="font-size:12px;color:var(--muted)">${t.rif||''} ${t.telefono||''}${inactivo&&t.motivo_inactivo?' · Motivo: '+t.motivo_inactivo:''}</div>${badgeDemo}</div><button class="wbtn wbtn-g" onclick="spEditarTaller(${t.id})">Editar</button> ${t.activo?`<button class="wbtn wbtn-g" onclick="spInactivar(${t.id},'${nm}')">Inactivar</button>`:`<button class="wbtn wbtn-d" onclick="spReactivar(${t.id})">Reactivar</button>`} <button class="wbtn wbtn-gr" onclick="spEliminarTaller(${t.id},'${nm}')" title="Eliminar por completo — no se puede deshacer">🗑 Eliminar</button></div></div>`;}
+  return `<div class="dcard" style="margin-bottom:12px;${inactivo?'opacity:.72':''}"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><div class="av" style="background:${esDemo?'#2563eb':'var(--sidebar)'};color:#fff">${inits(t.nombre)}</div><div style="flex:1;min-width:140px"><div style="font-weight:700${esDemo?';cursor:pointer;text-decoration:underline dotted':''}" ${esDemo?`onclick="spDemoDetalle(${t.id})" title="Ver los datos que registró"`:''}>${t.nombre} ${inactivo?'<span style="color:var(--red);font-size:11px">(inactivo)</span>':''}</div><div style="font-size:12px;color:var(--muted)">${t.rif||''} ${t.telefono||''}${inactivo&&t.motivo_inactivo?' · Motivo: '+t.motivo_inactivo:''}</div>${badgeDemo}</div><button class="wbtn wbtn-g" onclick="spEditarTaller(${t.id})">Editar</button> ${t.activo?`<button class="wbtn wbtn-g" onclick="spInactivar(${t.id},'${nm}')">Inactivar</button>`:`<button class="wbtn wbtn-d" onclick="spReactivar(${t.id})">Reactivar</button>`} <button class="wbtn wbtn-gr" onclick="spEliminarTaller(${t.id},'${nm}')" title="Eliminar por completo — no se puede deshacer">🗑 Eliminar</button></div></div>`;}
 function spEliminarTaller(id,nombre){
   document.getElementById('modalH').innerHTML=`<h2>⚠️ Eliminar taller</h2>`;
   document.getElementById('modalB').innerHTML=`<p style="font-size:13.5px">Vas a eliminar <b>${nombre}</b> por completo — sus clientes, vehículos, órdenes, técnicos y administradores (si no tienen otro taller). <b>Esto no se puede deshacer.</b></p>

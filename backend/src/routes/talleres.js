@@ -431,6 +431,8 @@ router.put('/:id/cuenta', async (req, res) => {
 // Lista de solicitudes de demo (solo superadmin) — con los datos del taller, su
 // administrador (nombre/correo/teléfono), y si sigue vigente o ya venció.
 router.get('/demos', requireRole('superadmin'), async (req, res) => {
+  // Quita demos "huérfanas" (intentos fallidos que dejaron un taller sin administrador)
+  try { await query('DELETE FROM talleres WHERE demo_expira IS NOT NULL AND id NOT IN (SELECT taller_id FROM taller_admins)'); } catch (e) { /* nada */ }
   const { rows } = await query(
     `SELECT t.id, t.nombre, t.demo_expira, t.demo_pais, t.demo_volumen, t.demo_interes, t.creado_en,
             u.nombre AS admin_nombre, u.correo AS admin_correo, u.telefono AS admin_telefono, u.usuario AS admin_usuario
