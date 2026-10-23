@@ -1,10 +1,13 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, RefreshControl, Alert, ScrollView, TextInput, Image, Modal, Linking, Share, ActivityIndicator, AppState } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { api, getState, getStateCache, putState, clearSession, getApiUrl, registrarNotificacionesPush } from '../api';
 import { compartirActaPDF, abrirEnNavegador, urlDocumento, subirMedia } from '../acta';
 import { ProgressSlider , colorMarca, marcaDe, BotonAjustes, AjustesModal, Calendario } from '../ui';
+
+// El cliente solo ve los avances aprobados: los que el técnico dejó pendientes de revisión no se muestran hasta que el administrador los notifique.
+const avVisibleCliente = (a) => !a.pendienteRevision && a.notificadoCliente !== false;
 
 const STATUS = {
   espera: { l: 'En espera', c: '#64748B', bg: '#eef0f2' },
@@ -479,7 +482,7 @@ export default function HomeScreen({ navigation, route }) {
                 </View>
                 <View style={{ flexDirection: 'row', gap: 26, marginTop: 14 }}>
                   <View><Text style={s.heroLbl}>Fecha de ingreso</Text><Text style={s.heroVal}>{fechaCorta(v.ingreso)}</Text></View>
-                  <View style={{ flex: 1 }}><Text style={s.heroLbl}>Último avance</Text><Text style={s.heroVal} numberOfLines={1}>{(v.advances || []).length ? ((v.advances[v.advances.length - 1].ago) || (v.advances[v.advances.length - 1].t) || '—') : 'Sin avances'}</Text></View>
+                  <View style={{ flex: 1 }}><Text style={s.heroLbl}>Último avance</Text><Text style={s.heroVal} numberOfLines={1}>{(v.advances || []).length ? ((v.advances.filter(avVisibleCliente).slice(-1)[0] || {}).ago || (v.advances.filter(avVisibleCliente).slice(-1)[0] || {}).t || 'Sin avances') : 'Sin avances'}</Text></View>
                 </View>
                 <Text style={[s.heroLbl, { marginTop: 12 }]}>🔧 Técnico: {v.mech || 'por asignar'}</Text>
               </View>
@@ -490,7 +493,7 @@ export default function HomeScreen({ navigation, route }) {
                 <Text style={s.cardTxt}>{v.mech || 'Por asignar'}{v.motivo ? ' · ' + v.motivo : ''}</Text>
 
                 <Text style={[s.cardH, { marginTop: 16 }]}>Seguimiento</Text>
-                {(v.advances || []).length ? [...(v.advances || [])].reverse().map((a, i) => (
+                {(v.advances || []).filter(avVisibleCliente).length ? [...(v.advances || [])].filter(avVisibleCliente).reverse().map((a, i) => (
                   <View key={i} style={s.timeRow}>
                     <View style={[s.timeIcon, { backgroundColor: a.type === 'nota' ? '#e9f0fe' : a.type === 'atencion' ? '#fdecec' : '#fdf1e1' }]}>
                       <Text style={{ fontSize: 14 }}>{a.type === 'nota' ? '📝' : a.type === 'atencion' ? '⚠️' : '🔧'}</Text>
@@ -878,20 +881,44 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
   const [avanceModalOpen, setAvanceModalOpen] = useState(false);
   const [adicional, setAdicional] = useState(false);
   const [txtAd, setTxtAd] = useState('');
-  const [obsActa, setObsActa] = useState((v.recepcion && v.recepcion.obs) || '');
   useEffect(() => { setProg(v.progress || 0); }, [v.progress]);
 
   const tomarDeCamara = async () => {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) { Alert.alert('Permiso', 'Se necesita acceso a la cámara.'); return; }
+    await new Promise((ok) => setTimeout(ok, 400));
     const r = await ImagePicker.launchCameraAsync({ quality: 0.35, base64: true });
-    if (!r.canceled && r.assets && r.assets[0]) setFoto('data:image/jpeg;base64,' + r.assets[0].base64);
+    aplicarFoto(r);
   };
+  const abriendoFoto = useRef(false);
+  const aplicarFoto = (r) => {
+    if (r && !r.canceled && r.assets && r.assets[0] && r.assets[0].base64) setFoto('data:image/jpeg;base64,' + r.assets[0].base64);
+  };
+  // En Android, si el sistema cierra la app mientras se elige la foto, el resultado queda pendiente: lo recuperamos.
+  useEffect(() => {
+    (async () => {
+      try {
+        if (ImagePicker.getPendingResultAsync) {
+          const pend = await ImagePicker.getPendingResultAsync();
+          if (pend && !pend.code) aplicarFoto(Array.isArray(pend) ? { assets: pend } : pend);
+        }
+      } catch (e) { /* sin pendiente */ }
+    })();
+  }, []);
   const elegirDeGaleria = async () => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) { Alert.alert('Permiso', 'Se necesita acceso a las fotos.'); return; }
-    const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.35, base64: true });
-    if (!r.canceled && r.assets && r.assets[0]) setFoto('data:image/jpeg;base64,' + r.assets[0].base64);
+    if (abriendoFoto.current) return;
+    abriendoFoto.current = true;
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) { Alert.alert('Permiso', 'Se necesita acceso a las fotos.'); return; }
+      await new Promise((ok) => setTimeout(ok, 400)); // deja que cierre el aviso antes de abrir la galería
+      const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.35, base64: true, allowsMultipleSelection: false });
+      aplicarFoto(r);
+    } catch (e) {
+      Alert.alert('No se pudo cargar la foto', (e && e.message) || 'Intenta de nuevo.');
+    } finally {
+      abriendoFoto.current = false;
+    }
   };
   const pickFoto = () => {
     Alert.alert('Agregar foto', '¿De dónde quieres tomar la foto?', [
@@ -1027,18 +1054,7 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
     setAvanceModalOpen(false);
     setGuardandoAvance(false);
     setTxt(''); setFoto(null); setVideo(null); setVideoThumb(null); setVideoDuracionSeg(0);
-    Alert.alert('Listo', 'Avance registrado. El cliente ya puede verlo.');
-  };
-
-  const guardarObsActa = () => {
-    if (!obsActa.trim()) { Alert.alert('Falta', 'Escribe la observación.'); return; }
-    // Actualiza la observación DENTRO de la recepción (el acta), sin crear un avance
-    const vehicles = (data.vehicles || []).map((x) => {
-      if (x.id !== v.id) return x;
-      return { ...x, recepcion: { ...(x.recepcion || {}), obs: obsActa.trim() } };
-    });
-    guardar({ ...data, vehicles });
-    Alert.alert('Guardado en el acta', 'La observación quedó registrada en el acta del vehículo (visible en web y al descargar el acta).');
+    Alert.alert('Listo', notificaDirecto ? 'Avance registrado. El cliente ya puede verlo.' : 'Avance registrado. El administrador lo revisará antes de que el cliente lo vea.');
   };
 
   const reportarAdicional = () => {
@@ -1047,7 +1063,7 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
       { t: '⚠️ Requiere autorización del cliente', m: txtAd.trim(), type: 'atencion', ago: 'ahora' },
       { text: '⚠️ Se requiere tu atención: ' + txtAd.trim(), atencion: true });
     setTxtAd(''); setAdicional(false);
-    Alert.alert('Enviado', 'Se notificó al cliente que se requiere su atención.');
+    Alert.alert('Enviado', notificaDirecto ? 'Se notificó al cliente que se requiere su atención.' : 'Se envió al administrador para que solicite la autorización al cliente.');
   };
 
   return (
@@ -1139,11 +1155,6 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
             </View>
           </Modal>
 
-          <Text style={[s.cardH, { marginTop: 16 }]}>Observación para el acta</Text>
-          <Text style={{ fontSize: 11.5, color: '#6b7480', marginBottom: 6 }}>Esto se guarda en el acta del vehículo (no es un avance).</Text>
-          <TextInput style={[s.input, { minHeight: 60, textAlignVertical: 'top' }]} value={obsActa} onChangeText={setObsActa} multiline placeholder="Ej. Se encontró fuga de aceite en el motor…" />
-          <TouchableOpacity style={[s.addAv, { marginTop: 10, backgroundColor: '#2563EB' }]} onPress={guardarObsActa}><Text style={s.addAvT}>Guardar en el acta</Text></TouchableOpacity>
-
           {!adicional ? (
             <TouchableOpacity style={s.adBtn} onPress={() => setAdicional(true)}>
               <Text style={s.adBtnT}>⚠️ Reportar trabajo adicional</Text>
@@ -1154,7 +1165,7 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
               <TextInput style={[s.input, { minHeight: 70, textAlignVertical: 'top' }]} value={txtAd} onChangeText={setTxtAd} multiline
                 placeholder="Ej. Los discos están desgastados, se requiere rectificado" />
               <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
-                <TouchableOpacity style={[s.addAv, { backgroundColor: '#D97706' }]} onPress={reportarAdicional}><Text style={[s.addAvT, { color: '#fff' }]}>Notificar al cliente</Text></TouchableOpacity>
+                <TouchableOpacity style={[s.addAv, { backgroundColor: '#D97706' }]} onPress={reportarAdicional}><Text style={[s.addAvT, { color: '#fff' }]}>{notificaDirecto ? 'Notificar al cliente' : 'Enviar al administrador'}</Text></TouchableOpacity>
                 <TouchableOpacity style={s.camBtn} onPress={() => setAdicional(false)}><Text style={{ fontWeight: '700' }}>✕</Text></TouchableOpacity>
               </View>
             </View>

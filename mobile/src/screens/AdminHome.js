@@ -492,14 +492,26 @@ export default function AdminHomeScreen({ navigation, route }) {
                             <TouchableOpacity style={[s.act, { backgroundColor: '#16A34A', borderColor: '#16A34A' }]} onPress={() => cambiarEstadoOrden(item.id, 'term')}><Text style={[s.actT, { color: '#fff' }]}>Marcar listo</Text></TouchableOpacity>
                           )}
                         </View>
-                        <View style={{ flexDirection: 'row', gap: 14, marginTop: 9, flexWrap: 'wrap' }}>
+                        <View style={s.ordBtnsWrap}>
                           {item.status && item.status !== 'espera' && item.status !== 'reprog' ? (
-                            <TouchableOpacity onPress={() => setModal({ tipo: 'avances', item })}><Text style={[s.link, { color: '#F5B700' }]}>📸 Ver avances{(item.advances || []).filter((a) => a.foto || a.video).length ? ' (' + (item.advances || []).filter((a) => a.foto || a.video).length + ')' : ''} →</Text></TouchableOpacity>
+                            <TouchableOpacity style={[s.ordBtn, { backgroundColor: '#FFF6D6', borderColor: '#F5B700' }]} activeOpacity={0.7} onPress={() => setModal({ tipo: 'avances', item })}>
+                              <Text style={s.ordBtnIc}>📸</Text>
+                              <Text style={[s.ordBtnT, { color: '#8a6200' }]}>Avances{(item.advances || []).filter((a) => a.foto || a.video).length ? ' (' + (item.advances || []).filter((a) => a.foto || a.video).length + ')' : ''}</Text>
+                            </TouchableOpacity>
                           ) : null}
-                          <TouchableOpacity onPress={() => abrirEnNavegador(taller.id, item, item.status && item.status !== 'espera' ? 'trabajo' : 'acta')}><Text style={s.link}>Ver acta →</Text></TouchableOpacity>
-                          <TouchableOpacity onPress={() => compartirActaPDF(taller.id, item, item.status && item.status !== 'espera' ? 'trabajo' : 'acta')}><Text style={s.link}>Compartir acta (PDF) →</Text></TouchableOpacity>
+                          <TouchableOpacity style={[s.ordBtn, { backgroundColor: '#EEF4FF', borderColor: '#BFD3FB' }]} activeOpacity={0.7} onPress={() => abrirEnNavegador(taller.id, item, item.status && item.status !== 'espera' ? 'trabajo' : 'acta')}>
+                            <Text style={s.ordBtnIc}>👁️</Text>
+                            <Text style={[s.ordBtnT, { color: '#1D4ED8' }]}>Ver acta</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity style={[s.ordBtn, { backgroundColor: '#E8F6EC', borderColor: '#B5E0C2' }]} activeOpacity={0.7} onPress={() => compartirActaPDF(taller.id, item, item.status && item.status !== 'espera' ? 'trabajo' : 'acta')}>
+                            <Text style={s.ordBtnIc}>📤</Text>
+                            <Text style={[s.ordBtnT, { color: '#0F6E56' }]}>Compartir PDF</Text>
+                          </TouchableOpacity>
                           {(!item.status || item.status === 'espera' || item.status === 'reprog') ? (
-                            <TouchableOpacity onPress={() => { setEditarItem(item); setTab('recep'); }}><Text style={[s.link, { color: '#2563EB' }]}>✎ Editar acta →</Text></TouchableOpacity>
+                            <TouchableOpacity style={[s.ordBtn, { backgroundColor: '#F3F4F6', borderColor: '#D5D9DE' }]} activeOpacity={0.7} onPress={() => { setEditarItem(item); setTab('recep'); }}>
+                              <Text style={s.ordBtnIc}>✏️</Text>
+                              <Text style={[s.ordBtnT, { color: '#374151' }]}>Editar acta</Text>
+                            </TouchableOpacity>
                           ) : null}
                         </View>
                       </View>
@@ -2301,7 +2313,8 @@ function AvancesModal({ item, close, taller, data, guardar }) {
         const advances = (v.advances || []).map((a, i) => (i === idx ? { ...a, pendienteRevision: false, notificadoCliente: true } : a));
         return { ...v, advances };
       });
-      const notifs = [...(data.notifs || []), { owner: item.owner, veh: item.model, text: '🔧 ' + avsOriginal[idx].t + (avsOriginal[idx].m ? ' — ' + avsOriginal[idx].m : ''), time: 'ahora', read: false }];
+      const esAt = avsOriginal[idx].type === 'atencion';
+      const notifs = [...(data.notifs || []), { owner: item.owner, veh: item.model, text: esAt ? '⚠️ Se requiere tu atención: ' + (avsOriginal[idx].m || '') : '🔧 ' + avsOriginal[idx].t + (avsOriginal[idx].m ? ' — ' + avsOriginal[idx].m : ''), time: 'ahora', read: false, atencion: esAt }];
       await guardar({ ...data, vehicles, notifs });
       setNotificadosLocal((prev) => ({ ...prev, [idx]: true }));
       Alert.alert('✅ Notificado', 'El cliente ya puede ver este avance.');
@@ -2352,7 +2365,7 @@ function AvancesModal({ item, close, taller, data, guardar }) {
                   ) : null}
                   {a.pendienteRevision && !notificadosLocal[a._idx] ? (
                     <TouchableOpacity style={[s.act, { backgroundColor: '#fdf3e0', marginTop: 6, alignSelf: 'flex-start' }, notificando && { opacity: 0.6 }]} disabled={notificando} onPress={() => notificar(a._idx)}>
-                      <Text style={[s.actT, { color: '#b45309' }]}>{notificando ? 'Notificando…' : '🔔 Notificar al cliente'}</Text>
+                      <Text style={[s.actT, { color: '#b45309' }]}>{notificando ? 'Enviando…' : (a.type === 'atencion' ? '⚠️ Solicitar autorización al cliente' : '🔔 Notificar al cliente')}</Text>
                     </TouchableOpacity>
                   ) : (a.notificadoCliente || notificadosLocal[a._idx]) ? (
                     <View style={{ backgroundColor: '#e8f6ec', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, alignSelf: 'flex-start', marginTop: 6 }}>
@@ -3095,6 +3108,10 @@ const s = StyleSheet.create({
   ordWork: { color: '#6b7480', fontSize: 13.5, marginTop: 3 },
   ordMeta: { color: '#6b7480', fontSize: 12, marginTop: 6 },
   actions: { flexDirection: 'row', gap: 7, marginTop: 12 },
+  ordBtnsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderColor: '#eef0f3' },
+  ordBtn: { flexGrow: 1, flexBasis: '30%', minHeight: 58, borderWidth: 1.5, borderRadius: 14, alignItems: 'center', justifyContent: 'center', paddingVertical: 8, paddingHorizontal: 6 },
+  ordBtnIc: { fontSize: 20, marginBottom: 2 },
+  ordBtnT: { fontSize: 12.5, fontWeight: '800', textAlign: 'center' },
   act: { flex: 1, borderWidth: 1, borderColor: '#e7e9ec', borderRadius: 9, paddingVertical: 10, alignItems: 'center' },
   actOk: { backgroundColor: '#16A34A', borderColor: '#16A34A' },
   actT: { fontSize: 12, fontWeight: '700', color: '#16191d' },

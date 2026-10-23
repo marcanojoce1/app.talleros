@@ -132,12 +132,10 @@ function generarActaHTML(o = {}) {
   .col h3 { margin: 0 0 6px; font-size: 12px; background: #111; color: #fff; padding: 3px 7px; display: inline-block; }
   .fld { font-size: 11px; padding: 2px 0; border-bottom: 1px dotted #999; margin-bottom: 3px; }
   .fld span { color: #555; }
-  .cars { display: block; padding: 5px 6px; font-size: 0; }
+  .cars { display: block; padding: 5px 6px; font-size: 0; text-align: center; }
   .cars:first-of-type { padding-bottom: 2px; }
-  .cars-3 .carbox { display: inline-block; vertical-align: top; width: calc(33.333% - 7px); margin-right: 10px; }
-  .cars-3 .carbox:nth-child(3) { margin-right: 0; }
-  .cars-2 .carbox { display: inline-block; vertical-align: top; width: calc(50% - 5px); margin-right: 10px; }
-  .cars-2 .carbox:nth-child(2) { margin-right: 0; }
+  .cars-3 .carbox { display: inline-block; vertical-align: top; width: calc(33.333% - 10.5px); margin: 0 5px; }
+  .cars-2 .carbox { display: inline-block; vertical-align: top; width: calc(50% - 10.5px); margin: 0 5px; }
   .carbox { font-size: 12px; border: 1px solid #ccc; border-radius: 6px; padding: 4px; text-align: center; background: #fbfbfb; box-sizing: border-box; overflow: hidden; page-break-inside: avoid; break-inside: avoid; }
   .carlbl { font-size: 9px; font-weight: bold; color: #666; letter-spacing: 1px; margin-bottom: 4px; }
   .carimg { position: relative; display: block; }

@@ -45,11 +45,12 @@ export function Dropdown({ label, value, onChange, options, onAdd, placeholder, 
       </TouchableOpacity>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <TouchableOpacity style={d.backdrop} activeOpacity={1} onPress={() => setOpen(false)}>
-          <TouchableOpacity style={d.sheet} activeOpacity={1}>
+        <View style={d.backdrop}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => { setOpen(false); setQ(''); setAgregando(false); }} />
+          <View style={d.sheet}>
             <View style={d.sheetHead}>
               <Text style={d.sheetTitle}>{label || 'Selecciona'}</Text>
-              <TouchableOpacity onPress={() => setOpen(false)}><Text style={{ fontSize: 20, color: '#6b7480' }}>✕</Text></TouchableOpacity>
+              <TouchableOpacity style={d.closeX} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} onPress={() => { setOpen(false); setQ(''); setAgregando(false); }}><Text style={{ fontSize: 20, color: '#374151', fontWeight: '700' }}>✕</Text></TouchableOpacity>
             </View>
 
             {opts.length > 1 && (
@@ -82,8 +83,11 @@ export function Dropdown({ label, value, onChange, options, onAdd, placeholder, 
                 <Text style={d.addBtnT}>＋ Agregar nuevo</Text>
               </TouchableOpacity>
             ))}
-          </TouchableOpacity>
-        </TouchableOpacity>
+            <TouchableOpacity style={d.cerrarBtn} activeOpacity={0.7} onPress={() => { setOpen(false); setQ(''); setAgregando(false); }}>
+              <Text style={d.cerrarBtnT}>Cerrar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
     </View>
   );
@@ -255,6 +259,9 @@ const d = StyleSheet.create({
   caret: { color: '#6b7480', fontSize: 14, marginLeft: 8 },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,.5)', justifyContent: 'center', padding: 18 },
   sheet: { backgroundColor: '#fff', borderRadius: 18, padding: 16 },
+  closeX: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#f1f3f5', alignItems: 'center', justifyContent: 'center' },
+  cerrarBtn: { marginTop: 12, paddingVertical: 13, borderRadius: 11, backgroundColor: '#eef0f2', alignItems: 'center' },
+  cerrarBtnT: { fontWeight: '800', color: '#374151', fontSize: 14 },
   sheetHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   sheetTitle: { fontSize: 16, fontWeight: '800', color: '#16191d' },
   search: { borderWidth: 1, borderColor: '#e7e9ec', borderRadius: 10, padding: 11, fontSize: 14, marginBottom: 8, backgroundColor: '#fff' },
