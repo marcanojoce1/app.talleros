@@ -443,4 +443,19 @@ router.get('/demos', requireRole('superadmin'), async (req, res) => {
   res.json(rows);
 });
 
+
+// POST /api/talleres/probar-correo — el superadmin prueba el envío de correo y ve el error exacto (si lo hay)
+router.post('/probar-correo', requireRole('superadmin'), async (req, res) => {
+  const { sendEmail } = require('../services/email');
+  const destino = ((req.body && req.body.to) || 'soporte@mjservices.app').trim();
+  const proveedor = process.env.RESEND_API_KEY ? 'Resend' : (process.env.SMTP_HOST ? 'SMTP' : 'NINGUNO (modo consola: no se envía nada)');
+  const remitente = process.env.MAIL_FROM || (process.env.RESEND_API_KEY ? 'TallerOS <onboarding@resend.dev> (por defecto: solo envía al dueño de la cuenta de Resend)' : '(no definido)');
+  try {
+    const r = await sendEmail(destino, 'Prueba de correo — TallerOS', 'Si lees esto, el envío de correo de TallerOS funciona.', '<p>Si lees esto, el envío de correo de <b>TallerOS</b> funciona.</p>');
+    res.json({ ok: r.provider !== 'demo', proveedor, remitente, destino, detalle: r.provider === 'demo' ? 'No hay proveedor de correo configurado en Render (falta RESEND_API_KEY o SMTP_HOST): el correo solo se escribe en el log y NO se envía.' : 'Enviado correctamente a ' + destino + '. Revisa también spam.' });
+  } catch (e) {
+    res.json({ ok: false, proveedor, remitente, destino, detalle: e.message });
+  }
+});
+
 module.exports = router;

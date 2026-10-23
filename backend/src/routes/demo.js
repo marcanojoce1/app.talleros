@@ -22,29 +22,59 @@ function generarClave() {
   return out;
 }
 
+// Envía y, si falla, espera un poco y lo intenta una vez más.
+async function sendEmailReintento(...args) {
+  try { return await sendEmail(...args); }
+  catch (e) { await new Promise((ok) => setTimeout(ok, 2000)); return await sendEmail(...args); }
+}
+
 router.post('/solicitar', async (req, res) => {
   const { nombre, correo, telefono, tallerNombre, pais, volumen, interes } = req.body;
   if (!nombre || !nombre.trim()) return res.status(400).json({ error: 'Escribe tu nombre' });
   if (!correo || !correo.trim() || !correo.includes('@')) return res.status(400).json({ error: 'Escribe un correo válido' });
 
-  const usuario = generarUsuario(correo.split('@')[0]);
+  const correoLimpio = correo.trim();
+  // Limpia demos "huérfanas" de intentos anteriores que fallaron (taller de demo sin administrador).
+  try {
+    await query('DELETE FROM talleres WHERE demo_expira IS NOT NULL AND id NOT IN (SELECT taller_id FROM taller_admins)');
+  } catch (e) { console.error('[demo] limpieza de huérfanos:', e.message); }
+  // Si ese correo ya tiene una cuenta (o una demo anterior) lo avisamos claro, sin dejar nada a medias.
+  const existe = (await query('SELECT id FROM usuarios WHERE LOWER(correo) = LOWER($1) LIMIT 1', [correoLimpio])).rows[0];
+  if (existe) {
+    return res.status(409).json({ error: 'Este correo ya tiene una cuenta o una demo registrada. Inicia sesión con tu usuario, o escríbenos a soporte@mjservices.app / +51 917 024 656 y te ayudamos.' });
+  }
+
   const clave = generarClave();
   const hash = await hashPassword(clave);
   const expira = new Date(Date.now() + DEMO_DIAS * 24 * 60 * 60 * 1000);
   const nombreTaller = (tallerNombre && tallerNombre.trim()) || `Demo — ${nombre.trim()}`;
 
-  // Crea el taller de demo (versión Premium, para que se vean todas las funciones)
-  const t = (await query(
-    'INSERT INTO talleres (nombre, activo, demo_expira, demo_pais, demo_volumen, demo_interes) VALUES ($1,1,$2,$3,$4,$5) RETURNING id',
-    [nombreTaller, expira, pais || null, volumen || null, interes || null]
-  )).rows[0];
-
-  // Crea el usuario administrador de ese taller
-  const u = (await query(
-    'INSERT INTO usuarios (nombre, usuario, correo, telefono, password, rol) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
-    [nombre.trim(), usuario, correo.trim(), telefono || null, hash, 'administrador']
-  )).rows[0];
-  await query('INSERT INTO taller_admins (taller_id, usuario_id) VALUES ($1,$2)', [t.id, u.id]);
+  // Crea el taller de demo y su administrador; si algo falla, no deja un taller "huérfano".
+  let t, u, usuario;
+  try {
+    t = (await query(
+      'INSERT INTO talleres (nombre, activo, demo_expira, demo_pais, demo_volumen, demo_interes) VALUES ($1,1,$2,$3,$4,$5) RETURNING id',
+      [nombreTaller, expira, pais || null, volumen || null, interes || null]
+    )).rows[0];
+    for (let intento = 0; intento < 6 && !u; intento++) {
+      usuario = generarUsuario(correoLimpio.split('@')[0]);
+      try {
+        u = (await query(
+          'INSERT INTO usuarios (nombre, usuario, correo, telefono, password, rol) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
+          [nombre.trim(), usuario, correoLimpio, telefono || null, hash, 'administrador']
+        )).rows[0];
+      } catch (e) {
+        if (!/usuarios_usuario_key|usuario/i.test(e.message || '') || intento === 5) throw e; // solo reintenta si el usuario generado ya existía
+      }
+    }
+    await query('INSERT INTO taller_admins (taller_id, usuario_id) VALUES ($1,$2)', [t.id, u.id]);
+  } catch (e) {
+    console.error('[demo] error al crear la demo:', e.message);
+    if (u && u.id) { try { await query('DELETE FROM usuarios WHERE id=$1', [u.id]); } catch (_) {} }
+    if (t && t.id) { try { await query('DELETE FROM talleres WHERE id=$1', [t.id]); } catch (_) {} }
+    const dup = /duplicate key|unique/i.test(e.message || '');
+    return res.status(dup ? 409 : 500).json({ error: dup ? 'Este correo ya tiene una cuenta o una demo registrada. Escríbenos a soporte@mjservices.app y te ayudamos.' : 'No pudimos crear tu demo en este momento. Intenta de nuevo en unos minutos.' });
+  }
 
   const fechaLimite = expira.toLocaleDateString('es', { day: 'numeric', month: 'long' });
   const html = plantillaCorreo({
@@ -80,7 +110,8 @@ router.post('/solicitar', async (req, res) => {
       mensaje: interes ? `Interés: ${interes}` : '',
       contacto: 'Contáctalo pronto — su demo dura solo 3 días.',
     });
-    const envioLead = await sendEmail(
+    await new Promise((ok) => setTimeout(ok, 1200)); // pausa: los proveedores limitan envíos por segundo
+    const envioLead = await sendEmailReintento(
       'soporte@mjservices.app',
       'Nueva solicitud de demo de TallerOS',
       `Nueva solicitud de demo:\n\nNombre: ${nombre.trim()}\nCorreo: ${correo.trim()}\nTeléfono: ${telefono || '—'}\nTaller: ${nombreTaller}\nPaís: ${pais || '—'}\nVolumen: ${volumen || '—'}\nInterés: ${interes || '—'}`,

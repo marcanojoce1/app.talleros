@@ -531,7 +531,7 @@ html[data-theme="dark"] .wbtn:focus-visible,html[data-theme="dark"] .logoutbtn:f
   <div class="web-wrap"><div class="web">
     <div class="wsideBackdrop" id="wSideBackdrop" onclick="toggleWSide(false)"></div>
     <div class="wside">
-      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v257</span><button id="btnTema" onclick="toggleTema()" title="Modo claro / oscuro" style="margin-left:auto;font-size:15px;line-height:1;background:rgba(255,255,255,.12);border-radius:8px;width:28px;height:28px;color:#fff">🌙</button></div>
+      <div class="wb"><div class="d" id="brandIcon"><svg viewBox="0 0 24 24" fill="none" stroke="#16191d" stroke-width="2.2" stroke-linecap="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6 2 2 6-6a4 4 0 0 0 5.4-5.4l-2.3 2.3-1.4-1.4z"/></svg></div><img id="brandLogo" style="width:30px;height:30px;border-radius:7px;object-fit:cover;display:none"><span id="brandName">TallerOS</span><span style="font-size:9px;color:var(--sidebar-muted);font-weight:400;margin-left:5px">v259</span><button id="btnTema" onclick="toggleTema()" title="Modo claro / oscuro" style="margin-left:auto;font-size:15px;line-height:1;background:rgba(255,255,255,.12);border-radius:8px;width:28px;height:28px;color:#fff">🌙</button></div>
       <div class="wlbl op-item">Operación</div>
       <a class="on op-item" data-w="dash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
       <a class="op-item" data-w="recep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-6 0v4"/><rect x="2" y="9" width="20" height="11" rx="2"/></svg>Recepción digital</a>
@@ -2847,7 +2847,7 @@ async function doLogin(){const usuario=(document.getElementById('lgU').value||''
   }catch(e){loginErr(e.message);}}
 function afterLogin(){document.getElementById('login').style.display='none';removeSuper();
   const nt=document.getElementById('navTalleres');if(nt)nt.style.display=(ME.rol==='superadmin')?'':'none';
-  if(ME.rol==='superadmin'){enterMainAsSuper();return;}
+  if(ME.rol==='superadmin'){enterMainAsSuper();setTimeout(avisarDemosNuevas,1500);return;}
   document.querySelectorAll('.op-item').forEach(e=>e.style.display='');
   aplicarPermisosMenu();
   document.getElementById('stage').style.display='none';
@@ -3047,11 +3047,11 @@ function renderNoTaller(){removeSuper();const el=document.createElement('div');e
 function showTallerInactivo(t){removeSuper();const el=document.createElement('div');el.id='superPanel';el.className='pickerwrap';el.innerHTML=`<div class="pickcard"><div style="padding:26px;text-align:center"><div style="font-size:34px;margin-bottom:4px">🔒</div><h3>Taller desactivado</h3><div class="sub" style="margin:8px 0 6px">El taller <b>${t.nombre}</b> está desactivado por el Super Administrador.</div><div style="background:#fdecec;color:#b91c1c;border-radius:10px;padding:11px 13px;font-size:13px;margin:8px 0 16px;text-align:left">Motivo: ${t.motivo_inactivo||'No especificado.'}</div><button class="lbtn lbtn-p" onclick="cerrarInactivo()">Cerrar</button><span class="llink" onclick="logout()">Cerrar sesión</span></div></div>`;document.body.appendChild(el);}
 function cerrarInactivo(){removeSuper();if(CURRENT_TALLER){document.getElementById('stage').style.display='';renderTallerSelector();}else{renderTallerPicker();}}
 function renderTallerPicker(){removeSuper();const el=document.createElement('div');el.id='superPanel';el.className='pickerwrap';el.innerHTML=`<div class="pickcard"><div style="padding:22px"><h3>Selecciona un taller</h3><div class="sub" style="margin:4px 0 14px">Hola ${ME.nombre}, tienes varios talleres. ¿Con cuál deseas trabajar?</div>${TALLERES.map(t=>{const inact=(t.activo===0||t.activo===false);return `<button class="lbtn lbtn-g" style="justify-content:flex-start;margin-bottom:8px;${inact?'opacity:.6':''}" onclick="enterTaller(${t.id},'${(t.nombre||'').replace(/'/g,'')}')">${inact?'🔒':'🏭'} ${t.nombre}${inact?' (inactivo)':''}</button>`;}).join('')}<span class="llink" onclick="logout()">Cerrar sesión</span></div></div>`;document.body.appendChild(el);}
-async function renderSuperPanel(){const _cont=document.getElementById('w-talleres');if(!_cont)return;let talleres=[];try{talleres=await apiReq('/api/talleres');window._talleresCache=talleres;window._TALLERES_SU=talleres;}catch(e){}
+async function renderSuperPanel(){const _cont=document.getElementById('w-talleres');if(!_cont)return;setTimeout(avisarDemosNuevas,800);let talleres=[];try{talleres=await apiReq('/api/talleres');window._talleresCache=talleres;window._TALLERES_SU=talleres;}catch(e){}
   let contacto={};try{contacto=await apiReq('/api/config/contacto');}catch(e){}
   _cont.innerHTML=`
    <div class="supermain" style="max-width:none;padding:0">
-     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h3 style="font-size:15px;margin:0">Talleres registrados (${talleres.length})</h3><div style="display:flex;gap:8px"><button class="wbtn wbtn-g" onclick="spVerDemos()">🎁 Solicitudes de Demo</button><button class="wbtn wbtn-d" onclick="spAbrirCrearTaller()">＋ Crear taller</button></div></div>
+     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h3 style="font-size:15px;margin:0">Talleres registrados (${talleres.length})</h3><div style="display:flex;gap:8px"><button class="wbtn wbtn-g" id="btnVerDemos" onclick="spVerDemos()">🎁 Solicitudes de Demo</button><button class="wbtn wbtn-g" onclick="spProbarCorreo()">📧 Probar correo</button><button class="wbtn wbtn-d" onclick="spAbrirCrearTaller()">＋ Crear taller</button></div></div>
      <div id="spList">${talleres.map(spTallerCard).join('')||'<div class="dcard" style="color:var(--muted)">Aún no hay talleres. Crea el primero arriba.</div>'}</div>
      <div class="dcard" style="margin-top:14px"><h3 style="font-size:15px;margin-bottom:6px">🖼️ Imágenes del inicio de sesión</h3>
        <div style="font-size:12.5px;color:var(--muted);margin-bottom:12px">Estas fotos aparecen en el panel derecho de la pantalla de inicio de TODA la plataforma, rotando junto con los consejos de mantenimiento. Si no subes ninguna, se muestran fondos de color.</div>
@@ -3105,9 +3105,35 @@ function previewActaHTML(condiciones,pie,logoSrc,logoTam){
     ${!condiciones&&!pie?'<div style="font-size:11px;color:#c7ccd2">Escribe arriba para ver el ejemplo…</div>':''}
   </div>`;
 }
+
+// Avisa al superadmin cuando hay solicitudes de demo que aún no ha visto (aviso dentro de la plataforma, además del correo).
+async function avisarDemosNuevas(){
+  try{
+    const demos=await apiReq('/api/talleres/demos');
+    let vistas=0;try{vistas=+localStorage.getItem('demos_vistas_id')||0;}catch(e){}
+    const nuevas=demos.filter(d=>d.id>vistas);
+    window._demosNuevas=nuevas.length;
+    const b=document.getElementById('btnVerDemos');if(b)b.innerHTML='🎁 Solicitudes de Demo'+(nuevas.length?` <span style="background:#dc2626;color:#fff;border-radius:20px;padding:1px 7px;font-size:10.5px;margin-left:4px">${nuevas.length} nueva${nuevas.length>1?'s':''}</span>`:'');
+    if(nuevas.length){toast('🎁 '+nuevas.length+' solicitud'+(nuevas.length>1?'es':'')+' de demo nueva'+(nuevas.length>1?'s':'')+': '+nuevas[0].admin_nombre+' ('+nuevas[0].admin_correo+')');}
+  }catch(e){}
+}
+
+async function spProbarCorreo(){
+  toast('Enviando correo de prueba…');
+  try{
+    const r=await apiReq('/api/talleres/probar-correo',{method:'POST',body:JSON.stringify({to:'soporte@mjservices.app'})});
+    document.getElementById('modalH').innerHTML=`<h2>${r.ok?'✅':'❌'} Prueba de correo</h2>`;
+    document.getElementById('modalB').innerHTML=`<div style="font-size:13px;line-height:1.7">
+      <div><b>Proveedor:</b> ${r.proveedor}</div><div><b>Remitente:</b> ${r.remitente}</div><div><b>Destino:</b> ${r.destino}</div>
+      <div style="margin-top:10px;padding:10px 12px;border-radius:9px;background:${r.ok?'#17382a':'#40222B'};color:${r.ok?'#7BE0A4':'#FF9A9A'}">${r.detalle}</div></div>`;
+    document.getElementById('modal').classList.add('on');
+  }catch(e){toast(e.message);}
+}
 async function spVerDemos(){
   let demos=[];try{demos=await apiReq('/api/talleres/demos');}catch(e){toast(e.message);return;}
   const ahora=new Date();
+  try{localStorage.setItem('demos_vistas_id',String(demos.reduce((m,d)=>Math.max(m,d.id),0)));}catch(e){}
+  const _bd=document.getElementById('btnVerDemos');if(_bd)_bd.innerHTML='🎁 Solicitudes de Demo';
   document.getElementById('modalH').innerHTML=`<h2>🎁 Solicitudes de Demo (${demos.length})</h2>`;
   document.getElementById('modalB').innerHTML=demos.length?demos.map(d=>{
     const expira=new Date(d.demo_expira);const vencido=expira<ahora;
