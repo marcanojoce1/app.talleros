@@ -1,9 +1,11 @@
+import './src/theme';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, View, Text, TouchableOpacity } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { loadSession, despertarServidor } from './src/api';
+import { useTema } from './src/theme';
 import LoginScreen from './src/screens/Login';
 import HomeScreen from './src/screens/Home';
 import AdminHomeScreen from './src/screens/AdminHome';
@@ -33,6 +35,7 @@ class ErrorBoundary extends React.Component {
 }
 
 export default function App() {
+  useTema(); // vuelve a dibujar toda la app al cambiar ☀️/🌙
   const [ready, setReady] = useState(false);
   const [session, setSession] = useState(null);
   const [actualizando, setActualizando] = useState(false);

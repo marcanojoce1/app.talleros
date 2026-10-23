@@ -4,6 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { api, getState, getStateCache, putState, clearSession, getApiUrl, registrarNotificacionesPush } from '../api';
 import { compartirActaPDF, abrirEnNavegador, compartirCotizacionPDF, compartirResumenEsperaPDF } from '../acta';
 import { Dropdown, FirmaPad, FirmaVista, CarroSVG, etiqueta, colorMarca, marcaDe, Calendario, BotonAjustes, AjustesModal, firmaADataUri } from '../ui';
+import { useTema } from '../theme';
 
 const STATUS = {
   espera: { l: 'En espera', c: '#64748B' }, rep: { l: 'En reparación', c: '#D97706' },
@@ -119,6 +120,7 @@ const nid = (arr) => Math.max(0, ...(arr || []).map((x) => +x.id || 0)) + 1;
 const inits = (str) => (str || '').split(' ').map((x) => x[0]).slice(0, 2).join('').toUpperCase();
 
 export default function AdminHomeScreen({ navigation, route }) {
+  useTema(); // se vuelve a dibujar al cambiar ☀️/🌙
   const me = route.params?.me || {};
   const esSuper = me.rol === 'superadmin';
   const [talleres, setTalleres] = useState(route.params?.talleres || []);
@@ -242,6 +244,13 @@ export default function AdminHomeScreen({ navigation, route }) {
 
   const salir = async () => { await clearSession(); navigation.reset({ index: 0, routes: [{ name: 'Login' }] }); };
   const [ajustesOpen, setAjustesOpen] = useState(false);
+  // El botón 🔄 (modo técnico) solo se muestra si el usuario está marcado como "Administrador y Técnico".
+  const [esMechOk, setEsMechOk] = useState(!!(me && me.esMech));
+  useEffect(() => {
+    let vivo = true;
+    api('/api/auth/me').then((f) => { if (vivo && f) setEsMechOk(!!f.esMech); }).catch(() => {});
+    return () => { vivo = false; };
+  }, []);
 
   const cur = (data.config && data.config.currency && data.config.currency.sym) || 'Bs.';
   const clients = data.clients || [];
@@ -346,6 +355,7 @@ export default function AdminHomeScreen({ navigation, route }) {
         </View>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        {esMechOk ? (
         <TouchableOpacity
           onPress={async () => {
             let fresco = null;
@@ -361,6 +371,7 @@ export default function AdminHomeScreen({ navigation, route }) {
         >
           <Text style={{ fontSize: 16 }}>🔄</Text>
         </TouchableOpacity>
+        ) : null}
         <BotonAjustes onPress={() => setAjustesOpen(true)} />
         <TouchableOpacity style={s.logout} onPress={salir}><Text style={{ color: '#fff', fontSize: 12 }}>Salir</Text></TouchableOpacity>
       </View>
@@ -994,11 +1005,12 @@ function Recepcion({ data, guardar, onListo, editarItem, onEditarConsumido, tall
     if (bateria && !bateriaMarca.trim() && !bateriaAmperaje.trim() && !bateriaColor.trim() && !bateriaObs.trim()) { Alert.alert('Falta un dato obligatorio', 'Marcaste "Batería" — indica al menos la observación (ej. dónde está ubicada) si no vas a llenar marca/amperaje/color.'); return; }
     if (!editandoVehId) {
       const vSel = vehicles.find((v) => v.id === vehId);
-      if (vSel && vSel.status && !vSel.cerrada && vSel.recepcion) {
-        Alert.alert('⚠️ Este vehículo ya está en el taller', (vSel.model || '') + ' — ' + (vSel.plate || '') + ' de ' + (vSel.owner || '') + ' ya ingresó y se está trabajando en él. Si vuelves a recepcionarlo, se reiniciará el avance actual de esa orden.', [
-          { text: 'Cancelar', style: 'cancel' },
-          { text: 'Continuar de todas formas', style: 'destructive', onPress: () => confirmarForzado() },
-        ]);
+      const placaSel = vSel && vSel.plate ? String(vSel.plate).replace(/\s|-/g, '').toUpperCase() : '';
+      // Un vehículo (o su misma placa) con orden abierta no se puede volver a recepcionar hasta que se culmine el trabajo
+      const abierto = vehicles.find((v) => v.recepcion && !v.cerrada && v.status && (v.id === vehId || (placaSel && v.plate && String(v.plate).replace(/\s|-/g, '').toUpperCase() === placaSel)));
+      if (abierto) {
+        const os = abierto.numOrden ? 'OS' + String(abierto.numOrden).padStart(4, '0') : '';
+        Alert.alert('⚠️ Vehículo ya registrado en recepción', (abierto.model || '') + ' — ' + (abierto.plate || '') + ' de ' + (abierto.owner || '') + ' ya está registrado' + (os ? ' (orden ' + os + ')' : '') + ' y su trabajo aún no se ha culminado.\n\nNo se puede registrar de nuevo hasta que se culmine y se entregue el trabajo.');
         return;
       }
     }
@@ -2219,15 +2231,18 @@ function Historial({ data, guardar, cur, loading, recargar, pickFoto, taller }) 
               <Text style={s.muted}>{item.fecha} · {item.cliente} · {item.trabajo}</Text>
               <Text style={s.muted}>Total {cur} {(+item.total || 0).toLocaleString('es-VE')} · Pagado {cur} {(+item.pagado || 0).toLocaleString('es-VE')}</Text>
             </TouchableOpacity>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginTop: 8 }}>
-              <TouchableOpacity onPress={() => taller && item.vehId && abrirEnNavegador(taller.id, { id: item.vehId, model: item.veh }, 'trabajo')}>
-                <Text style={[s.link, { marginTop: 0 }]}>👁 Ver trabajo realizado →</Text>
+            <View style={s.ordBtnsWrap}>
+              <TouchableOpacity style={[s.ordBtn, { backgroundColor: '#EEF4FF', borderColor: '#BFD3FB' }]} activeOpacity={0.7} onPress={() => taller && item.vehId && abrirEnNavegador(taller.id, { id: item.vehId, model: item.veh }, 'trabajo')}>
+                <Text style={s.ordBtnIc}>👁️</Text>
+                <Text style={[s.ordBtnT, { color: '#1D4ED8' }]}>Ver trabajo</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => compartir(item)}>
-                <Text style={[s.link, { marginTop: 0 }]}>📄 Compartir (PDF) →</Text>
+              <TouchableOpacity style={[s.ordBtn, { backgroundColor: '#E8F6EC', borderColor: '#B5E0C2' }]} activeOpacity={0.7} onPress={() => compartir(item)}>
+                <Text style={s.ordBtnIc}>📤</Text>
+                <Text style={[s.ordBtnT, { color: '#0F6E56' }]}>Compartir PDF</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => setHonorarioDe(item)}>
-                <Text style={[s.link, { marginTop: 0, color: '#0F6E56' }]}>💵 Honorarios{item.honorario ? ' ✓' : ''} →</Text>
+              <TouchableOpacity style={[s.ordBtn, { backgroundColor: '#FFF6D6', borderColor: '#F5B700' }]} activeOpacity={0.7} onPress={() => setHonorarioDe(item)}>
+                <Text style={s.ordBtnIc}>💵</Text>
+                <Text style={[s.ordBtnT, { color: '#8a6200' }]}>Honorarios{item.honorario ? ' ✓' : ''}</Text>
               </TouchableOpacity>
             </View>
           </View>

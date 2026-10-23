@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, ScrollView, PanResponder, Image } from 'react-native';
 import Svg, { Path, G, Rect, Circle, Ellipse, Line } from 'react-native-svg';
+import { BotonTema } from './theme';
 
 /* Acepta opciones como texto ('Toyota') o como objeto ({marca:'Toyota', modelos:[...]}) */
 export const etiqueta = (o) => (typeof o === 'string' ? o : (o && (o.marca || o.nombre || o.n || o.name)) || '');
@@ -388,12 +389,15 @@ import { getApiUrl } from './api';
 
 export function BotonAjustes({ color = '#fff', onPress }) {
   return (
+    <>
+    <BotonTema claroEnCabecera={color !== '#fff'} />
     <TouchableOpacity onPress={onPress} style={aj.btn} accessibilityLabel="Ajustes">
       <Svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke={color} strokeWidth={2}>
         <Circle cx="12" cy="12" r="3" />
         <Path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
       </Svg>
     </TouchableOpacity>
+    </>
   );
 }
 

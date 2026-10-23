@@ -1,3 +1,4 @@
+import { useTema } from '../theme';
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert, Modal, Linking } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,6 +16,7 @@ const GRADS = [
 ];
 
 export default function LoginScreen({ navigation }) {
+  useTema(); // se vuelve a dibujar al cambiar ☀️/🌙
   const [grad] = useState(() => GRADS[Math.floor(Math.random() * GRADS.length)]);
   const [usuario, setUsuario] = useState('');
   const [password, setPassword] = useState('');

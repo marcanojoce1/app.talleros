@@ -5,6 +5,7 @@ import * as VideoThumbnails from 'expo-video-thumbnails';
 import { api, getState, getStateCache, putState, clearSession, getApiUrl, registrarNotificacionesPush } from '../api';
 import { compartirActaPDF, abrirEnNavegador, urlDocumento, subirMedia } from '../acta';
 import { ProgressSlider , colorMarca, marcaDe, BotonAjustes, AjustesModal, Calendario } from '../ui';
+import { useTema } from '../theme';
 
 // El cliente solo ve los avances aprobados: los que el técnico dejó pendientes de revisión no se muestran hasta que el administrador los notifique.
 const avVisibleCliente = (a) => !a.pendienteRevision && a.notificadoCliente !== false;
@@ -80,6 +81,7 @@ const cc = StyleSheet.create({
 
 
 export default function HomeScreen({ navigation, route }) {
+  useTema(); // se vuelve a dibujar al cambiar ☀️/🌙
   const me = route.params?.me || {};
   const talleresParam = route.params?.talleres || [];
   const esTécnico = me.rol === 'mecanico';
