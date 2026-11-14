@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Alert, ScrollView, TextInput, Image, Modal, Pressable, Linking, BackHandler, ActivityIndicator, AppState } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { api, getState, getStateCache, putState, clearSession, getApiUrl, registrarNotificacionesPush } from '../api';
@@ -164,12 +165,35 @@ export default function AdminHomeScreen({ navigation, route }) {
     // plano si hay algo nuevo — así la app no se siente "colgada" esperando al servidor.
     const cache = await getStateCache(t.id);
     if (cache) { setData(cache); setLoading(true); } else { setLoading(true); }
-    try { const d = await getState(t.id); setData(d || {}); } catch (e) { if (!cache) setError(e.message); } finally { setLoading(false); }
+    try {
+      // Si la última vez algún cambio no llegó al servidor (se cerró la app o no había conexión),
+      // se reenvía ahora ANTES de leer — así no se pierde nada. El servidor fusiona por id.
+      try {
+        const pend = await AsyncStorage.getItem('t_pend_' + t.id);
+        if (pend) { await putState(t.id, JSON.parse(pend)); await AsyncStorage.removeItem('t_pend_' + t.id); }
+      } catch (e) { /* si no se puede reenviar ahora, se mantiene guardado para el próximo intento */ }
+      const d = await getState(t.id); setData(d || {});
+    } catch (e) { if (!cache) setError(e.message); } finally { setLoading(false); }
   }, []);
+
+  // Control de guardados: evita que una recarga pise con datos viejos del servidor un cambio
+  // que todavía se está enviando (o que falló), que era lo que hacía "desaparecer" vehículos.
+  const dataRef = useRef({});
+  const guardado = useRef({ n: 0, ver: 0, fallo: false });
+  useEffect(() => { dataRef.current = data; }, [data]);
 
   const recargar = useCallback(async () => {
     if (!taller) return; setLoading(true);
-    try { const d = await getState(taller.id); setData(d || {}); } catch (e) { setError(e.message); } finally { setLoading(false); }
+    try {
+      const g = guardado.current;
+      // Si un cambio anterior no llegó al servidor, se reenvía primero
+      if (g.fallo && dataRef.current) { await putState(taller.id, dataRef.current); g.fallo = false; try { await AsyncStorage.removeItem('t_pend_' + taller.id); } catch (e) {} }
+      if (g.n > 0) return; // hay un guardado en curso: no pisar lo que el usuario acaba de hacer
+      const verAntes = g.ver;
+      const d = await getState(taller.id);
+      if (g.n > 0 || g.fallo || g.ver !== verAntes) return; // el usuario guardó algo mientras se leía: esa lectura ya es vieja
+      setData(d || {});
+    } catch (e) { setError(e.message); } finally { setLoading(false); }
   }, [taller]);
 
   // Al volver de segundo plano (el usuario minimizó la app un rato y regresó), el servidor
@@ -189,8 +213,22 @@ export default function AdminHomeScreen({ navigation, route }) {
   }, [taller, recargar]);
 
   const guardar = useCallback(async (nuevo) => {
-    setData(nuevo);
-    try { await putState(taller.id, nuevo); } catch (e) { Alert.alert('Error al sincronizar', e.message); }
+    const g = guardado.current;
+    setData(nuevo); dataRef.current = nuevo;
+    g.n++; g.ver++;
+    // Copia de seguridad en el teléfono ANTES de enviar: si la app se cierra a la fuerza mientras
+    // el servidor (gratuito) despierta, al volver a abrir se reenvía sola y no se pierde nada.
+    try { await AsyncStorage.setItem('t_pend_' + taller.id, JSON.stringify(nuevo)); } catch (e0) {}
+    try {
+      await putState(taller.id, nuevo);
+      g.fallo = false;
+      try { await AsyncStorage.removeItem('t_pend_' + taller.id); } catch (e) {}
+    } catch (e) {
+      g.fallo = true;
+      // Se conserva una copia en el teléfono: se reenviará sola al volver a abrir o recargar
+      try { await AsyncStorage.setItem('t_pend_' + taller.id, JSON.stringify(nuevo)); } catch (e2) {}
+      Alert.alert('⚠️ Cambios sin sincronizar', 'No se pudo guardar en el servidor (' + e.message + ').\n\nTus cambios están guardados en este teléfono y se reenviarán solos al reconectar. No desinstales la app.');
+    } finally { g.n--; }
   }, [taller]);
 
   const toggleActivo = (tipo, item) => {
@@ -288,7 +326,9 @@ export default function AdminHomeScreen({ navigation, route }) {
       const veh = (data.vehicles || []).find((v) => v.id === id);
       if (veh && !veh.mech) {
         setTecnicoElegido(''); setAsignarTecnicoOpen(id);
-        recargar(); // trae técnicos frescos (por si alguien se acaba de marcar como dual-rol)
+        // Trae técnicos frescos (por si alguien se acaba de marcar como dual-rol) SIN reemplazar el resto
+        // de los datos locales — antes esto recargaba todo y podía borrar de la pantalla un cambio recién hecho.
+        if (taller) getState(taller.id).then((d) => { if (d && Array.isArray(d.mecanicos)) setData((prev) => ({ ...prev, mecanicos: d.mecanicos })); }).catch(() => {});
         return;
       }
     }
@@ -311,10 +351,14 @@ export default function AdminHomeScreen({ navigation, route }) {
       nv.advances = [...(v.advances || []), { t: 'En proceso', m: 'Actualizado por ' + (me.nombre || 'Administrador'), type: 'rep', ago: 'ahora' }];
       return nv;
     });
-    guardar({ ...data, vehicles: vs });
-    setAsignarTecnicoOpen(null);
     const numTxt = vActual && vActual.numOrden ? 'OS' + String(vActual.numOrden).padStart(4, '0') : ('#' + asignarTecnicoOpen);
-    Alert.alert('✅ Orden actualizada', `Orden ${numTxt} fue trasladada a estado Reparación.`);
+    // Primero se cierra la ventana; el guardado y el aviso van un instante después para que Android
+    // no se cuelgue mostrando una alerta mientras la ventana todavía se está cerrando.
+    setAsignarTecnicoOpen(null);
+    setTimeout(() => {
+      guardar({ ...data, vehicles: vs });
+      setTimeout(() => Alert.alert('✅ Orden actualizada', `Orden ${numTxt} fue trasladada a estado Reparación.`), 250);
+    }, 150);
   };
 
   const avancesPendientes = vehicles.reduce((a, v) => a + (v.advances || []).filter((ad) => ad.pendienteRevision).length, 0);
@@ -687,7 +731,16 @@ export default function AdminHomeScreen({ navigation, route }) {
             <Text style={{ fontSize: 13, color: '#6b7480', marginBottom: 14 }}>
               Antes de pasar este vehículo a "En proceso", indica qué técnico lo va a atender.
             </Text>
-            <Dropdown value={tecnicoElegido} options={mecanicos.filter((m) => m.activo !== false).map((m) => m.n)} onChange={setTecnicoElegido} placeholder="Selecciona el técnico" textoVacio="No hay técnicos activos. Regístralos en el módulo Técnicos." />
+            {/* Lista dentro de la misma ventana (NO un Dropdown): en Android una ventana dentro de otra se cuelga */}
+            <ScrollView style={{ maxHeight: 260 }} keyboardShouldPersistTaps="handled">
+              {mecanicos.filter((m) => m.activo !== false).length ? mecanicos.filter((m) => m.activo !== false).map((m) => (
+                <TouchableOpacity key={String(m.id) + m.n} activeOpacity={0.7} onPress={() => setTecnicoElegido(m.n)}
+                  style={{ flexDirection: 'row', alignItems: 'center', padding: 12, marginBottom: 6, borderRadius: 10, borderWidth: 1.5, borderColor: tecnicoElegido === m.n ? '#16A34A' : '#e5e8ec', backgroundColor: tecnicoElegido === m.n ? '#ECFDF3' : '#fff' }}>
+                  <Text style={{ flex: 1, fontSize: 14, fontWeight: tecnicoElegido === m.n ? '800' : '600', color: '#16191d' }}>🔧 {m.n}</Text>
+                  {tecnicoElegido === m.n ? <Text style={{ color: '#16A34A', fontWeight: '800', fontSize: 16 }}>✓</Text> : null}
+                </TouchableOpacity>
+              )) : <Text style={{ fontSize: 13, color: '#6b7480', paddingVertical: 8 }}>No hay técnicos activos. Regístralos en el módulo Técnicos.</Text>}
+            </ScrollView>
             <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
               <TouchableOpacity style={{ flex: 1, padding: 12, borderRadius: 10, backgroundColor: '#eef0f2', alignItems: 'center' }} onPress={() => setAsignarTecnicoOpen(null)}>
                 <Text style={{ fontWeight: '700', color: '#6b7480' }}>Cancelar</Text>

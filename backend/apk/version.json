@@ -1,6 +1,6 @@
 {
-    "appBuild":  411,
+    "appBuild":  412,
     "appVersion":  "1.1.0",
     "apk":  "/apk/talleros.apk",
-    "notas":  "Los vehiculos en taller ya no aparecen en recepcion."
+    "notas":  "Guardado mas seguro y asignar tecnico sin cuelgues."
 }
