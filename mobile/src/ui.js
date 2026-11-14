@@ -384,7 +384,7 @@ const cal = StyleSheet.create({
 
 /* =================== AJUSTES / VERSIÓN =================== */
 import { Linking, Platform, Alert } from 'react-native';
-import { APP_VERSION, APP_BUILD } from './version';
+import { APP_VERSION, APP_BUILD, ES_PLAY } from './version';
 import { getApiUrl } from './api';
 
 export function BotonAjustes({ color = '#fff', onPress }) {
@@ -429,7 +429,7 @@ export function AjustesModal({ visible, onClose }) {
     if (!estado || !estado.apk) return;
     if (Platform.OS !== 'android') { Linking.openURL(estado.apk).catch(() => {}); return; }
     let FS, IntentLauncher;
-    try { FS = require('expo-file-system'); IntentLauncher = require('expo-intent-launcher'); } catch (e) { FS = null; }
+    try { FS = require('expo-file-system/legacy'); IntentLauncher = require('expo-intent-launcher'); } catch (e) { FS = null; }
     if (!FS) { Linking.openURL(estado.apk).catch(() => {}); return; } // sin librería: abrir en navegador
     setBajando(true); setPct(0);
     try {
@@ -479,9 +479,11 @@ export function AjustesModal({ visible, onClose }) {
           <View style={aj.fila}><Text style={aj.k}>Build</Text><Text style={aj.v}>{APP_BUILD}</Text></View>
           <View style={aj.fila}><Text style={aj.k}>Sistema</Text><Text style={aj.v}>{Platform.OS === 'android' ? 'Android' : Platform.OS}</Text></View>
 
+          {ES_PLAY ? null : (
           <TouchableOpacity style={[aj.actualizar, buscando && { opacity: 0.6 }]} disabled={buscando || bajando} onPress={buscarActualizacion}>
             <Text style={aj.actualizarT}>{buscando ? 'Buscando…' : '🔄 Buscar actualización'}</Text>
           </TouchableOpacity>
+          )}
 
           {estado ? (
             <View style={[aj.aviso, estado.hay ? { backgroundColor: '#fdf1e1' } : { backgroundColor: '#e8f6ec' }]}>

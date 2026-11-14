@@ -271,7 +271,7 @@ export default function AdminHomeScreen({ navigation, route }) {
   const pickFoto = async (setter) => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) { Alert.alert('Permiso', 'Se necesita acceso a las fotos.'); return; }
-    const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.4, base64: true });
+    const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.4, base64: true });
     if (!r.canceled && r.assets && r.assets[0]) setter('data:image/jpeg;base64,' + r.assets[0].base64);
   };
   const enviarFactura = async () => {
@@ -2459,7 +2459,7 @@ function Talleres() {
   const elegirLogo = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) { Alert.alert('Permiso', 'Se necesita acceso a la galería.'); return; }
-    const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.5, base64: true });
+    const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.5, base64: true });
     if (!r.canceled && r.assets && r.assets[0]) setF({ ...f, logo: 'data:image/jpeg;base64,' + r.assets[0].base64 });
   };
   const guardar = async () => {
@@ -2734,7 +2734,7 @@ function EditarTallerContenido({ taller, esSuper, onDone }) {
   const elegirLogo = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) { Alert.alert('Permiso', 'Se necesita acceso a la galería.'); return; }
-    const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.5, base64: true });
+    const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.5, base64: true });
     if (!r.canceled && r.assets && r.assets[0]) setF({ ...f, logo: 'data:image/jpeg;base64,' + r.assets[0].base64 });
   };
   const guardar = async () => {

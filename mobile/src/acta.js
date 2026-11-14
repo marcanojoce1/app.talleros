@@ -1,5 +1,5 @@
 import { Alert, Linking, Platform } from 'react-native';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { getApiUrl, getToken } from './api';
 
 // Sube una foto o video directo a R2 (Cloudflare) usando una URL firmada que pide al
@@ -42,7 +42,7 @@ function cargarModulo(nombre) {
   try {
     if (nombre === 'print') return require('expo-print');
     if (nombre === 'sharing') return require('expo-sharing');
-    if (nombre === 'fs') return require('expo-file-system');
+    if (nombre === 'fs') return require('expo-file-system/legacy');
   } catch (e) { return null; }
   return null;
 }

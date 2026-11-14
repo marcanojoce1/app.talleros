@@ -27,6 +27,13 @@ if ($contenidoNuevo -notmatch "APP_VERSION\s*=\s*'([^']+)'") {
 }
 $version = $matches[1]
 
+# 1b) Seguridad: el APK interno necesita el permiso de instalar actualizaciones (el proyecto no debe estar en modo Play).
+$manifest = Join-Path $raiz "mobile\android\app\src\main\AndroidManifest.xml"
+if ((Test-Path $manifest) -and ((Get-Content $manifest -Raw) -match 'REQUEST_INSTALL_PACKAGES" tools:node="remove"')) {
+  Write-Host "El proyecto Android esta en modo Google Play. Corre primero (desde C:\talleros\mobile):  npx expo prebuild --platform android --clean" -ForegroundColor Red
+  exit 1
+}
+
 # 2) Compila el APK ya con el numero nuevo.
 Write-Host ""
 Write-Host "Compilando el APK (esto puede tardar varios minutos)..." -ForegroundColor Cyan

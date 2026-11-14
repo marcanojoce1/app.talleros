@@ -914,7 +914,7 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) { Alert.alert('Permiso', 'Se necesita acceso a las fotos.'); return; }
       await new Promise((ok) => setTimeout(ok, 400)); // deja que cierre el aviso antes de abrir la galería
-      const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.35, base64: true, allowsMultipleSelection: false });
+      const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.35, base64: true, allowsMultipleSelection: false });
       aplicarFoto(r);
     } catch (e) {
       Alert.alert('No se pudo cargar la foto', (e && e.message) || 'Intenta de nuevo.');
@@ -951,7 +951,7 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) { Alert.alert('Permiso', 'Se necesita acceso a la cámara.'); return; }
     const tope = Math.min(15, segRestante);
-    const r = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Videos, videoMaxDuration: tope, quality: 0.3 });
+    const r = await ImagePicker.launchCameraAsync({ mediaTypes: ['videos'], videoMaxDuration: tope, quality: 0.3 });
     if (r.canceled || !r.assets || !r.assets[0]) return;
     const asset = r.assets[0];
     // La cámara del celular no siempre respeta el límite que le pedimos — si de todas
@@ -968,7 +968,7 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
     if (segRestante <= 0) { Alert.alert('Sin tiempo de video disponible', 'Este vehículo ya usó los ' + limiteMin + ' minuto(s) de video que permite la versión ' + plan.toUpperCase() + ' del taller. Pide al administrador que amplíe el límite.'); return; }
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) { Alert.alert('Permiso', 'Se necesita acceso a la galería.'); return; }
-    const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Videos, quality: 0.5 });
+    const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['videos'], quality: 0.5 });
     if (r.canceled || !r.assets || !r.assets[0]) return;
     const asset = r.assets[0];
     const MAX_MB = 100;

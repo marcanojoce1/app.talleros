@@ -9,3 +9,9 @@ mobile/node_modules/
 .DS_Store
 *.log
 backend/.cache/
+
+# Llaves de firma de Google Play: NUNCA subir a git
+keys/
+*.jks
+*.aab
+mobile/play-build/

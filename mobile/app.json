@@ -28,7 +28,8 @@
         "ACCESS_FINE_LOCATION",
         "REQUEST_INSTALL_PACKAGES"
       ],
-      "versionCode": 1
+      "versionCode": 1,
+      "edgeToEdgeEnabled": true
     },
     "extra": {
       "apiUrl": "https://taller.mjservices.app",
@@ -47,7 +48,6 @@
           "locationAlwaysAndWhenInUsePermission": "Permite compartir tu ubicación cuando solicitas auxilio vial."
         }
       ],
-      "./plugins/withGradleFix.js",
       [
         "expo-notifications",
         {

@@ -4,6 +4,7 @@ import { ActivityIndicator, View, Text, TouchableOpacity } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { loadSession, despertarServidor } from './src/api';
 import { useTema } from './src/theme';
 import LoginScreen from './src/screens/Login';
@@ -32,6 +33,13 @@ class ErrorBoundary extends React.Component {
     }
     return this.props.children;
   }
+}
+
+// Android 16 obliga a dibujar bajo la barra de navegación: este margen evita que tape botones al final de las pantallas.
+function MargenInferior({ children }) {
+  const insets = useSafeAreaInsets();
+  const oscuro = useTema();
+  return <View style={{ flex: 1, paddingBottom: insets.bottom, backgroundColor: oscuro ? '#0E1627' : '#f3f4f6' }}>{children}</View>;
 }
 
 export default function App() {
@@ -68,6 +76,8 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+    <SafeAreaProvider>
+    <MargenInferior>
     <NavigationContainer>
       <StatusBar style="light" />
       <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initial}>
@@ -76,6 +86,8 @@ export default function App() {
         <Stack.Screen name="AdminHome" component={AdminHomeScreen} initialParams={{ me: session && session.me, talleres: (session && session.talleres) || [] }} />
       </Stack.Navigator>
     </NavigationContainer>
+    </MargenInferior>
+    </SafeAreaProvider>
     </ErrorBoundary>
   );
 }
