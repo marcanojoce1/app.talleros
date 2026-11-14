@@ -1,6 +1,6 @@
 {
-    "appBuild":  405,
+    "appBuild":  411,
     "appVersion":  "1.1.0",
     "apk":  "/apk/talleros.apk",
-    "notas":  "Actualizacion disponible."
+    "notas":  "Los vehiculos en taller ya no aparecen en recepcion."
 }
