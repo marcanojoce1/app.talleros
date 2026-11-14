@@ -43,11 +43,11 @@ La versión de Play **no** tiene el botón "Buscar actualización" ni el permiso
 Todas las apps → Crear app → Nombre **TallerOS** · Idioma **Español (Latinoamérica)** · App · **Gratuita** · acepta las declaraciones.
 
 ### 2. Ficha de la tienda (Presencia en la tienda → Ficha principal)
-- **Descripción breve (80 máx.):** `Recepción digital, órdenes y avances de tu taller automotriz en un solo lugar.`
+- **Descripción breve (80 máx.):** `App y plataforma web para tu taller: recepción digital, órdenes y avances.`
 - **Descripción completa:**
 
 ```
-TallerOS es la plataforma para talleres automotrices que quieren trabajar ordenado y sin papeles.
+TallerOS es la plataforma para talleres automotrices que quieren trabajar ordenado y sin papeles. Funciona en tu celular con esta app y también en la computadora con la plataforma web.
 
 • Recepción digital con acta de inspección: datos del cliente y del vehículo, accesorios, combustible, daños sobre el esquema del carro y firmas digitales.
 • Órdenes de taller en tiempo real: en espera, en reparación, terminado y entregado.
@@ -57,6 +57,7 @@ TallerOS es la plataforma para talleres automotrices que quieren trabajar ordena
 • Próximos mantenimientos y avisos al cliente.
 • Auxilio vial: el cliente comparte su ubicación para pedir ayuda.
 • Modo claro y modo oscuro.
+• Plataforma web para administrar tu taller desde la computadora: taller.mjservices.app (usa el mismo usuario y contraseña de la app).
 
 TallerOS es una aplicación de uso para talleres registrados. Solicita tu demo gratuita en taller.mjservices.app/demo.html
 ```

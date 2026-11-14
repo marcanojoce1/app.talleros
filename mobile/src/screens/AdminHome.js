@@ -938,7 +938,9 @@ function Recepcion({ data, guardar, onListo, editarItem, onEditarConsumido, tall
     if (scrollRef.current) scrollRef.current.scrollTo({ y: 0, animated: true });
   }, [editarItem]);
 
-  const cvs = vehicles.filter((v) => v.owner === cliente && v.activo !== false);
+  // Un vehículo con orden abierta (recepcionado y sin culminar) no aparece para volver a recepcionarlo
+  const enTaller = (v) => !!(v.recepcion && !v.cerrada && v.status);
+  const cvs = vehicles.filter((v) => v.owner === cliente && v.activo !== false && !enTaller(v));
   const vSel = vehicles.find((v) => v.id === vehId);
   const cSel = clients.find((c) => c.n === cliente);
   const norm = (t) => (t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -949,8 +951,8 @@ function Recepcion({ data, guardar, onListo, editarItem, onEditarConsumido, tall
   const elegirCotizacion = (c) => {
     setCotizacionId(c.id); setCotizacionNum(c.num); setMontoCotizacion(c.monto || 0); setCotizacionItems(c.items || []);
     setCliente(c.cliente);
-    const vehsCli = vehicles.filter((v) => v.owner === c.cliente && v.activo !== false);
-    if (!vehsCli.length) { Alert.alert('Sin vehículo', c.cliente + ' no tiene un vehículo registrado — regístralo primero.'); setVehId(null); return; }
+    const vehsCli = vehicles.filter((v) => v.owner === c.cliente && v.activo !== false && !enTaller(v));
+    if (!vehsCli.length) { Alert.alert('Sin vehículo', c.cliente + ' no tiene un vehículo disponible (sin registrar, o ya en taller con trabajo sin culminar).'); setVehId(null); return; }
     const porPlaca = c.placa ? vehsCli.find((v) => v.plate === c.placa) : null;
     const elegido = porPlaca || vehsCli[0];
     setVehId(elegido.id);
@@ -1124,7 +1126,7 @@ function Recepcion({ data, guardar, onListo, editarItem, onEditarConsumido, tall
           <Dropdown label="Cliente" obligatorio value={cliente} placeholder="Selecciona el cliente"
             options={clients.map((c) => c.n)}
             meta={Object.fromEntries(clients.map((c) => [c.n, [c.tipoDoc, c.doc, c.tel, c.correo].filter(Boolean).join(' · ')]))}
-            onChange={(v) => { setCliente(v); const nc = vehicles.filter((x) => x.owner === v && x.activo !== false); const pv = nc[0]; setVehId(pv ? pv.id : null); if (pv && pv.color) setColor(pv.color); if (pv && pv.tipoVeh) setTipoVeh(pv.tipoVeh); }}
+            onChange={(v) => { setCliente(v); const nc = vehicles.filter((x) => x.owner === v && x.activo !== false && !enTaller(x)); const pv = nc[0]; setVehId(pv ? pv.id : null); if (pv && pv.color) setColor(pv.color); if (pv && pv.tipoVeh) setTipoVeh(pv.tipoVeh); }}
             textoVacio="Aún no hay clientes. Regístralos en el módulo Clientes." />
           {cSel ? <Text style={s.muted}>{cSel.tipoDoc || ''} {cSel.doc || ''} · {cSel.tel || ''} · {cSel.correo || ''}</Text> : null}
 
@@ -1134,7 +1136,7 @@ function Recepcion({ data, guardar, onListo, editarItem, onEditarConsumido, tall
             options={cvs.map((v) => v.model + ' · ' + v.plate)}
             meta={Object.fromEntries(cvs.map((v) => [v.model + ' · ' + v.plate, [v.color, v.anio, v.tipoVeh].filter(Boolean).join(' · ')]))}
             onChange={(txt) => { const v = cvs.find((x) => (x.model + ' · ' + x.plate) === txt); setVehId(v ? v.id : null); if (v && v.color) setColor(v.color); if (v && v.tipoVeh) setTipoVeh(v.tipoVeh); }}
-            textoVacio="Este cliente no tiene vehículos. Regístralos en el módulo Vehículos." />
+            textoVacio="Este cliente no tiene vehículos disponibles. Los que ya están en taller con trabajo sin culminar no aparecen aquí hasta que se cierre su orden." />
         </>
       )}
 
