@@ -1,6 +1,6 @@
 {
-  "appVersion": "1.0.1",
-  "appBuild": 84,
-  "apk": "/apk/talleros.apk",
-  "notas": "Actualización por OTA disponible."
+    "appBuild":  406,
+    "appVersion":  "1.1.0",
+    "apk":  "/apk/talleros.apk",
+    "notas":  "Modo claro y oscuro, botones más grandes en las órdenes, avisos de vehículo duplicado y mejoras en el acta."
 }

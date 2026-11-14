@@ -6,6 +6,7 @@ const path = require('path');
 module.exports = ({ config }) => {
   const esPlay = process.env.APP_VARIANT === 'play';
   const out = { ...config, extra: { ...(config.extra || {}), variant: esPlay ? 'play' : 'interna' } };
+  out.plugins = [...(config.plugins || []), './plugins/withGradleMemoria.js'];
 
   if (esPlay) {
     // versionCode de Google Play: sube solo con build-play.ps1 (cada subida a Play debe llevar un número mayor)
@@ -22,7 +23,7 @@ module.exports = ({ config }) => {
         'android.permission.WRITE_EXTERNAL_STORAGE',
       ],
     };
-    out.plugins = [...(config.plugins || []), './plugins/withPlaySigning.js'];
+    out.plugins = [...out.plugins, './plugins/withPlaySigning.js'];
   }
   return out;
 };
