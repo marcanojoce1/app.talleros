@@ -74,6 +74,7 @@ app.use('/api', require('./routes/ordenes'));
 app.use('/api/config', require('./routes/config'));
 app.use('/api/branding', require('./routes/branding'));
 app.use('/api/media', require('./routes/media'));
+app.use('/api/feedback', require('./routes/feedback'));
 
 // Servir la web del administrador y las apps (PWA) desde el mismo servidor
 const pick = (a, b) => (fs.existsSync(a) ? a : b);

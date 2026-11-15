@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Ver comentarios — TallerOS</title>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:Arial,Helvetica,sans-serif;background:#f3f5f8;margin:0;padding:20px;color:#1a1a1a}
+  .wrap{max-width:760px;margin:0 auto}
+  h1{color:#16406b;font-size:22px}
+  .card{background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:12px;box-shadow:0 1px 6px rgba(0,0,0,.07)}
+  .meta{font-size:12px;color:#667;margin-bottom:6px}
+  .tag{display:inline-block;background:#eef2f7;border-radius:6px;padding:2px 8px;margin-right:6px;font-weight:700;color:#16406b}
+  .msg{white-space:pre-wrap;line-height:1.5}
+  input{width:100%;padding:11px;border:1px solid #cfd5dc;border-radius:8px;font-size:16px;margin-bottom:10px}
+  button{padding:12px 18px;border:0;border-radius:10px;background:#f5b800;font-weight:800;font-size:15px;cursor:pointer}
+  .err{color:#b42318;margin:8px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>💬 Comentarios de los testers</h1>
+  <div id="login" class="card">
+    <p>Entra con tu usuario de superadministrador.</p>
+    <input id="u" placeholder="Usuario" autocapitalize="off">
+    <input id="p" type="password" placeholder="Contraseña">
+    <div class="err" id="err"></div>
+    <button onclick="entrar()">Entrar</button>
+  </div>
+  <div id="lista"></div>
+</div>
+<script>
+function $(i){return document.getElementById(i)}
+function esc(t){var d=document.createElement('div');d.textContent=t==null?'':String(t);return d.innerHTML}
+async function entrar(){
+  $('err').textContent='';
+  try{
+    var r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({usuario:$('u').value.trim(),password:$('p').value})});
+    var d=await r.json(); if(!r.ok) throw new Error(d.error||'No se pudo entrar');
+    var c=await fetch('/api/feedback',{headers:{Authorization:'Bearer '+d.token}});
+    var rows=await c.json(); if(!c.ok) throw new Error(rows.error||'Sin permiso (se necesita superadministrador)');
+    $('login').style.display='none';
+    $('lista').innerHTML = rows.length ? rows.map(function(x){
+      return '<div class="card"><div class="meta"><span class="tag">'+esc(x.tipo)+'</span><span class="tag">'+esc(x.rol)+'</span>'+esc(new Date(x.fecha).toLocaleString())+
+      '</div><div class="msg">'+esc(x.mensaje)+'</div><div class="meta" style="margin-top:8px">'+
+      [x.nombre,x.contacto,x.dispositivo].filter(Boolean).map(esc).join(' · ')+'</div></div>';
+    }).join('') : '<div class="card">Todavía no hay comentarios.</div>';
+  }catch(e){$('err').textContent=e.message}
+}
+</script>
+</body>
+</html>
