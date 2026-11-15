@@ -365,12 +365,12 @@ export default function AdminHomeScreen({ navigation, route }) {
   };
 
   // Solo cuenta lo que realmente aparece en Avances: órdenes activas y no cerradas (mismo criterio que la lista)
-  const avancesPendientes = vehicles.filter((v) => v.activo !== false && !v.cerrada).reduce((a, v) => a + (v.advances || []).filter((ad) => ad.pendienteRevision).length, 0);
+  const avancesPendientes = vehicles.filter((v) => v.activo !== false && !v.cerrada && (v.advances || []).some((ad) => ad.pendienteRevision)).length; // cuenta vehículos con avances por revisar, no avances sueltos
   const MODULOS = [
     { k: 'dash', ic: '📊', c: '#2563EB', t: 'Dashboard', s: 'Resumen del taller' },
     { k: 'recep', ic: '📋', c: '#0891b2', t: 'Recepción', s: 'Recibir vehículo' },
     { k: 'ordenes', ic: '🔧', c: '#D97706', t: 'Órdenes', s: V.length + ' activas' },
-    { k: 'avances', ic: '📶', c: avancesPendientes ? '#dc2626' : '#16A34A', t: 'Avances', s: avancesPendientes ? '⚠ ' + avancesPendientes + ' por revisar' : 'Al día' },
+    { k: 'avances', ic: '📶', c: avancesPendientes ? '#dc2626' : '#16A34A', t: 'Avances', s: avancesPendientes ? '⚠ ' + avancesPendientes + (avancesPendientes === 1 ? ' vehículo por revisar' : ' vehículos por revisar') : 'Al día' },
     { k: 'hist', ic: '✅', c: '#16A34A', t: 'Trabajos', s: (data.history || []).length + ' realizados' },
     { k: 'mant', ic: '🔔', c: '#ca8a04', t: 'Mantenimientos', s: vehicles.filter((v) => v.proximoMant).length + ' programados' },
     { k: 'sos', ic: '🚨', c: (data.sos || []).some((x) => x.estado === 'abierto') ? '#dc2626' : '#16A34A', t: 'Auxilio vial',
