@@ -294,7 +294,8 @@ export default function AdminHomeScreen({ navigation, route }) {
   const clients = data.clients || [];
   const vehicles = data.vehicles || [];
   const mecanicos = data.mecanicos || [];
-  const V = vehicles.filter((v) => v.activo !== false && v.recepcion && !v.cerrada);
+  // Órdenes ordenadas por número de orden (OS0001, OS0002, …); las que aún no tienen número van al final
+  const V = vehicles.filter((v) => v.activo !== false && v.recepcion && !v.cerrada).sort((a, b) => (a.numOrden || 1e9) - (b.numOrden || 1e9));
 
   const kpis = {
     espera: V.filter((v) => !v.status || v.status === 'espera' || v.status === 'reprog').length,
@@ -322,11 +323,12 @@ export default function AdminHomeScreen({ navigation, route }) {
   const [asignarTecnicoOpen, setAsignarTecnicoOpen] = useState(null); // id del vehiculo, o null
   const [tecnicoElegido, setTecnicoElegido] = useState('');
   const [busqTec, setBusqTec] = useState('');
+  const [tecAbierto, setTecAbierto] = useState(false);
   const cambiarEstadoOrden = async (id, code) => {
     if (code === 'rep') {
       const veh = (data.vehicles || []).find((v) => v.id === id);
       if (veh && !veh.mech) {
-        setTecnicoElegido(''); setBusqTec(''); setAsignarTecnicoOpen(id);
+        setTecnicoElegido(''); setBusqTec(''); setTecAbierto(false); setAsignarTecnicoOpen(id);
         // Trae técnicos frescos (por si alguien se acaba de marcar como dual-rol) SIN reemplazar el resto
         // de los datos locales — antes esto recargaba todo y podía borrar de la pantalla un cambio recién hecho.
         if (taller) getState(taller.id).then((d) => { if (d && Array.isArray(d.mecanicos)) setData((prev) => ({ ...prev, mecanicos: d.mecanicos })); }).catch(() => {});
@@ -732,7 +734,7 @@ export default function AdminHomeScreen({ navigation, route }) {
             <Text style={{ fontSize: 13, color: '#6b7480', marginBottom: 14 }}>
               Antes de pasar este vehículo a "En proceso", indica qué técnico lo va a atender.
             </Text>
-            {/* Buscador + lista dentro de la misma ventana (NO un Dropdown): en Android una ventana dentro de otra se cuelga */}
+            {/* Desplegable + buscador DENTRO de la misma ventana (no abre otra ventana encima: en Android eso se cuelga) */}
             {(() => {
               const activos = mecanicos.filter((m) => m.activo !== false);
               const nz = (t) => String(t == null ? '' : t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -740,24 +742,32 @@ export default function AdminHomeScreen({ navigation, route }) {
               const lista = palabras.length ? activos.filter((m) => { const t = nz((m.n || '') + ' ' + (m.sp || '') + ' ' + (m.tel || '')); return palabras.every((w) => t.includes(w)); }) : activos;
               return (
                 <View>
-                  {activos.length > 5 ? (
-                    <TextInput value={busqTec} onChangeText={setBusqTec} placeholder="🔍 Buscar técnico por nombre…" autoCorrect={false} autoCapitalize="none"
-                      style={{ borderWidth: 1, borderColor: '#d8dde3', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, fontSize: 14, marginBottom: 10, color: '#16191d', backgroundColor: '#fff' }} />
+                  <TouchableOpacity activeOpacity={0.7} onPress={() => setTecAbierto((v) => !v)}
+                    style={{ flexDirection: 'row', alignItems: 'center', padding: 13, borderRadius: 10, borderWidth: 1.5, borderColor: tecAbierto ? '#F5B700' : '#d8dde3', backgroundColor: '#fff' }}>
+                    <Text style={{ flex: 1, fontSize: 14.5, fontWeight: tecnicoElegido ? '800' : '500', color: tecnicoElegido ? '#16191d' : '#9aa3ad' }} numberOfLines={1}>
+                      {tecnicoElegido ? '🔧 ' + tecnicoElegido : 'Selecciona el técnico'}
+                    </Text>
+                    <Text style={{ fontSize: 16, color: '#6b7480' }}>{tecAbierto ? '▴' : '▾'}</Text>
+                  </TouchableOpacity>
+                  {tecAbierto ? (
+                    <View style={{ marginTop: 8, borderWidth: 1, borderColor: '#e5e8ec', borderRadius: 10, padding: 8, backgroundColor: '#fafbfc' }}>
+                      <TextInput value={busqTec} onChangeText={setBusqTec} placeholder="🔍 Buscar técnico por nombre…" autoCorrect={false} autoCapitalize="none"
+                        style={{ borderWidth: 1, borderColor: '#d8dde3', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, marginBottom: 8, color: '#16191d', backgroundColor: '#fff' }} />
+                      <Text style={{ fontSize: 11.5, color: '#6b7480', marginBottom: 6 }}>{lista.length} de {activos.length} técnicos</Text>
+                      <ScrollView style={{ maxHeight: 200 }} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+                        {lista.length ? lista.map((m) => (
+                          <TouchableOpacity key={String(m.id) + m.n} activeOpacity={0.7} onPress={() => { setTecnicoElegido(m.n); setTecAbierto(false); setBusqTec(''); }}
+                            style={{ flexDirection: 'row', alignItems: 'center', padding: 11, marginBottom: 5, borderRadius: 8, borderWidth: 1.5, borderColor: tecnicoElegido === m.n ? '#16A34A' : '#e5e8ec', backgroundColor: tecnicoElegido === m.n ? '#ECFDF3' : '#fff' }}>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 14, fontWeight: tecnicoElegido === m.n ? '800' : '600', color: '#16191d' }}>{m.n}</Text>
+                              {m.sp ? <Text style={{ fontSize: 11.5, color: '#6b7480', marginTop: 2 }}>{m.sp}</Text> : null}
+                            </View>
+                            {tecnicoElegido === m.n ? <Text style={{ color: '#16A34A', fontWeight: '800', fontSize: 16 }}>✓</Text> : null}
+                          </TouchableOpacity>
+                        )) : <Text style={{ fontSize: 13, color: '#6b7480', paddingVertical: 8 }}>{activos.length ? 'Ningún técnico coincide con la búsqueda.' : 'No hay técnicos activos. Regístralos en el módulo Técnicos.'}</Text>}
+                      </ScrollView>
+                    </View>
                   ) : null}
-                  {activos.length > 5 ? <Text style={{ fontSize: 11.5, color: '#6b7480', marginBottom: 6 }}>{lista.length} de {activos.length} técnicos</Text> : null}
-                  <ScrollView style={{ maxHeight: 250 }} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
-                    {lista.length ? lista.map((m) => (
-                      <TouchableOpacity key={String(m.id) + m.n} activeOpacity={0.7} onPress={() => setTecnicoElegido(m.n)}
-                        style={{ flexDirection: 'row', alignItems: 'center', padding: 12, marginBottom: 6, borderRadius: 10, borderWidth: 1.5, borderColor: tecnicoElegido === m.n ? '#16A34A' : '#e5e8ec', backgroundColor: tecnicoElegido === m.n ? '#ECFDF3' : '#fff' }}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={{ fontSize: 14, fontWeight: tecnicoElegido === m.n ? '800' : '600', color: '#16191d' }}>🔧 {m.n}</Text>
-                          {m.sp ? <Text style={{ fontSize: 11.5, color: '#6b7480', marginTop: 2 }}>{m.sp}</Text> : null}
-                        </View>
-                        {tecnicoElegido === m.n ? <Text style={{ color: '#16A34A', fontWeight: '800', fontSize: 16 }}>✓</Text> : null}
-                      </TouchableOpacity>
-                    )) : <Text style={{ fontSize: 13, color: '#6b7480', paddingVertical: 8 }}>{activos.length ? 'Ningún técnico coincide con la búsqueda.' : 'No hay técnicos activos. Regístralos en el módulo Técnicos.'}</Text>}
-                  </ScrollView>
-                  {tecnicoElegido ? <Text style={{ fontSize: 12.5, color: '#16A34A', fontWeight: '700', marginTop: 4 }}>Seleccionado: {tecnicoElegido}</Text> : null}
                 </View>
               );
             })()}
