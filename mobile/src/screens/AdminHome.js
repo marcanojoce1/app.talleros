@@ -139,7 +139,11 @@ export default function AdminHomeScreen({ navigation, route }) {
     });
     return () => sub.remove();
   }, [tab]);
-  const [loading, setLoading] = useState(false);
+  // cargandoBg = lectura en segundo plano (no se muestra al usuario si ya hay datos en pantalla).
+  // refrescando = solo cuando el usuario jala la pantalla hacia abajo para actualizar.
+  const [cargandoBg, setLoading] = useState(false);
+  const [refrescando, setRefrescando] = useState(false);
+  const loading = refrescando;
   const [error, setError] = useState('');
   const [modal, setModal] = useState(null);
   const [qOrd, setQOrd] = useState('');
@@ -195,6 +199,7 @@ export default function AdminHomeScreen({ navigation, route }) {
       setData(d || {});
     } catch (e) { setError(e.message); } finally { setLoading(false); }
   }, [taller]);
+  const recargarManual = useCallback(async () => { setRefrescando(true); try { await recargar(); } finally { setRefrescando(false); } }, [recargar]);
 
   // Al volver de segundo plano (el usuario minimizó la app un rato y regresó), el servidor
   // gratuito puede haberse "dormido" mientras tanto, y cualquier conexión que haya quedado a
@@ -441,13 +446,13 @@ export default function AdminHomeScreen({ navigation, route }) {
         </ScrollView>
       )}
 
-      {loading && taller && (
+      {cargandoBg && taller && !(data && data.vehicles) && (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fdf3e0', padding: 10, marginHorizontal: 14, marginTop: 10, borderRadius: 10 }}>
           <ActivityIndicator color="#b45309" size="small" />
           <Text style={{ color: '#b45309', fontWeight: '700', fontSize: 12.5, flex: 1 }}>Actualizando datos con el servidor… puede tardar hasta 2 minutos si estaba dormido. No cierres la app.</Text>
         </View>
       )}
-      {loading && !taller && !error && (
+      {cargandoBg && !taller && !error && (
         <View style={{ padding: 30, alignItems: 'center' }}>
           <ActivityIndicator color="#F5B700" size="large" />
           <Text style={{ color: '#16191d', fontWeight: '700', marginTop: 14, textAlign: 'center' }}>Conectando con el servidor…</Text>
@@ -472,12 +477,12 @@ export default function AdminHomeScreen({ navigation, route }) {
           )}
         </View>
       )}
-      {!taller && !error && !loading && <Text style={s.muted2}>Selecciona un taller para comenzar.</Text>}
+      {!taller && !error && !cargandoBg && <Text style={s.muted2}>Selecciona un taller para comenzar.</Text>}
 
       {/* ---------- INICIO: tarjetas por módulo ---------- */}
-      {tab === 'inicio' && taller && <Inicio data={data} cur={cur} kpis={kpis} taller={taller} me={me} modulos={MODULOS} onNav={setTab} loading={loading} recargar={recargar} />}
+      {tab === 'inicio' && taller && <Inicio data={data} cur={cur} kpis={kpis} taller={taller} me={me} modulos={MODULOS} onNav={setTab} loading={loading} recargar={recargarManual} />}
 
-      {tab === 'dash' && taller && <Dashboard data={data} cur={cur} kpis={kpis} V={V} loading={loading} recargar={recargar} />}
+      {tab === 'dash' && taller && <Dashboard data={data} cur={cur} kpis={kpis} V={V} loading={loading} recargar={recargarManual} />}
       {tab === 'recep' && taller && <Recepcion data={data} guardar={guardar} onListo={() => setTab('ordenes')} editarItem={editarItem} onEditarConsumido={() => setEditarItem(null)} taller={taller} />}
       {tab === 'avances' && taller && <Avances data={data} guardar={guardar} cur={cur} taller={taller} />}
 
@@ -489,7 +494,7 @@ export default function AdminHomeScreen({ navigation, route }) {
         ];
         return (
           <>
-          <ScrollView contentContainerStyle={{ padding: 14 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={recargar} />}>
+          <ScrollView contentContainerStyle={{ padding: 14 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={recargarManual} />}>
             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
               <TouchableOpacity style={[s.act, { flex: 1, backgroundColor: '#eef0f2', justifyContent: 'center' }]} onPress={() => setResumenOpen(true)}>
                 <Text style={s.actT}>👁️ Ver Resumen</Text>
@@ -619,14 +624,14 @@ export default function AdminHomeScreen({ navigation, route }) {
         );
       })()}
 
-      {tab === 'hist' && taller && <Historial data={data} guardar={guardar} cur={cur} loading={loading} recargar={recargar} pickFoto={pickFoto} taller={taller} me={me} />}
-      {tab === 'mant' && taller && <Mantenimientos data={data} guardar={guardar} cur={cur} loading={loading} recargar={recargar} taller={taller} />}
-      {tab === 'sos' && taller && <AuxilioVial data={data} loading={loading} recargar={recargar} taller={taller} />}
-      {tab === 'citas' && taller && <CitasProgramadas data={data} guardar={guardar} cur={cur} loading={loading} recargar={recargar} taller={taller} />}
-      {tab === 'cotiza' && taller && <Cotizaciones data={data} guardar={guardar} cur={cur} loading={loading} recargar={recargar} taller={taller} onNav={setTab} />}
+      {tab === 'hist' && taller && <Historial data={data} guardar={guardar} cur={cur} loading={loading} recargar={recargarManual} pickFoto={pickFoto} taller={taller} me={me} />}
+      {tab === 'mant' && taller && <Mantenimientos data={data} guardar={guardar} cur={cur} loading={loading} recargar={recargarManual} taller={taller} />}
+      {tab === 'sos' && taller && <AuxilioVial data={data} loading={loading} recargar={recargarManual} taller={taller} />}
+      {tab === 'citas' && taller && <CitasProgramadas data={data} guardar={guardar} cur={cur} loading={loading} recargar={recargarManual} taller={taller} />}
+      {tab === 'cotiza' && taller && <Cotizaciones data={data} guardar={guardar} cur={cur} loading={loading} recargar={recargarManual} taller={taller} onNav={setTab} />}
 
       {tab === 'cli' && taller && (
-        <Listado titulo="＋ Nuevo cliente" onAdd={() => setModal({ tipo: 'cliente', item: null })} datos={clients} loading={loading} recargar={recargar} vacio="Sin clientes."
+        <Listado titulo="＋ Nuevo cliente" onAdd={() => setModal({ tipo: 'cliente', item: null })} datos={clients} loading={loading} recargar={recargarManual} vacio="Sin clientes."
           render={(item) => (
             <TouchableOpacity style={s.card} onPress={() => {
               const opciones = [
@@ -645,7 +650,7 @@ export default function AdminHomeScreen({ navigation, route }) {
       )}
 
       {tab === 'veh' && taller && (
-        <Listado titulo="＋ Nuevo vehículo" onAdd={() => setModal({ tipo: 'vehiculo', item: null })} datos={vehicles} loading={loading} recargar={recargar} vacio="Sin vehículos."
+        <Listado titulo="＋ Nuevo vehículo" onAdd={() => setModal({ tipo: 'vehiculo', item: null })} datos={vehicles} loading={loading} recargar={recargarManual} vacio="Sin vehículos."
           render={(item) => (
             <TouchableOpacity style={s.card} onPress={() => setModal({ tipo: 'vehiculo', item })}>
               <Text style={s.veh}>{item.model}</Text>
@@ -655,7 +660,7 @@ export default function AdminHomeScreen({ navigation, route }) {
       )}
 
       {tab === 'mec' && taller && (
-        <Listado titulo="＋ Nuevo técnico" onAdd={() => setModal({ tipo: 'mecanico', item: null })} datos={mecanicos} loading={loading} recargar={recargar} vacio="Sin técnicos."
+        <Listado titulo="＋ Nuevo técnico" onAdd={() => setModal({ tipo: 'mecanico', item: null })} datos={mecanicos} loading={loading} recargar={recargarManual} vacio="Sin técnicos."
           render={(item) => (
             <TouchableOpacity style={s.card} onPress={() => {
               const opciones = [
@@ -673,7 +678,7 @@ export default function AdminHomeScreen({ navigation, route }) {
       )}
 
       {tab === 'fact' && taller && (
-        <ScrollView contentContainerStyle={{ padding: 14 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={recargar} />}>
+        <ScrollView contentContainerStyle={{ padding: 14 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={recargarManual} />}>
           <View style={s.card}>
             <Text style={s.h}>Enviar pago / factura</Text>
             <Text style={s.label}>Código</Text><TextInput style={s.input} value={fCod} onChangeText={setFCod} placeholder="F-001" />

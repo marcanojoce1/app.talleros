@@ -68,6 +68,14 @@ router.get('/', async (req, res) => {
   const { rows } = await query('SELECT data FROM app_state WHERE taller_id=$1', [tallerId]);
   let data = null;
   if (rows[0] && rows[0].data) { try { data = JSON.parse(rows[0].data); } catch { data = null; } }
+  // Fotos viejas en base64 dentro del estado: se pasan a R2 (poco a poco) para que la app abra rápido
+  try {
+    const media = require('./media');
+    if (data && media.tieneFotosBase64(data)) {
+      const movidas = await media.migrarFotosEstado(data, 12);
+      if (movidas > 0) await query('UPDATE app_state SET data=$2 WHERE taller_id=$1', [tallerId, JSON.stringify(data)]);
+    }
+  } catch (e) { console.error('migración de fotos:', e.message); }
   res.json({ data });
 });
 

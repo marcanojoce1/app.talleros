@@ -92,6 +92,7 @@ export default function HomeScreen({ navigation, route }) {
   const [verVehId, setVerVehId] = useState(null); // cliente con varios vehículos: cuál tiene abierto
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(true);
+  const [refrescando, setRefrescando] = useState(false); // solo cuando el usuario jala para actualizar
   const [error, setError] = useState('');
   const [abierto, setAbierto] = useState(null);   // id del trabajo desplegado
   const [tecTab, setTecTab] = useState('trabajos'); // pestaña del técnico: trabajos | pagos
@@ -157,6 +158,7 @@ export default function HomeScreen({ navigation, route }) {
       setData(d || {});
     } catch (e) { setError(e.message); } finally { setLoading(false); }
   }, [taller, esTécnico]);
+  const cargarManual = async () => { setRefrescando(true); try { await cargar(); } finally { setRefrescando(false); } };
   useEffect(() => { cargar(); }, [cargar]);
   useEffect(() => { registrarNotificacionesPush(); }, []);
 
@@ -288,7 +290,7 @@ export default function HomeScreen({ navigation, route }) {
           </View>
         ) : null}
         <Header titulo={tecTab === 'pagos' ? 'Mis pagos' : 'Mis trabajos'} sub={`${misTrabajos.length} activo(s) · ${taller ? taller.nombre : ''}`} />
-        {loading ? (
+        {loading && !data.vehicles ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fdf3e0', padding: 10, marginHorizontal: 14, marginBottom: 10, borderRadius: 10 }}>
             <ActivityIndicator color="#b45309" size="small" />
             <Text style={{ color: '#b45309', fontWeight: '700', fontSize: 12, flex: 1 }}>Actualizando datos… puede tardar hasta 2 minutos si el servidor estaba dormido. No cierres la app.</Text>
@@ -302,7 +304,7 @@ export default function HomeScreen({ navigation, route }) {
           ))}
         </View>
         {tecTab === 'pagos' ? (
-          <ScrollView contentContainerStyle={{ padding: 14, paddingBottom: 40 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={cargar} />}>
+          <ScrollView contentContainerStyle={{ padding: 14, paddingBottom: 40 }} refreshControl={<RefreshControl refreshing={refrescando} onRefresh={cargarManual} />}>
             <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
               <View style={{ flex: 1, backgroundColor: '#0F6E56', borderRadius: 14, padding: 16 }}>
                 <Text style={{ color: '#b6e5d7', fontSize: 12, fontWeight: '700' }}>Total ganado</Text>
@@ -334,7 +336,7 @@ export default function HomeScreen({ navigation, route }) {
           </ScrollView>
         ) : (
           <ScrollView contentContainerStyle={{ padding: 14, paddingBottom: 40 }}
-            refreshControl={<RefreshControl refreshing={loading} onRefresh={cargar} />}>
+            refreshControl={<RefreshControl refreshing={refrescando} onRefresh={cargarManual} />}>
             {misTrabajos.length ? misTrabajos.map((v, i) => (
               <TrabajoCard key={v.id} v={v} i={i} tallerId={taller.id} cliente={(data.clients || []).find((c) => c.n === v.owner)} abierto={abierto === v.id}
                 onToggle={() => setAbierto(abierto === v.id ? null : v.id)}
@@ -456,14 +458,14 @@ export default function HomeScreen({ navigation, route }) {
   return (
     <View style={[s.wrap, { backgroundColor: fondo }]}>
       <Header titulo={enTaller.length > 1 ? 'Mis vehículos' : 'Mi vehículo'} sub={taller ? taller.nombre : ''} />
-      {loading ? (
+      {loading && !data.vehicles ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fdf3e0', padding: 10, marginHorizontal: 14, marginTop: 10, borderRadius: 10 }}>
           <ActivityIndicator color="#b45309" size="small" />
           <Text style={{ color: '#b45309', fontWeight: '700', fontSize: 12, flex: 1 }}>Actualizando datos… puede tardar hasta 2 minutos si el servidor estaba dormido. No cierres la app.</Text>
         </View>
       ) : null}
       <ScrollView contentContainerStyle={{ padding: 14, paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={cargar} />}>
+        refreshControl={<RefreshControl refreshing={refrescando} onRefresh={cargarManual} />}>
 
         {sinLeer ? (
           <TouchableOpacity style={s.avisoBar} onPress={() => setNotifOpen(true)}>

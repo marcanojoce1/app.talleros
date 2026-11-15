@@ -51,4 +51,42 @@ router.post('/upload-url', auth, async (req, res) => {
   }
 });
 
+
+// ---- Migración automática: fotos antiguas guardadas dentro del estado (base64) -> R2 ----
+// Las fotos de avances viejas pesan varios MB cada una DENTRO del estado del taller, y eso
+// hace que la app tarde mucho en abrir ("Actualizando datos…"). Aquí se suben a R2 y en su
+// lugar queda solo el enlace. Si R2 no está configurado o algo falla, la foto se deja como estaba.
+async function subirBase64(dataUri) {
+  const client = getClient();
+  const bucket = process.env.R2_BUCKET_NAME;
+  const publicBase = (process.env.R2_PUBLIC_URL || '').replace(/\/$/, '');
+  if (!client || !bucket || !publicBase) return null;
+  const m = /^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i.exec(dataUri);
+  if (!m) return null;
+  const { PutObjectCommand } = require('@aws-sdk/client-s3');
+  const ext = m[1].toLowerCase().includes('png') ? 'png' : 'jpg';
+  const nombre = `fotos/${new Date().toISOString().slice(0, 10)}/${crypto.randomUUID()}.${ext}`;
+  await client.send(new PutObjectCommand({ Bucket: bucket, Key: nombre, Body: Buffer.from(m[2], 'base64'), ContentType: m[1] }));
+  return `${publicBase}/${nombre}`;
+}
+// Recorre los avances de los vehículos; devuelve cuántas fotos pasó a R2 (máx. `max` por llamada).
+async function migrarFotosEstado(data, max = 12) {
+  let n = 0;
+  if (!data || !Array.isArray(data.vehicles)) return 0;
+  for (const v of data.vehicles) {
+    for (const a of (v && v.advances) || []) {
+      if (n >= max) return n;
+      if (a && typeof a.foto === 'string' && a.foto.startsWith('data:image/') && a.foto.length > 20000) {
+        try { const url = await subirBase64(a.foto); if (url) { a.foto = url; n++; } } catch (e) { console.error('migrar foto:', e.message); }
+      }
+    }
+  }
+  return n;
+}
+function tieneFotosBase64(data) {
+  return !!(data && Array.isArray(data.vehicles) && data.vehicles.some((v) => ((v && v.advances) || []).some((a) => a && typeof a.foto === 'string' && a.foto.startsWith('data:image/') && a.foto.length > 20000)));
+}
+
 module.exports = router;
+module.exports.migrarFotosEstado = migrarFotosEstado;
+module.exports.tieneFotosBase64 = tieneFotosBase64;
