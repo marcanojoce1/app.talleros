@@ -10,7 +10,7 @@ $raiz = $PSScriptRoot
 
 # 1) Sube el numero de build automaticamente (+1 sobre el que tenia).
 $versionFile = Join-Path $raiz "mobile\src\version.js"
-$contenido = Get-Content $versionFile -Raw
+$contenido = [System.IO.File]::ReadAllText($versionFile, (New-Object System.Text.UTF8Encoding $false))
 if ($contenido -notmatch "APP_BUILD\s*=\s*(\d+)") {
   Write-Host "No se pudo leer APP_BUILD de mobile\src\version.js" -ForegroundColor Red
   exit 1

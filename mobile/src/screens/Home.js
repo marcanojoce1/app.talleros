@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, RefreshControl, Alert, ScrollView, TextInput, Image, Modal, Linking, Share, ActivityIndicator, AppState } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system/legacy';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { api, getState, getStateCache, putState, clearSession, getApiUrl, registrarNotificacionesPush } from '../api';
 import { compartirActaPDF, abrirEnNavegador, urlDocumento, subirMedia } from '../acta';
@@ -120,6 +122,12 @@ export default function HomeScreen({ navigation, route }) {
   const [citaVer, setCitaVer] = useState(null); // cotización (de cita) que el cliente está revisando
   const [cotizaVer, setCotizaVer] = useState(null); // cotización (directa) que el cliente está revisando
 
+  // Control de guardados: evita que una recarga pise con datos viejos un cambio que todavía se está enviando
+  // (o que falló), y reenvía solo lo que quedó pendiente (por ejemplo si se cerró la app a mitad de camino).
+  const dataRef = useRef({});
+  const guardado = useRef({ n: 0, ver: 0, fallo: false });
+  useEffect(() => { dataRef.current = data; }, [data]);
+
   const cargar = useCallback(async () => {
     setError('');
     try {
@@ -135,7 +143,17 @@ export default function HomeScreen({ navigation, route }) {
       // algo nuevo — así la app no se siente "colgada" esperando al servidor.
       const cache = await getStateCache(t.id);
       if (cache) setData(cache);
-      const d = await getState(t.id); setData(d || {});
+      const g = guardado.current;
+      try {
+        const pend = await AsyncStorage.getItem('t_pend_' + t.id);
+        if (pend) { await putState(t.id, JSON.parse(pend)); await AsyncStorage.removeItem('t_pend_' + t.id); g.fallo = false; }
+        else if (g.fallo && dataRef.current && dataRef.current.vehicles) { await putState(t.id, dataRef.current); g.fallo = false; }
+      } catch (e) { /* se reintentará en la próxima carga */ }
+      if (g.n > 0) return; // hay un guardado en curso: no pisar lo que acaba de hacer el usuario
+      const verAntes = g.ver;
+      const d = await getState(t.id);
+      if (g.n > 0 || g.fallo || g.ver !== verAntes) return; // el usuario guardó algo mientras se leía: esa lectura ya es vieja
+      setData(d || {});
     } catch (e) { setError(e.message); } finally { setLoading(false); }
   }, [taller, esTécnico]);
   useEffect(() => { cargar(); }, [cargar]);
@@ -154,8 +172,19 @@ export default function HomeScreen({ navigation, route }) {
   }, [cargar]);
 
   const guardar = async (nuevo) => {
-    setData(nuevo);
-    try { await putState(taller.id, nuevo); } catch (e) { Alert.alert('Error al sincronizar', e.message); }
+    const g = guardado.current;
+    setData(nuevo); dataRef.current = nuevo;
+    g.n++; g.ver++;
+    // Copia de seguridad en el teléfono ANTES de enviar: si la app se cierra o falla la conexión, se reenvía sola
+    try { await AsyncStorage.setItem('t_pend_' + taller.id, JSON.stringify(nuevo)); } catch (e0) {}
+    try {
+      await putState(taller.id, nuevo);
+      g.fallo = false;
+      try { await AsyncStorage.removeItem('t_pend_' + taller.id); } catch (e) {}
+    } catch (e) {
+      g.fallo = true;
+      Alert.alert('⚠️ Cambios sin sincronizar', 'No se pudo guardar en el servidor (' + e.message + ').\n\nTus cambios están guardados en este teléfono y se reenviarán solos al reconectar. No desinstales la app.');
+    } finally { g.n--; }
   };
   const salir = async () => { await clearSession(); navigation.reset({ index: 0, routes: [{ name: 'Login' }] }); };
   const [ajustesOpen, setAjustesOpen] = useState(false);
@@ -874,7 +903,10 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
   const st = STATUS[v.status] || STATUS.espera;
   const [prog, setProg] = useState(v.progress || 0);
   const [txt, setTxt] = useState('');
-  const [foto, setFoto] = useState(null);
+  const [fotos, setFotos] = useState([]); // [{ uri, txt }] fotos locales, se suben al guardar
+  const [mismoComentario, setMismoComentario] = useState(true);
+  const [subiendoFotos, setSubiendoFotos] = useState('');
+  const MAX_FOTOS = 10;
   const [video, setVideo] = useState(null); // uri local, antes de subir
   const [videoThumb, setVideoThumb] = useState(null); // uri local de la miniatura
   const [videoDuracionSeg, setVideoDuracionSeg] = useState(0);
@@ -889,12 +921,15 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) { Alert.alert('Permiso', 'Se necesita acceso a la cámara.'); return; }
     await new Promise((ok) => setTimeout(ok, 400));
-    const r = await ImagePicker.launchCameraAsync({ quality: 0.35, base64: true });
+    const r = await ImagePicker.launchCameraAsync({ quality: 0.45 });
     aplicarFoto(r);
   };
   const abriendoFoto = useRef(false);
   const aplicarFoto = (r) => {
-    if (r && !r.canceled && r.assets && r.assets[0] && r.assets[0].base64) setFoto('data:image/jpeg;base64,' + r.assets[0].base64);
+    if (r && !r.canceled && r.assets && r.assets.length) {
+      const nuevas = r.assets.filter((a) => a && a.uri).map((a) => ({ uri: a.uri, txt: '' }));
+      setFotos((prev) => [...prev, ...nuevas].slice(0, MAX_FOTOS));
+    }
   };
   // En Android, si el sistema cierra la app mientras se elige la foto, el resultado queda pendiente: lo recuperamos.
   useEffect(() => {
@@ -914,7 +949,9 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) { Alert.alert('Permiso', 'Se necesita acceso a las fotos.'); return; }
       await new Promise((ok) => setTimeout(ok, 400)); // deja que cierre el aviso antes de abrir la galería
-      const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.35, base64: true, allowsMultipleSelection: false });
+      const cupo = Math.max(1, MAX_FOTOS - fotos.length);
+      if (fotos.length >= MAX_FOTOS) { Alert.alert('Máximo de fotos', 'Puedes agregar hasta ' + MAX_FOTOS + ' fotos por avance.'); return; }
+      const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.45, allowsMultipleSelection: true, selectionLimit: cupo });
       aplicarFoto(r);
     } catch (e) {
       Alert.alert('No se pudo cargar la foto', (e && e.message) || 'Intenta de nuevo.');
@@ -999,7 +1036,8 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
     const vehicles = (data.vehicles || []).map((x) => {
       if (x.id !== v.id) return x;
       const nv = { ...x, ...cambios };
-      if (avance) nv.advances = [...(x.advances || []), { ...avance, notificadoCliente: notif ? notificaDirecto : true, pendienteRevision: !!(notif && !notificaDirecto) }];
+      const lista = Array.isArray(avance) ? avance : (avance ? [avance] : []);
+      if (lista.length) nv.advances = [...(x.advances || []), ...lista.map((av) => ({ ...av, notificadoCliente: notif ? notificaDirecto : true, pendienteRevision: !!(notif && !notificaDirecto) }))];
       return nv;
     });
     let notifs = data.notifs || [];
@@ -1035,7 +1073,7 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
 
   const guardarAvance = async () => {
     if (guardandoAvance) return; // ya se está guardando — evita que un doble toque cree un avance repetido
-    if (!txt.trim() && prog === (v.progress || 0) && !foto && !video) { Alert.alert('Nada que registrar', 'Escribe una descripción, cambia el porcentaje, o adjunta una foto o video.'); return; }
+    if (!txt.trim() && prog === (v.progress || 0) && !fotos.length && !video) { Alert.alert('Nada que registrar', 'Escribe una descripción, cambia el porcentaje, o adjunta una foto o video.'); return; }
     setGuardandoAvance(true);
     let videoUrl = null, videoThumbUrl = null;
     if (video) {
@@ -1050,12 +1088,38 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
       }
       setSubiendoVideo(false);
     }
-    aplicar({ progress: prog },
-      { id: Date.now() + '-' + Math.random().toString(36).slice(2), t: txt.trim() || 'Avance actualizado', m: (me.nombre || 'Técnico') + ' · ' + prog + '% completado', type: 'nota', ago: 'ahora', foto, video: videoUrl, videoThumb: videoThumbUrl, videoDuracion: videoUrl ? videoDuracionSeg : 0 },
-      { text: 'Nuevo avance en tu vehículo (' + prog + '%)' });
+    // Fotos: se suben a R2 (solo se guarda el enlace, así el estado del taller no engorda).
+    // Si R2 no responde, esa foto se guarda en el propio avance como respaldo para no perderla.
+    const urls = [];
+    for (let i = 0; i < fotos.length; i++) {
+      setSubiendoFotos('Subiendo foto ' + (i + 1) + ' de ' + fotos.length + '…');
+      let url = null;
+      try { url = await subirMedia(fotos[i].uri, 'foto', 'image/jpeg'); } catch (e) { url = null; }
+      if (!url) {
+        try { const b64 = await FileSystem.readAsStringAsync(fotos[i].uri, { encoding: 'base64' }); url = 'data:image/jpeg;base64,' + b64; } catch (e2) { url = null; }
+      }
+      if (!url) { setSubiendoFotos(''); setGuardandoAvance(false); Alert.alert('No se pudo cargar la foto ' + (i + 1), 'Revisa tu conexión e intenta de nuevo. No se guardó nada.'); return; }
+      urls.push(url);
+    }
+    setSubiendoFotos('');
+    const base = { m: (me.nombre || 'Técnico') + ' · ' + prog + '% completado', type: 'nota', ago: 'ahora' };
+    const nuevoId = () => Date.now() + '-' + Math.random().toString(36).slice(2);
+    let lista;
+    if (!urls.length) {
+      lista = [{ ...base, id: nuevoId(), t: txt.trim() || 'Avance actualizado', video: videoUrl, videoThumb: videoThumbUrl, videoDuracion: videoUrl ? videoDuracionSeg : 0 }];
+    } else {
+      // Una entrada por foto. Con "mismo comentario" todas llevan la misma descripción; si no, cada una la suya.
+      lista = urls.map((u, i) => ({
+        ...base, id: nuevoId(), foto: u,
+        t: ((mismoComentario || urls.length === 1) ? txt.trim() : (fotos[i].txt || '').trim() || txt.trim()) || 'Avance actualizado',
+        ...(i === 0 ? { video: videoUrl, videoThumb: videoThumbUrl, videoDuracion: videoUrl ? videoDuracionSeg : 0 } : {}),
+      }));
+    }
+    aplicar({ progress: prog }, lista,
+      { text: urls.length > 1 ? 'Nuevas fotos del avance en tu vehículo (' + prog + '%)' : 'Nuevo avance en tu vehículo (' + prog + '%)' });
     setAvanceModalOpen(false);
     setGuardandoAvance(false);
-    setTxt(''); setFoto(null); setVideo(null); setVideoThumb(null); setVideoDuracionSeg(0);
+    setTxt(''); setFotos([]); setMismoComentario(true); setVideo(null); setVideoThumb(null); setVideoDuracionSeg(0);
     Alert.alert('Listo', notificaDirecto ? 'Avance registrado. El cliente ya puede verlo.' : 'Avance registrado. El administrador lo revisará antes de que el cliente lo vea.');
   };
 
@@ -1120,16 +1184,39 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
                   <TextInput style={[s.input, { minHeight: 70, textAlignVertical: 'top' }]} value={txt} onChangeText={setTxt} placeholder="Describe el avance…" multiline />
 
                   <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
-                    <TouchableOpacity style={[s.camBtn, { flex: 1, flexDirection: 'row', gap: 6, justifyContent: 'center' }]} onPress={pickFoto}><Text style={{ fontSize: 18 }}>{foto ? '✅' : '📷'}</Text><Text style={{ fontWeight: '700' }}>{foto ? 'Foto agregada' : 'Agregar foto'}</Text></TouchableOpacity>
+                    <TouchableOpacity style={[s.camBtn, { flex: 1, flexDirection: 'row', gap: 6, justifyContent: 'center' }]} onPress={pickFoto}><Text style={{ fontSize: 18 }}>{fotos.length ? '✅' : '📷'}</Text><Text style={{ fontWeight: '700' }}>{fotos.length ? fotos.length + (fotos.length === 1 ? ' foto' : ' fotos') + ' · agregar' : 'Agregar fotos'}</Text></TouchableOpacity>
                     {plan !== 'lite' ? <TouchableOpacity style={[s.camBtn, { flex: 1, flexDirection: 'row', gap: 6, justifyContent: 'center' }]} onPress={pickVideo}><Text style={{ fontSize: 18 }}>{video ? '✅' : '🎥'}</Text><Text style={{ fontWeight: '700' }}>{video ? 'Video agregado' : 'Agregar video'}</Text></TouchableOpacity> : null}
                   </View>
 
-                  {foto ? (
+                  {fotos.length ? (
                     <View style={{ marginTop: 10 }}>
-                      <Image source={{ uri: foto }} style={s.prev} />
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
-                        <Text style={{ color: '#16A34A', fontWeight: '700', fontSize: 12.5, flex: 1 }}>✓ Foto cargada — se enviará con el avance</Text>
-                        <TouchableOpacity onPress={() => setFoto(null)}><Text style={{ color: '#dc2626', fontWeight: '700', fontSize: 12.5 }}>Quitar</Text></TouchableOpacity>
+                      {fotos.length > 1 ? (
+                        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
+                          <TouchableOpacity style={{ flex: 1, padding: 10, borderRadius: 10, borderWidth: 1.5, borderColor: mismoComentario ? '#16A34A' : '#e5e8ec', backgroundColor: mismoComentario ? '#ECFDF3' : '#fff', alignItems: 'center' }} onPress={() => setMismoComentario(true)}>
+                            <Text style={{ fontWeight: '800', fontSize: 12.5, color: '#16191d' }}>📝 Mismo comentario</Text><Text style={{ fontSize: 11, color: '#6b7480' }}>para todas</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity style={{ flex: 1, padding: 10, borderRadius: 10, borderWidth: 1.5, borderColor: !mismoComentario ? '#16A34A' : '#e5e8ec', backgroundColor: !mismoComentario ? '#ECFDF3' : '#fff', alignItems: 'center' }} onPress={() => setMismoComentario(false)}>
+                            <Text style={{ fontWeight: '800', fontSize: 12.5, color: '#16191d' }}>✏️ Uno por foto</Text><Text style={{ fontSize: 11, color: '#6b7480' }}>cada una el suyo</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ) : null}
+                      {fotos.map((f, i) => (
+                        <View key={f.uri + i} style={{ marginBottom: 10 }}>
+                          <View>
+                            <Image source={{ uri: f.uri }} style={s.prev} />
+                            <TouchableOpacity onPress={() => setFotos((prev) => prev.filter((_, k) => k !== i))} style={{ position: 'absolute', top: 8, right: 8, width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(0,0,0,.6)', alignItems: 'center', justifyContent: 'center' }}>
+                              <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>✕</Text>
+                            </TouchableOpacity>
+                            {fotos.length > 1 ? <View style={{ position: 'absolute', top: 8, left: 8, backgroundColor: 'rgba(0,0,0,.6)', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 }}><Text style={{ color: '#fff', fontWeight: '700', fontSize: 11.5 }}>{i + 1} / {fotos.length}</Text></View> : null}
+                          </View>
+                          {fotos.length > 1 && !mismoComentario ? (
+                            <TextInput style={[s.input, { marginTop: 6 }]} value={f.txt} onChangeText={(t) => setFotos((prev) => prev.map((x, k) => (k === i ? { ...x, txt: t } : x)))} placeholder={'Comentario de la foto ' + (i + 1) + '…'} />
+                          ) : null}
+                        </View>
+                      ))}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Text style={{ color: '#16A34A', fontWeight: '700', fontSize: 12.5, flex: 1 }}>✓ {fotos.length === 1 ? 'Foto cargada' : fotos.length + ' fotos cargadas'} — se enviarán con el avance</Text>
+                        <TouchableOpacity onPress={() => setFotos([])}><Text style={{ color: '#dc2626', fontWeight: '700', fontSize: 12.5 }}>Quitar {fotos.length > 1 ? 'todas' : ''}</Text></TouchableOpacity>
                       </View>
                     </View>
                   ) : null}
@@ -1150,7 +1237,7 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
                     </View>
                   ) : null}
 
-                  <TouchableOpacity style={[s.addAv, { marginTop: 16 }]} onPress={guardarAvance} disabled={guardandoAvance}><Text style={s.addAvT}>{subiendoVideo ? 'Subiendo video…' : guardandoAvance ? 'Guardando…' : 'Guardar'}</Text></TouchableOpacity>
+                  <TouchableOpacity style={[s.addAv, { marginTop: 16 }]} onPress={guardarAvance} disabled={guardandoAvance}><Text style={s.addAvT}>{subiendoVideo ? 'Subiendo video…' : subiendoFotos ? subiendoFotos : guardandoAvance ? 'Guardando…' : 'Guardar'}</Text></TouchableOpacity>
                   <TouchableOpacity style={{ marginTop: 10, alignItems: 'center', padding: 6 }} onPress={() => setAvanceModalOpen(false)}><Text style={{ color: '#6b7480', fontWeight: '600' }}>Cancelar</Text></TouchableOpacity>
                 </ScrollView>
               </View>

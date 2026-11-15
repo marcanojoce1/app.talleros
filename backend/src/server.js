@@ -29,7 +29,7 @@ const io = new Server(server, { cors: { origin: process.env.CORS_ORIGIN || '*' }
 app.set('io', io);
 
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
-app.use(express.json({ limit: '5mb' }));
+app.use(express.json({ limit: '25mb' }));
 app.use('/uploads', express.static(path.join(__dirname, '..', process.env.UPLOAD_DIR || 'uploads')));
 // Política de privacidad (requerida por Google Play Console)
 app.use(express.static(path.join(__dirname, '..', 'public')));
