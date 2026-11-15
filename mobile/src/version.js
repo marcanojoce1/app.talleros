@@ -1,6 +1,6 @@
 // VersiÃ³n visible de la app TallerOS. SÃºbela cada vez que publiques un APK nuevo.
 export const APP_VERSION = '1.1.0';
-export const APP_BUILD = 3;
+export const APP_BUILD = 4;
 
 // En la versiÃ³n de Google Play las actualizaciones las hace la propia tienda (no se instala ningÃºn APK desde la app).
 import Constants from 'expo-constants';
