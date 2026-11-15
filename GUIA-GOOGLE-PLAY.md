@@ -47,19 +47,45 @@ Todas las apps → Crear app → Nombre **TallerOS** · Idioma **Español (Latin
 - **Descripción completa:**
 
 ```
-TallerOS es la plataforma para talleres automotrices que quieren trabajar ordenado y sin papeles. Funciona en tu celular con esta app y también en la computadora con la plataforma web.
+TallerOS es la plataforma completa para talleres automotrices que quieren trabajar ordenado, sin papeles y con sus clientes siempre informados. Funciona en tu celular con esta app y también en la computadora, con la plataforma web (taller.mjservices.app). Es el mismo sistema: entras con tu usuario y contraseña y cada persona ve solo lo que le corresponde según su rol: administrador, mecánico o cliente.
 
-• Recepción digital con acta de inspección: datos del cliente y del vehículo, accesorios, combustible, daños sobre el esquema del carro y firmas digitales.
-• Órdenes de taller en tiempo real: en espera, en reparación, terminado y entregado.
-• Avances con fotos, videos y notas que el cliente puede ver desde su celular.
-• Asignación de técnicos y control de honorarios.
-• Cotizaciones y PDF listos para compartir por WhatsApp.
-• Próximos mantenimientos y avisos al cliente.
-• Auxilio vial: el cliente comparte su ubicación para pedir ayuda.
-• Modo claro y modo oscuro.
-• Plataforma web para administrar tu taller desde la computadora: taller.mjservices.app (usa el mismo usuario y contraseña de la app).
+ADMINISTRADOR DEL TALLER
+• Dashboard con el resumen del taller: vehículos en espera, en reparación, terminados, trabajos realizados e ingresos.
+• Recepción digital con acta de inspección: datos del cliente y del vehículo, accesorios, nivel de combustible, kilometraje, daños marcados sobre el esquema del carro, fotos y firmas digitales del cliente y del recepcionista.
+• Registro de clientes, vehículos y técnicos.
+• Órdenes de servicio en tiempo real: en espera, en reparación, esperando repuestos, terminado y entregado.
+• Asignación del trabajo al técnico y control de sus honorarios.
+• Revisión de los avances que cargan los técnicos, con la opción de notificarlos al cliente.
+• Cotizaciones con PDF listos para compartir por WhatsApp.
+• Citas: recibe las solicitudes de los clientes, envía la cotización y confirma el día y la hora.
+• Auxilio vial: recibe los pedidos de ayuda de los clientes con su ubicación.
+• Próximo mantenimiento: programa la fecha o el kilometraje y el cliente recibe el aviso.
+• Historial de trabajos realizados, facturación y control de pagos y saldos.
+• Gestión de usuarios y accesos.
+• Personalización del taller: sube el logo de tu taller y personaliza las actas y documentos con tu marca y tus datos.
+• Si tiene marcada la opción de mecánico, el mismo administrador también puede trabajar como técnico desde su propia cuenta.
 
-TallerOS es una aplicación de uso para talleres registrados. Solicita tu demo gratuita en taller.mjservices.app/demo.html
+MECÁNICO O TÉCNICO
+• Entra con su propio usuario y contraseña y ve solo los trabajos que le asignaron.
+• Carga el avance de cada trabajo con fotos (una o varias), videos, comentarios y porcentaje de progreso.
+• Reporta trabajos adicionales para que el cliente los autorice.
+• Marca el trabajo como terminado y consulta sus pagos.
+
+CLIENTE
+• Entra con su usuario y contraseña y ve sus vehículos, con el estado y el progreso de cada uno.
+• Recibe una notificación cuando hay un avance nuevo y ve las fotos y videos del trabajo, sin necesidad de llamar al taller.
+• Autoriza o rechaza los trabajos adicionales y aprueba cotizaciones desde la app.
+• Solicita citas y recibe la cotización del taller para aceptarla o rechazarla.
+• Si se queda varado, abre la app y pide auxilio vial enviando su ubicación al taller.
+• Consulta su historial de servicios, su saldo pendiente y sus próximos mantenimientos.
+• Descarga el acta de conformidad en PDF cuando el trabajo termina.
+
+PARA TODOS
+• App y plataforma web con la misma información, siempre sincronizadas.
+• Modo claro y modo oscuro, a tu gusto.
+• Notificaciones para no perder ningún aviso.
+
+TallerOS es una aplicación de uso para talleres registrados: las cuentas las crea el administrador del taller. Solicita tu demo gratuita en taller.mjservices.app/demo.html
 ```
 
 - **Ícono 512×512:** `play-assets/icono-512.png`
@@ -73,7 +99,7 @@ TallerOS es una aplicación de uso para talleres registrados. Solicita tu demo g
 - **Anuncios:** No.
 - **Clasificación de contenido:** categoría *Utilidad/Productividad*, responde "No" a violencia, sexo, drogas, apuestas.
 - **Público objetivo:** 18 años o más.
-- **Eliminación de cuenta:** URL `https://taller.mjservices.app/privacidad.html#eliminar-cuenta`.
+- **Eliminación de cuenta:** URL `https://taller.mjservices.app/eliminar-cuenta.html`.
 - **Seguridad de los datos** (responde así):
   - ¿Recopila datos? **Sí**. ¿Cifrados en tránsito? **Sí** (HTTPS). ¿Permite pedir su eliminación? **Sí**.
   - **Información personal:** nombre, correo, teléfono, ID de usuario → recopilado, **no compartido**, necesario para la función de la app.
