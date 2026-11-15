@@ -89,6 +89,7 @@ export default function HomeScreen({ navigation, route }) {
   const esTécnico = me.rol === 'mecanico';
   const [taller, setTaller] = useState(talleresParam[0] || null);
 
+  const [verVehId, setVerVehId] = useState(null); // cliente con varios vehículos: cuál tiene abierto
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -454,7 +455,7 @@ export default function HomeScreen({ navigation, route }) {
   };
   return (
     <View style={[s.wrap, { backgroundColor: fondo }]}>
-      <Header titulo="Mi vehículo" sub={taller ? taller.nombre : ''} />
+      <Header titulo={enTaller.length > 1 ? 'Mis vehículos' : 'Mi vehículo'} sub={taller ? taller.nombre : ''} />
       {loading ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fdf3e0', padding: 10, marginHorizontal: 14, marginTop: 10, borderRadius: 10 }}>
           <ActivityIndicator color="#b45309" size="small" />
@@ -490,7 +491,51 @@ export default function HomeScreen({ navigation, route }) {
           </TouchableOpacity>
         ))}
 
-        {enTaller.length ? enTaller.map((v) => {
+        {/* Varios vehículos: primero una lista con el estado de cada uno; al tocar uno se abre el detalle completo */}
+        {enTaller.length > 1 && !enTaller.some((x) => x.id === verVehId) ? (
+          <View>
+            <View style={s.heroCard}>
+              <Text style={s.heroLbl}>EN ESTE TALLER</Text>
+              <Text style={[s.heroModel, { marginTop: 4 }]}>Tienes {enTaller.length} vehículos</Text>
+              <Text style={[s.heroLbl, { marginTop: 6 }]}>
+                {enTaller.filter((x) => x.mech && x.status === 'rep').length} en reparación · {enTaller.filter((x) => !x.mech).length} sin asignar a un mecánico
+              </Text>
+            </View>
+            <Text style={[s.secTitle, { marginBottom: 8 }]}>Toca un vehículo para ver sus detalles</Text>
+            {enTaller.map((x) => {
+              const stx = STATUS[x.status] || STATUS.espera;
+              const sinAsignar = !x.mech;
+              const etiqueta = sinAsignar ? 'En recepción · sin asignar' : stx.l;
+              return (
+                <TouchableOpacity key={x.id} activeOpacity={0.85} style={[s.heroCard, { marginBottom: 12 }]} onPress={() => setVerVehId(x.id)}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={s.heroPlate}>{x.plate}</Text>
+                    <View style={[s.pill, { backgroundColor: sinAsignar ? '#eef0f2' : stx.bg }]}><Text style={[s.pillT, { color: sinAsignar ? '#64748B' : stx.c }]}>● {etiqueta}</Text></View>
+                  </View>
+                  <Text style={s.heroModel}>{x.model}</Text>
+                  {sinAsignar ? (
+                    <Text style={[s.heroLbl, { marginTop: 4 }]}>Aún no tiene mecánico asignado. Te avisaremos cuando comience el trabajo.</Text>
+                  ) : (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 2 }}>
+                      <Text style={[s.heroPct, { fontSize: 26 }]}>{x.progress || 0}%</Text>
+                      <View style={s.heroBar}><View style={[s.heroFill, { width: (x.progress || 0) + '%' }]} /></View>
+                    </View>
+                  )}
+                  <Text style={[s.heroLbl, { marginTop: 10 }]}>🔧 {x.mech || 'Por asignar'}{x.motivo ? ' · ' + x.motivo : ''}</Text>
+                  <Text style={{ color: '#F5B700', fontWeight: '800', fontSize: 12.5, marginTop: 8 }}>Toca para ver más detalles →</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ) : null}
+
+        {enTaller.length > 1 && enTaller.some((x) => x.id === verVehId) ? (
+          <TouchableOpacity onPress={() => setVerVehId(null)} style={{ marginBottom: 10 }}>
+            <Text style={{ color: '#2563EB', fontWeight: '800', fontSize: 14 }}>← Mis vehículos ({enTaller.length})</Text>
+          </TouchableOpacity>
+        ) : null}
+
+        {enTaller.length ? (enTaller.length > 1 ? enTaller.filter((x) => x.id === verVehId) : enTaller).map((v) => {
           const st = STATUS[v.status] || STATUS.espera;
           const hist = miHistorial.find((h) => h.vehId === v.id);
           return (
@@ -1031,7 +1076,8 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
 
   // Actualiza el vehículo y (opcional) agrega un aviso para el cliente
   const miMecanico = (data.mecanicos || []).find((m) => m.n === me.nombre);
-  const notificaDirecto = !!(miMecanico && miMecanico.notificarCliente);
+  // Técnico normal: bandera del mecánico. Administrador que trabaja como técnico: su propia casilla "notificar al cliente".
+  const notificaDirecto = !!((miMecanico && miMecanico.notificarCliente) || me.notificarAutomatico);
   const aplicar = (cambios, avance, notif) => {
     const vehicles = (data.vehicles || []).map((x) => {
       if (x.id !== v.id) return x;
@@ -1120,7 +1166,7 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
     setAvanceModalOpen(false);
     setGuardandoAvance(false);
     setTxt(''); setFotos([]); setMismoComentario(true); setVideo(null); setVideoThumb(null); setVideoDuracionSeg(0);
-    Alert.alert('Listo', notificaDirecto ? 'Avance registrado. El cliente ya puede verlo.' : 'Avance registrado. El administrador lo revisará antes de que el cliente lo vea.');
+    Alert.alert('Listo', notificaDirecto ? 'Avance registrado con éxito.' : 'Avance registrado. El administrador lo revisará antes de que el cliente lo vea.');
   };
 
   const reportarAdicional = () => {
