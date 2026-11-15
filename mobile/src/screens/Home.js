@@ -1191,6 +1191,7 @@ function TrabajoCard({ v, i, tallerId, cliente, abierto, onToggle, data, guardar
           <Text style={s.jobSub}>{v.motivo || 'Sin trabajo definido'}</Text>
           <Text style={s.jobFecha}>📅 Ingresó {fechaCorta(v.ingreso)}{ultimoAvance ? '  ·  🔧 Último avance: ' + ultimoAvance : ''}</Text>
           <View style={s.progBar}><View style={[s.progFill, { width: (v.progress || 0) + '%', backgroundColor: st.c }]} /></View>
+          <Text style={{ marginTop: 8, fontSize: 12, fontWeight: '700', color: st.c }}>{abierto ? '▴ Toca para ocultar' : '▾ Toca para ver más detalles'}</Text>
         </View>
         <View style={{ alignItems: 'flex-end', gap: 8 }}>
           <View style={[s.pill, { backgroundColor: st.bg }]}><Text style={[s.pillT, { color: st.c }]}>● {st.l}</Text></View>
