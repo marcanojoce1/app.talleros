@@ -364,7 +364,8 @@ export default function AdminHomeScreen({ navigation, route }) {
     }, 150);
   };
 
-  const avancesPendientes = vehicles.reduce((a, v) => a + (v.advances || []).filter((ad) => ad.pendienteRevision).length, 0);
+  // Solo cuenta lo que realmente aparece en Avances: órdenes activas y no cerradas (mismo criterio que la lista)
+  const avancesPendientes = vehicles.filter((v) => v.activo !== false && !v.cerrada).reduce((a, v) => a + (v.advances || []).filter((ad) => ad.pendienteRevision).length, 0);
   const MODULOS = [
     { k: 'dash', ic: '📊', c: '#2563EB', t: 'Dashboard', s: 'Resumen del taller' },
     { k: 'recep', ic: '📋', c: '#0891b2', t: 'Recepción', s: 'Recibir vehículo' },
@@ -618,7 +619,7 @@ export default function AdminHomeScreen({ navigation, route }) {
         );
       })()}
 
-      {tab === 'hist' && taller && <Historial data={data} guardar={guardar} cur={cur} loading={loading} recargar={recargar} pickFoto={pickFoto} taller={taller} />}
+      {tab === 'hist' && taller && <Historial data={data} guardar={guardar} cur={cur} loading={loading} recargar={recargar} pickFoto={pickFoto} taller={taller} me={me} />}
       {tab === 'mant' && taller && <Mantenimientos data={data} guardar={guardar} cur={cur} loading={loading} recargar={recargar} taller={taller} />}
       {tab === 'sos' && taller && <AuxilioVial data={data} loading={loading} recargar={recargar} taller={taller} />}
       {tab === 'citas' && taller && <CitasProgramadas data={data} guardar={guardar} cur={cur} loading={loading} recargar={recargar} taller={taller} />}
@@ -949,6 +950,7 @@ function Recepcion({ data, guardar, onListo, editarItem, onEditarConsumido, tall
   const cur = (data.config && data.config.currency && data.config.currency.sym) || 'Bs.';
   const cfg = data.config || {};
   const vehicles = data.vehicles || [];
+  const enCurso = (v) => !!(v.recepcion && v.activo !== false && !v.cerrada && v.status !== 'term' && v.status !== 'ent');
   const clients = (data.clients || []).filter((c) => c.activo !== false);
   const mecanicos = (data.mecanicos || []).filter((m) => m.activo !== false);
 
@@ -1405,7 +1407,8 @@ function Recepcion({ data, guardar, onListo, editarItem, onEditarConsumido, tall
       <View style={{ marginTop: 26, paddingTop: 18, borderTopWidth: 1, borderColor: '#e3e7ec' }}>
         <Text style={{ fontSize: 15, fontWeight: '800', color: '#16191d' }}>Recepciones registradas</Text>
         <Text style={s.muted}>Ver o editar las actas registradas (cambiar técnico, motivo, observaciones, etc.).</Text>
-        {vehicles.filter((v) => v.recepcion).length ? vehicles.filter((v) => v.recepcion).slice(0, 20).map((v) => (
+        {/* Solo trabajo en curso: terminados, cobrados o entregados salen de aquí (siguen en Trabajos realizados) */}
+        {vehicles.filter(enCurso).length ? vehicles.filter(enCurso).slice(0, 20).map((v) => (
           <View key={v.id} style={{ paddingVertical: 12, borderBottomWidth: 1, borderColor: '#f0f2f5' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text style={{ fontWeight: '800', color: '#16191d' }}>{v.model} <Text style={{ color: '#6b7480', fontWeight: '600' }}>{v.plate}</Text></Text>
@@ -1421,7 +1424,7 @@ function Recepcion({ data, guardar, onListo, editarItem, onEditarConsumido, tall
               </TouchableOpacity>
             </View>
           </View>
-        )) : <Text style={s.muted}>Aún no hay recepciones registradas.</Text>}
+        )) : <Text style={s.muted}>No hay recepciones con trabajo en curso.</Text>}
       </View>
 
       <FirmaPad
@@ -1440,7 +1443,9 @@ function Avances({ data, guardar, cur, taller }) {
   const [busq, setBusq] = useState('');
   const [verItem, setVerItem] = useState(null);
   // Solo órdenes activas (en proceso / espera / devolución) — las cobradas y entregadas no aplican aquí
-  const conAvances = vehicles.filter((v) => v.activo !== false && !v.cerrada && (v.advances || []).length)
+  // Solo órdenes con avances POR REVISAR. Los avances de técnicos con "Notificar al cliente" activado
+  // llegan directo al cliente y no pasan por aquí.
+  const conAvances = vehicles.filter((v) => v.activo !== false && !v.cerrada && (v.advances || []).some((x) => x.pendienteRevision))
     .filter((v) => !busq.trim() || norm(v.model + ' ' + v.plate + ' ' + v.owner + ' ' + (v.mech || '')).includes(norm(busq)))
     .sort((a, b) => {
       const pa = (a.advances || []).some((x) => x.pendienteRevision) ? 0 : 1;
@@ -1451,10 +1456,10 @@ function Avances({ data, guardar, cur, taller }) {
   return (
     <ScrollView contentContainerStyle={{ padding: 14 }}>
       <Text style={{ fontSize: 12.5, color: '#6b7480', marginBottom: 12, lineHeight: 18 }}>
-        Órdenes en proceso con avances de técnicos. Toca una para ver el detalle completo con el acta y decidir cuáles notificarle al cliente.
+        Avances de técnicos por revisar. Toca una orden para ver el detalle y notificarle al cliente. Los técnicos con "Notificar al cliente" activado envían sus avances directo al cliente y no aparecen aquí.
       </Text>
       <TextInput style={[s.input, { marginBottom: 12 }]} value={busq} onChangeText={setBusq} placeholder="Buscar por vehículo, placa, cliente o técnico…" placeholderTextColor="#9aa3ad" />
-      {!conAvances.length ? <Text style={s.muted}>No hay órdenes en proceso con avances registrados.</Text> : null}
+      {!conAvances.length ? <Text style={s.muted}>No hay avances por revisar. ✅</Text> : null}
       {conAvances.map((v) => {
         const pend = (v.advances || []).filter((x) => x.pendienteRevision).length;
         return (
@@ -2210,7 +2215,7 @@ function Mantenimientos({ data, guardar, cur, loading, recargar, taller }) {
   );
 }
 
-function Historial({ data, guardar, cur, loading, recargar, pickFoto, taller }) {
+function Historial({ data, guardar, cur, loading, recargar, pickFoto, taller, me }) {
   const histTodo = data.history || [];
   const [qHist, setQHist] = useState('');
   const [desde, setDesde] = useState('');
@@ -2245,12 +2250,15 @@ function Historial({ data, guardar, cur, loading, recargar, pickFoto, taller }) 
   const [honorarioDe, setHonorarioDe] = useState(null); // trabajo al que se le paga honorario
   const [honMonto, setHonMonto] = useState('');
   const pagarHonorario = () => {
+    // El honorario se paga UNA sola vez: una vez registrado ya no se puede editar ni volver a pagar
+    const actualH = (data.history || []).find((x) => x.id === honorarioDe.id);
+    if (actualH && actualH.honorario) { Alert.alert('Honorario ya pagado', 'Este honorario ya fue registrado y no se puede modificar.'); setHonorarioDe(null); setHonMonto(''); return; }
     const monto = +honMonto; if (!monto) { Alert.alert('Falta', 'Indica el monto a pagar al técnico.'); return; }
     const cobrado = +honorarioDe.total || +honorarioDe.costo || 0;
     const pct = cobrado > 0 ? Math.round((monto / cobrado) * 1000) / 10 : 0;
     const now = new Date();
     const nh = (data.history || []).map((x) => (x.id === honorarioDe.id ? {
-      ...x, honorario: { monto, pct, fecha: now.toISOString().slice(0, 10), tecnico: x.mech },
+      ...x, honorario: { monto, pct, fecha: now.toISOString().slice(0, 10), hora: now.toTimeString().slice(0, 5), tecnico: x.mech, pagadoPor: (me && me.nombre) || '' },
     } : x));
     guardar({ ...data, history: nh });
     setHonorarioDe(null); setHonMonto('');
@@ -2382,12 +2390,31 @@ function Historial({ data, guardar, cur, loading, recargar, pickFoto, taller }) 
                   </View>
                 ) : null}
                 <Row k="Cobrado al cliente" v={cur + ' ' + cobrado.toLocaleString('es-VE')} />
-                {honorarioDe.honorario ? <Text style={{ color: '#0F6E56', fontWeight: '700', marginTop: 6 }}>Ya pagado: {cur} {(+honorarioDe.honorario.monto).toLocaleString('es-VE')} ({honorarioDe.honorario.pct}%)</Text> : null}
-                <Text style={[s.label, { marginTop: 12 }]}>Monto a pagar al técnico</Text>
-                <TextInput style={s.input} value={honMonto} onChangeText={setHonMonto} keyboardType="numeric" placeholder="0" placeholderTextColor="#9aa3ad" />
-                {m > 0 ? <Text style={{ color: '#0F6E56', fontWeight: '800', marginTop: 8, fontSize: 15 }}>Equivale al {pct}% de lo cobrado</Text> : null}
-                <TouchableOpacity style={[s.btn, { marginTop: 16 }]} onPress={pagarHonorario}><Text style={s.btnT}>Registrar pago al técnico</Text></TouchableOpacity>
-                <Text style={{ fontSize: 11.5, color: '#9aa3ad', textAlign: 'center', marginTop: 8 }}>El técnico verá este pago en su app, con el detalle del trabajo.</Text>
+                {(() => {
+                  const hp = ((data.history || []).find((x) => x.id === honorarioDe.id) || honorarioDe).honorario;
+                  if (hp) {
+                    // YA PAGADO: solo lectura (monto, fecha y quién pagó). No se puede editar.
+                    return (
+                      <View style={{ marginTop: 12, backgroundColor: '#ECFDF3', borderRadius: 12, borderWidth: 1, borderColor: '#bfe8cf', padding: 14 }}>
+                        <Text style={{ color: '#0F6E56', fontWeight: '800', fontSize: 14, marginBottom: 8 }}>✓ Honorario pagado</Text>
+                        <Row k="Monto pagado" v={cur + ' ' + (+hp.monto).toLocaleString('es-VE') + ' (' + hp.pct + '%)'} />
+                        <Row k="Técnico" v={hp.tecnico || honorarioDe.mech || '—'} />
+                        <Row k="Fecha de pago" v={(hp.fecha || '—') + (hp.hora ? ' · ' + hp.hora : '')} />
+                        <Row k="Pagado por" v={hp.pagadoPor || 'No registrado'} />
+                        <Text style={{ fontSize: 11.5, color: '#6b7480', marginTop: 8 }}>Solo lectura: un honorario pagado no se puede editar.</Text>
+                      </View>
+                    );
+                  }
+                  return (
+                    <View>
+                      <Text style={[s.label, { marginTop: 12 }]}>Monto a pagar al técnico</Text>
+                      <TextInput style={s.input} value={honMonto} onChangeText={setHonMonto} keyboardType="numeric" placeholder="0" placeholderTextColor="#9aa3ad" />
+                      {m > 0 ? <Text style={{ color: '#0F6E56', fontWeight: '800', marginTop: 8, fontSize: 15 }}>Equivale al {pct}% de lo cobrado</Text> : null}
+                      <TouchableOpacity style={[s.btn, { marginTop: 16 }]} onPress={pagarHonorario}><Text style={s.btnT}>Registrar pago al técnico</Text></TouchableOpacity>
+                      <Text style={{ fontSize: 11.5, color: '#9aa3ad', textAlign: 'center', marginTop: 8 }}>Atención: al registrar el pago ya no se podrá editar. El técnico lo verá en su app.</Text>
+                    </View>
+                  );
+                })()}
               </View>
             );
           })()}

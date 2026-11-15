@@ -164,7 +164,18 @@ async function notificarCambios(tallerId, antes, despues) {
     const nuevos = (vNuevo.advances || []).slice(antesLen);
     nuevos.forEach((a) => avancesNuevos.push({ vehiculo: vNuevo, avance: a }));
   });
-  if (!citasNuevas.length && !avancesNuevos.length) return;
+  // Avances que el administrador acaba de aprobar (pasaron de "por revisar" a notificados):
+  // ahora SÍ se le avisa al cliente.
+  const avancesAprobados = [];
+  (despues.vehicles || []).forEach((vNuevo) => {
+    const vViejo = (antes.vehicles || []).find((x) => x.id === vNuevo.id);
+    if (!vViejo) return;
+    (vViejo.advances || []).forEach((aV, i) => {
+      const aN = (vNuevo.advances || [])[i];
+      if (aV && aN && aV.pendienteRevision && !aN.pendienteRevision && aN.notificadoCliente !== false) avancesAprobados.push({ vehiculo: vNuevo, avance: aN });
+    });
+  });
+  if (!citasNuevas.length && !avancesNuevos.length && !avancesAprobados.length) return;
 
   const admins = (await query(
     `SELECT u.id, u.nombre FROM usuarios u JOIN taller_admins ta ON ta.usuario_id=u.id WHERE ta.taller_id=$1 AND u.activo=1`,
@@ -174,20 +185,34 @@ async function notificarCambios(tallerId, antes, despues) {
   for (const c of citasNuevas) {
     await enviarPushVarios(admins.map((a) => a.id), '📅 Nueva cita', `${c.cliente || 'Un cliente'} solicitó una cita`, { tipo: 'cita', id: c.id });
   }
+  const clienteDe = async (vehiculo) => {
+    if (!vehiculo.owner) return null;
+    return (await query(
+      `SELECT id FROM usuarios WHERE taller_id=$1 AND rol='cliente' AND activo=1 AND LOWER(nombre)=LOWER($2) LIMIT 1`,
+      [tallerId, vehiculo.owner]
+    )).rows[0] || null;
+  };
   for (const { vehiculo, avance } of avancesNuevos) {
-    const titulo = `🔧 Avance en ${vehiculo.model || 'un vehículo'}`;
     const cuerpo = avance.t || 'Se registró un nuevo avance';
+    if (avance.pendienteRevision) {
+      // Técnico SIN "Notificar al cliente": solo se avisa al administrador, para que entre y decida
+      // qué notificarle al cliente. El cliente NO recibe nada todavía.
+      await enviarPushVarios(admins.map((a) => a.id), `⚠️ Avance por revisar — ${vehiculo.model || 'un vehículo'}`, cuerpo, { tipo: 'avance-revision', vehiculoId: vehiculo.id });
+      continue;
+    }
+    const titulo = `🔧 Avance en ${vehiculo.model || 'un vehículo'}`;
     await enviarPushVarios(admins.map((a) => a.id), titulo, cuerpo, { tipo: 'avance', vehiculoId: vehiculo.id });
-    // Si el dueño del vehículo tiene su propia cuenta de cliente en este taller, se le
-    // avisa también (coincidencia por nombre — es lo único que hay disponible hoy).
-    if (vehiculo.owner) {
-      const cli = (await query(
-        `SELECT id FROM usuarios WHERE taller_id=$1 AND rol='cliente' AND activo=1 AND LOWER(nombre)=LOWER($2) LIMIT 1`,
-        [tallerId, vehiculo.owner]
-      )).rows[0];
+    // Solo si el avance es visible para el cliente (técnico con "Notificar al cliente" o aviso interno)
+    if (avance.notificadoCliente !== false) {
+      const cli = await clienteDe(vehiculo);
       if (cli) await enviarPush(cli.id, titulo, cuerpo, { tipo: 'avance', vehiculoId: vehiculo.id });
     }
   }
+  for (const { vehiculo, avance } of avancesAprobados) {
+    const cli = await clienteDe(vehiculo);
+    if (cli) await enviarPush(cli.id, `🔧 Avance en ${vehiculo.model || 'tu vehículo'}`, avance.t || 'Hay un nuevo avance en tu vehículo', { tipo: 'avance', vehiculoId: vehiculo.id });
+  }
+
 }
 
 // POST /api/state/mis-notifs-leidas?taller=ID — el cliente/mecánico marca SUS avisos como leídos

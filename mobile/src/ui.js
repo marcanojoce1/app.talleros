@@ -384,7 +384,7 @@ const cal = StyleSheet.create({
 
 /* =================== AJUSTES / VERSIÓN =================== */
 import { Linking, Platform, Alert } from 'react-native';
-import { APP_VERSION, APP_BUILD, ES_PLAY } from './version';
+import { APP_VERSION, APP_BUILD, BUILD_VISIBLE, ES_PLAY } from './version';
 import { getApiUrl } from './api';
 
 export function BotonAjustes({ color = '#fff', onPress }) {
@@ -476,7 +476,7 @@ export function AjustesModal({ visible, onClose }) {
           </View>
 
           <View style={aj.fila}><Text style={aj.k}>Versión</Text><Text style={aj.v}>TallerOS v{APP_VERSION}</Text></View>
-          <View style={aj.fila}><Text style={aj.k}>Build</Text><Text style={aj.v}>{APP_BUILD}</Text></View>
+          <View style={aj.fila}><Text style={aj.k}>Build</Text><Text style={aj.v}>{BUILD_VISIBLE}</Text></View>
           <View style={aj.fila}><Text style={aj.k}>Sistema</Text><Text style={aj.v}>{Platform.OS === 'android' ? 'Android' : Platform.OS}</Text></View>
 
           {ES_PLAY ? null : (
