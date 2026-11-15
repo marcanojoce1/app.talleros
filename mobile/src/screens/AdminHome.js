@@ -321,11 +321,12 @@ export default function AdminHomeScreen({ navigation, route }) {
   const marcarPagada = async (fid) => guardar({ ...data, facturas: (data.facturas || []).map((f) => (f.id === fid ? { ...f, estado: 'pagada' } : f)) });
   const [asignarTecnicoOpen, setAsignarTecnicoOpen] = useState(null); // id del vehiculo, o null
   const [tecnicoElegido, setTecnicoElegido] = useState('');
+  const [busqTec, setBusqTec] = useState('');
   const cambiarEstadoOrden = async (id, code) => {
     if (code === 'rep') {
       const veh = (data.vehicles || []).find((v) => v.id === id);
       if (veh && !veh.mech) {
-        setTecnicoElegido(''); setAsignarTecnicoOpen(id);
+        setTecnicoElegido(''); setBusqTec(''); setAsignarTecnicoOpen(id);
         // Trae técnicos frescos (por si alguien se acaba de marcar como dual-rol) SIN reemplazar el resto
         // de los datos locales — antes esto recargaba todo y podía borrar de la pantalla un cambio recién hecho.
         if (taller) getState(taller.id).then((d) => { if (d && Array.isArray(d.mecanicos)) setData((prev) => ({ ...prev, mecanicos: d.mecanicos })); }).catch(() => {});
@@ -731,16 +732,35 @@ export default function AdminHomeScreen({ navigation, route }) {
             <Text style={{ fontSize: 13, color: '#6b7480', marginBottom: 14 }}>
               Antes de pasar este vehículo a "En proceso", indica qué técnico lo va a atender.
             </Text>
-            {/* Lista dentro de la misma ventana (NO un Dropdown): en Android una ventana dentro de otra se cuelga */}
-            <ScrollView style={{ maxHeight: 260 }} keyboardShouldPersistTaps="handled">
-              {mecanicos.filter((m) => m.activo !== false).length ? mecanicos.filter((m) => m.activo !== false).map((m) => (
-                <TouchableOpacity key={String(m.id) + m.n} activeOpacity={0.7} onPress={() => setTecnicoElegido(m.n)}
-                  style={{ flexDirection: 'row', alignItems: 'center', padding: 12, marginBottom: 6, borderRadius: 10, borderWidth: 1.5, borderColor: tecnicoElegido === m.n ? '#16A34A' : '#e5e8ec', backgroundColor: tecnicoElegido === m.n ? '#ECFDF3' : '#fff' }}>
-                  <Text style={{ flex: 1, fontSize: 14, fontWeight: tecnicoElegido === m.n ? '800' : '600', color: '#16191d' }}>🔧 {m.n}</Text>
-                  {tecnicoElegido === m.n ? <Text style={{ color: '#16A34A', fontWeight: '800', fontSize: 16 }}>✓</Text> : null}
-                </TouchableOpacity>
-              )) : <Text style={{ fontSize: 13, color: '#6b7480', paddingVertical: 8 }}>No hay técnicos activos. Regístralos en el módulo Técnicos.</Text>}
-            </ScrollView>
+            {/* Buscador + lista dentro de la misma ventana (NO un Dropdown): en Android una ventana dentro de otra se cuelga */}
+            {(() => {
+              const activos = mecanicos.filter((m) => m.activo !== false);
+              const nz = (t) => String(t == null ? '' : t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+              const palabras = nz(busqTec).split(/\s+/).filter(Boolean);
+              const lista = palabras.length ? activos.filter((m) => { const t = nz((m.n || '') + ' ' + (m.sp || '') + ' ' + (m.tel || '')); return palabras.every((w) => t.includes(w)); }) : activos;
+              return (
+                <View>
+                  {activos.length > 5 ? (
+                    <TextInput value={busqTec} onChangeText={setBusqTec} placeholder="🔍 Buscar técnico por nombre…" autoCorrect={false} autoCapitalize="none"
+                      style={{ borderWidth: 1, borderColor: '#d8dde3', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, fontSize: 14, marginBottom: 10, color: '#16191d', backgroundColor: '#fff' }} />
+                  ) : null}
+                  {activos.length > 5 ? <Text style={{ fontSize: 11.5, color: '#6b7480', marginBottom: 6 }}>{lista.length} de {activos.length} técnicos</Text> : null}
+                  <ScrollView style={{ maxHeight: 250 }} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+                    {lista.length ? lista.map((m) => (
+                      <TouchableOpacity key={String(m.id) + m.n} activeOpacity={0.7} onPress={() => setTecnicoElegido(m.n)}
+                        style={{ flexDirection: 'row', alignItems: 'center', padding: 12, marginBottom: 6, borderRadius: 10, borderWidth: 1.5, borderColor: tecnicoElegido === m.n ? '#16A34A' : '#e5e8ec', backgroundColor: tecnicoElegido === m.n ? '#ECFDF3' : '#fff' }}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 14, fontWeight: tecnicoElegido === m.n ? '800' : '600', color: '#16191d' }}>🔧 {m.n}</Text>
+                          {m.sp ? <Text style={{ fontSize: 11.5, color: '#6b7480', marginTop: 2 }}>{m.sp}</Text> : null}
+                        </View>
+                        {tecnicoElegido === m.n ? <Text style={{ color: '#16A34A', fontWeight: '800', fontSize: 16 }}>✓</Text> : null}
+                      </TouchableOpacity>
+                    )) : <Text style={{ fontSize: 13, color: '#6b7480', paddingVertical: 8 }}>{activos.length ? 'Ningún técnico coincide con la búsqueda.' : 'No hay técnicos activos. Regístralos en el módulo Técnicos.'}</Text>}
+                  </ScrollView>
+                  {tecnicoElegido ? <Text style={{ fontSize: 12.5, color: '#16A34A', fontWeight: '700', marginTop: 4 }}>Seleccionado: {tecnicoElegido}</Text> : null}
+                </View>
+              );
+            })()}
             <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
               <TouchableOpacity style={{ flex: 1, padding: 12, borderRadius: 10, backgroundColor: '#eef0f2', alignItems: 'center' }} onPress={() => setAsignarTecnicoOpen(null)}>
                 <Text style={{ fontWeight: '700', color: '#6b7480' }}>Cancelar</Text>
