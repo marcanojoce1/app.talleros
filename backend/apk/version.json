@@ -1,6 +1,6 @@
 {
-    "appBuild":  6,
-    "appVersion":  "1.1.0",
-    "apk":  "/apk/talleros.apk",
-    "notas":  "Carga más rápida y sin aviso de actualización"
+  "appVersion": "1.0.1",
+  "appBuild": 84,
+  "apk": "/apk/talleros.apk",
+  "notas": "Actualización por OTA disponible."
 }
